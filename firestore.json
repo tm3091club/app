@@ -1,0 +1,4 @@
+{
+  "rules": "firestore.rules.txt",
+  "indexes": "firestore.indexes.json"
+}

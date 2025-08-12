@@ -1,0 +1,12 @@
+{
+  "name": "Toastmasters Monthly Scheduler",
+  "description": "An application to help the Vice President of Education generate and manage monthly Toastmasters meeting schedules, assign roles to members, and track meeting themes.",
+  "requestFramePermissions": [],
+  "prompt": "",
+  "rewrites": [
+    {
+      "source": "**",
+      "destination": "/index.html"
+    }
+  ]
+}

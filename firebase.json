@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "site": "toastmasters-monthly-schedule",
+    "public": ".",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
