@@ -32,8 +32,7 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          # If you linked the repo from the Firebase console, you can OMIT firebaseServiceAccount.
-          # If this run still errors on authentication, add the secret per step 2 below and uncomment:
-          # firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TOASTMASTERS_MONTHLY_SCHEDULE }}
           channelId: live
           projectId: toastmasters-monthly-schedule
+          # If deploy later errors on auth, add a service-account secret and include:
+          # firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TOASTMASTERS_MONTHLY_SCHEDULE }}
