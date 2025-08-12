@@ -7,7 +7,6 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -15,7 +14,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'     # match your local LTS
+          node-version: '22'
           cache: 'npm'
 
       - name: Install deps (lockfile-aware)
@@ -33,6 +32,8 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TOASTMASTERS_MONTHLY_SCHEDULE }}
+          # If you linked the repo from the Firebase console, you can OMIT firebaseServiceAccount.
+          # If this run still errors on authentication, add the secret per step 2 below and uncomment:
+          # firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TOASTMASTERS_MONTHLY_SCHEDULE }}
           channelId: live
           projectId: toastmasters-monthly-schedule
