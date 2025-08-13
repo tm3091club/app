@@ -5,13 +5,13 @@
   "description": "An application to help the Vice President of Education generate and manage monthly Toastmasters meeting schedules, assign roles to members, and track meeting themes.",
   "icons": [
     {
-      "src": "/assets/toastmasters-icon-square-wd4oruh8.png",
+      "src": "/toastmasters-icon-square.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/toastmasters-icon-square-wd4oruh8.png",
+      "src": "/toastmasters-icon-square.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
