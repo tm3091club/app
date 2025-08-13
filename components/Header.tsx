@@ -30,7 +30,7 @@ const NavLink: React.FC<{
 
 export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, logOut, userEmail }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const { organization } = useToastmasters();
+    const { organization, currentUser } = useToastmasters();
 
     const handleNavClick = (view: View) => {
         setCurrentView(view);
@@ -57,7 +57,9 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                         <div className="hidden md:flex items-center space-x-4">
                             <nav className="flex items-baseline space-x-4">
                                 <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
-                                <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>Manage Members</NavLink>
+                                <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
+                                    {currentUser?.role === 'Admin' ? 'Manage Members' : "Other Members' Availability"}
+                                </NavLink>
                             </nav>
                              <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-4"></div>
                              <div className="flex items-center space-x-3">
@@ -107,7 +109,9 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                 <div className="md:hidden" id="mobile-menu">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                         <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
-                        <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>Manage Members</NavLink>
+                        <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
+                            {currentUser?.role === 'Admin' ? 'Manage Members' : "Other Members' Availability"}
+                        </NavLink>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                         <div className="px-2 py-2">
                              <button
