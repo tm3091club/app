@@ -43,7 +43,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !user.uid) {
       setNotifications([]);
       setLoading(false);
       return;
@@ -136,7 +136,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const fetchPreviousNotifications = useCallback(async (): Promise<Notification[]> => {
-    if (!user) return [];
+    if (!user || !user.uid) return [];
 
     try {
       const notificationsQuery = query(
