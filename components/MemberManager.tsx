@@ -659,7 +659,7 @@ const MembersTable: React.FC<{
                                 onSaveEdit={onSaveEdit}
                                 editError={editingMemberId === member.id ? editError : null}
                                 isSelf={!isAdmin && isMyProfileSection}
-                                linkedUser={organization?.members.find(u => u.uid === member.uid)}
+                                linkedUser={organization?.members.find(u => u.uid === member?.uid)}
                                 onLink={() => onLink(member)}
                                 onUnlink={() => onUnlink(member.id)}
                             />
@@ -689,7 +689,7 @@ const MembersTable: React.FC<{
                         onSaveEdit={onSaveEdit}
                         editError={editingMemberId === member.id ? editError : null}
                         isSelf={!isAdmin && isMyProfileSection}
-                        linkedUser={organization?.members.find(u => u.uid === member.uid)}
+                        linkedUser={organization?.members.find(u => u.uid === member?.uid)}
                         onLink={() => onLink(member)}
                         onUnlink={() => onUnlink(member.id)}
                     />
@@ -799,12 +799,12 @@ export const MemberManager: React.FC = () => {
     }, [activeMembers, sortConfig, isAdmin]);
     
     const myProfile = useMemo(() => {
-        if (isAdmin || !currentUser) return null;
+        if (isAdmin || !currentUser?.uid) return null;
         return activeMembers.find(m => m.uid === currentUser.uid);
     }, [activeMembers, currentUser, isAdmin]);
 
     const otherClubMembers = useMemo(() => {
-        if (isAdmin || !currentUser) return [];
+        if (isAdmin || !currentUser?.uid) return [];
         const others = activeMembers.filter(m => m.uid !== currentUser.uid);
         return others.sort((a, b) => a.name.localeCompare(b.name));
     }, [activeMembers, currentUser, isAdmin]);

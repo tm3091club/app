@@ -18,7 +18,7 @@ export const RoleAssignmentCell: React.FC<{
     const membersForThisRole = useMemo(() => {
         // For members (non-admins), show only the current user and currently assigned member
         if (currentUser?.role !== 'Admin') {
-            const currentMember = availableMembers.find(m => m.uid === currentUser.uid);
+            const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
             if (!currentMember) return [];
 
             // Always show the current user so they can assign/unassign themselves
@@ -99,7 +99,7 @@ export const RoleAssignmentCell: React.FC<{
                 }
 
                 // Check if this is the current user
-                const isCurrentUser = currentUser && member.uid === currentUser.uid;
+                const isCurrentUser = currentUser?.uid && member.uid === currentUser.uid;
                 
                 // For members (non-admins), only allow them to select themselves or unassign
                 const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUser;

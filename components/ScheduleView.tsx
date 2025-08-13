@@ -76,7 +76,7 @@ export const ScheduleView: React.FC = () => {
     const canEditRoleAssignment = useCallback((meetingIndex: number, role: string) => {
         if (isAdmin) return true; // Admins can edit everything
         
-        if (!activeSchedule || !currentUser) return false;
+        if (!activeSchedule || !currentUser?.uid) return false;
         
         const meeting = activeSchedule.meetings[meetingIndex];
         if (!meeting) return false;
@@ -98,7 +98,7 @@ export const ScheduleView: React.FC = () => {
     const canEditTheme = useCallback((meetingIndex: number) => {
         if (isAdmin) return true; // Admins can edit everything
         
-        if (!activeSchedule || !currentUser) return false;
+        if (!activeSchedule || !currentUser?.uid) return false;
         
         const meeting = activeSchedule.meetings[meetingIndex];
         if (!meeting) return false;
