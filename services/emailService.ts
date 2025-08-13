@@ -19,16 +19,20 @@ export interface AvailabilityEmailData {
 }
 
 class EmailService {
-  // Queue email for sending via Firebase Function
+  // Queue email for sending via Firebase Extension
   private async queueEmail(emailData: EmailRequest): Promise<void> {
     try {
-      await addDoc(collection(db, 'emailQueue'), {
-        ...emailData,
-        status: 'pending',
-        createdAt: Timestamp.now(),
-        attempts: 0,
+      // Use the 'mail' collection that your Firebase Extension monitors
+      await addDoc(collection(db, 'mail'), {
+        to: emailData.to,
+        message: {
+          subject: emailData.subject,
+          html: emailData.html,
+          text: emailData.text,
+        },
+        // The extension will use the default FROM address you configured
       });
-      console.log('Email queued successfully');
+      console.log('Email queued successfully via Firebase Extension');
     } catch (error) {
       console.error('Error queuing email:', error);
       throw error;

@@ -79,17 +79,13 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == getUserId();
     }
 
-    // --- Email Queue Collection ---
-    match /emailQueue/{emailId} {
+    // --- Mail Collection (Firebase Extension) ---
+    match /mail/{emailId} {
       // Only authenticated admin users can create email requests
       allow create: if isAuthenticated() && isAdmin();
       
-      // Email queue items can be read/updated by cloud functions (no user restrictions)
-      // These will be processed by server-side functions
-      allow read, update: if true;
-      
-      // No direct deletion by users - emails are processed by functions
-      allow delete: if false;
+      // The Firebase Extension will handle reading and processing
+      allow read, update, delete: if false;
     }
   }
 }
