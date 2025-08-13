@@ -8,6 +8,7 @@ import { useAuth } from './Context/AuthContext';
 import { AuthPage } from './components/AuthPage';
 import { ToastmastersProvider } from './Context/ToastmastersContext';
 import { PublicSchedulePage } from './components/PublicSchedulePage';
+import { APP_VERSION } from './utils/version';
 
 type View = 'schedule' | 'members' | 'profile';
 
@@ -52,6 +53,12 @@ function App() {
               {renderView()}
             </div>
           </main>
+          {/* Version Footer */}
+          <footer className="text-center py-2 px-4">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Version: {APP_VERSION}
+            </span>
+          </footer>
         </div>
       </ToastmastersProvider>
     );
