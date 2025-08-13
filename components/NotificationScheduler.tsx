@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { BellRing, Calendar, Users } from 'lucide-react';
+import { BellRing, Calendar, Users, Mail } from 'lucide-react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { notificationService } from '../services/notificationService';
-import { AvailabilityStatus, MemberStatus } from '../types';
+import { emailService } from '../services/emailService';
+import { AvailabilityStatus, MemberStatus, UserRole } from '../types';
 import { getNextMonthInfo, shouldSendAvailabilityNotification } from '../utils/monthUtils';
 
 const NotificationScheduler: React.FC = () => {
@@ -78,13 +79,49 @@ const NotificationScheduler: React.FC = () => {
       const meetingDay = organization?.meetingDay ?? 2; // Default to Tuesday
       const nextMonthInfo = getNextMonthInfo(meetingDay);
       
+      // Get active members with UIDs for notifications
       const activeMembers = members.filter(m => 
         m.status === MemberStatus.Active && m.uid
       );
 
+      // Send in-app notifications
       await notificationService.notifyAvailabilityRequest(activeMembers, nextMonthInfo.displayName);
 
-      setMessage({ type: 'success', text: 'Availability requests sent successfully!' });
+      // Get members with emails (excluding club admin role) for email notifications
+      const emailRecipients = members.filter(m => 
+        m.status === MemberStatus.Active && 
+        m.email && 
+        m.email.trim() !== '' &&
+        m.role !== UserRole.Admin // Exclude club admin as requested
+      ).map(m => ({
+        email: m.email,
+        name: m.name
+      }));
+
+      if (emailRecipients.length > 0 && organization) {
+        // Get meeting day name
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const meetingDayName = dayNames[meetingDay];
+
+        // Send emails
+        await emailService.sendAvailabilityRequest(
+          emailRecipients,
+          organization.name,
+          nextMonthInfo.displayName,
+          nextMonthInfo.year,
+          meetingDayName
+        );
+
+        setMessage({ 
+          type: 'success', 
+          text: `Availability requests sent! ${activeMembers.length} in-app notifications and ${emailRecipients.length} emails queued.` 
+        });
+      } else {
+        setMessage({ 
+          type: 'success', 
+          text: `Availability requests sent! ${activeMembers.length} in-app notifications sent. No email recipients found.` 
+        });
+      }
     } catch (error) {
       console.error('Error sending availability requests:', error);
       setMessage({ type: 'error', text: 'Failed to send availability requests' });
@@ -120,11 +157,14 @@ const NotificationScheduler: React.FC = () => {
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Calendar className="h-5 w-5" />
+            <div className="flex items-center gap-1">
+              <Calendar className="h-5 w-5" />
+              <Mail className="h-4 w-4" />
+            </div>
             Request Availability ({getNextMonthInfo(organization?.meetingDay ?? 2).displayName})
           </button>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Request all active members to update their availability for {getNextMonthInfo(organization?.meetingDay ?? 2).displayName}
+            Send in-app notifications and email requests to all active members (excluding club admin) to update their availability for {getNextMonthInfo(organization?.meetingDay ?? 2).displayName}
           </p>
         </div>
       </div>

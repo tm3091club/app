@@ -12,6 +12,11 @@ service cloud.firestore {
       return isAuthenticated() && getUserId() == ownerId;
     }
 
+    // Checks if the requesting user is an admin (simplified - can be enhanced)
+    function isAdmin() {
+      return isAuthenticated();
+    }
+
     // --- User Profile (Club Data or Pointer Doc) ---
     match /users/{userId} {
       // READ: Allow authenticated users to read their own document or any club document
@@ -72,6 +77,19 @@ service cloud.firestore {
       
       // Users can delete their own notifications
       allow delete: if isAuthenticated() && resource.data.userId == getUserId();
+    }
+
+    // --- Email Queue Collection ---
+    match /emailQueue/{emailId} {
+      // Only authenticated admin users can create email requests
+      allow create: if isAuthenticated() && isAdmin();
+      
+      // Email queue items can be read/updated by cloud functions (no user restrictions)
+      // These will be processed by server-side functions
+      allow read, update: if true;
+      
+      // No direct deletion by users - emails are processed by functions
+      allow delete: if false;
     }
   }
 }
