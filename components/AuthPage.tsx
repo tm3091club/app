@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
+import { APP_VERSION } from '../utils/version';
 import { db } from '../services/firebase';
 
 type AuthView = 'login' | 'signup' | 'reset';
@@ -347,6 +348,9 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
                 </div>
             )}
         </div>
+      </div>
+      <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        Version: {APP_VERSION}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/firebase';
 import { MonthlySchedule, Member } from '../types';
 import { TOASTMASTERS_ROLES } from '../Constants';
+import { APP_VERSION } from '../utils/version';
 
 interface PublicScheduleData extends MonthlySchedule {
     publicMembers: Pick<Member, 'id' | 'name'>[];
@@ -140,6 +141,7 @@ export const PublicSchedulePage: React.FC<{ clubNumber: string; shareId: string 
             </main>
              <footer className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
                 <p>Toastmasters Monthly Scheduler</p>
+                <p>Version: {APP_VERSION}</p>
             </footer>
         </div>
     );
