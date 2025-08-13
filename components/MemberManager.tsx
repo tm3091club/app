@@ -1031,7 +1031,7 @@ export const MemberManager: React.FC = () => {
                     </div>
                     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Members & Availability</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Other Members' Availability</h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">This is a read-only view of your club's roster.</p>
                         </div>
                         <MembersTable memberList={otherClubMembers} isAdmin={false} {...commonTableProps} />
