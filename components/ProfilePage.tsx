@@ -194,7 +194,9 @@ const TeamMemberListItem: React.FC<{
     onRoleChange: (uid: string, newRole: UserRole) => void;
     onRemove: (user: AppUser) => void;
     onSaveName: (payload: { uid: string, newName: string }) => Promise<any>;
-}> = ({ member, isClubAdmin, isLastAdmin, isAdminView, isSelf, onRoleChange, onRemove, onSaveName }) => {
+    onSendPasswordReset: (member: AppUser) => void;
+    isSendingPasswordReset: boolean;
+}> = ({ member, isClubAdmin, isLastAdmin, isAdminView, isSelf, onRoleChange, onRemove, onSaveName, onSendPasswordReset, isSendingPasswordReset }) => {
     
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState(member.name);
@@ -268,6 +270,25 @@ const TeamMemberListItem: React.FC<{
                                 </select>
                             )}
                             <button
+                                onClick={() => onSendPasswordReset(member)}
+                                disabled={isSendingPasswordReset}
+                                title="Send password reset email"
+                                className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded-full hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Send password reset to ${member.name}`}
+                            >
+                                {isSendingPasswordReset ? (
+                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                    </svg>
+                                )}
+                            </button>
+                            <button
                                 onClick={() => onRemove(member)}
                                 disabled={isClubAdmin}
                                 title={isClubAdmin ? "The Club Admin cannot be removed." : ""}
@@ -295,7 +316,7 @@ const TeamMemberListItem: React.FC<{
 
 
 export const ProfilePage = (): React.ReactElement | null => {
-    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, inviteUser, updateUserRole, removeUser, pendingInvites, revokeInvite } = useToastmasters();
+    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, inviteUser, updateUserRole, removeUser, pendingInvites, revokeInvite, sendPasswordResetEmail } = useToastmasters();
     const { updatePassword, user, updateUserEmail } = useAuth();
     
     // State for club profile form
@@ -324,6 +345,7 @@ export const ProfilePage = (): React.ReactElement | null => {
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [userToRevoke, setUserToRevoke] = useState<PendingInvite | null>(null);
     const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
+    const [isSendingPasswordReset, setIsSendingPasswordReset] = useState<string | null>(null);
     
     const isPasswordUser = useMemo(() => user?.providerData.some(p => p.providerId === 'password'), [user]);
     const isAdmin = currentUser?.role === UserRole.Admin;
@@ -517,6 +539,25 @@ export const ProfilePage = (): React.ReactElement | null => {
             setTeamFeedback({type: 'success', message: 'User name updated.'});
         } catch(error: any) {
             setTeamFeedback({type: 'error', message: error.message || 'Failed to update name.'});
+        }
+    };
+
+    const handleSendPasswordReset = async (member: AppUser) => {
+        setIsSendingPasswordReset(member.uid);
+        setTeamFeedback(null);
+        try {
+            await sendPasswordResetEmail(member.email);
+            setTeamFeedback({ 
+                type: 'success', 
+                message: `Password reset email sent to ${member.email}. They should receive it shortly.` 
+            });
+        } catch (error: any) {
+            setTeamFeedback({ 
+                type: 'error', 
+                message: error.message || 'Failed to send password reset email.' 
+            });
+        } finally {
+            setIsSendingPasswordReset(null);
         }
     };
     
@@ -717,6 +758,8 @@ export const ProfilePage = (): React.ReactElement | null => {
                                     onRoleChange={handleRoleChange}
                                     onRemove={openDeleteModal}
                                     onSaveName={handleSaveUserName}
+                                    onSendPasswordReset={handleSendPasswordReset}
+                                    isSendingPasswordReset={isSendingPasswordReset === member.uid}
                                 />
                             ))}
                         </ul>
