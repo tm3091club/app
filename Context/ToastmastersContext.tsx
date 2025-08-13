@@ -443,17 +443,21 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
         // Check if user exists in Firebase Auth
         try {
+            console.log("Step 1: Importing Firebase Auth...");
             const { getAuth, fetchSignInMethodsForEmail, sendPasswordResetEmail: firebaseSendPasswordReset } = await import('firebase/auth');
             const auth = getAuth();
             
+            console.log("Step 2: Checking sign-in methods for:", emailLower);
             const signInMethods = await fetchSignInMethodsForEmail(auth, emailLower);
+            console.log("Sign-in methods found:", signInMethods);
             
             if (signInMethods.length === 0) {
                 throw new Error(`User account exists but no password is set. The user needs to complete the signup process by setting a password first.`);
             }
 
-            // Send password reset email
+            console.log("Step 3: Sending password reset email...");
             await firebaseSendPasswordReset(auth, emailLower);
+            console.log("Step 4: Password reset email sent successfully");
             
             // Send a notification email to the user
             await db.collection("mail").add({
@@ -473,10 +477,16 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             });
 
         } catch (error: any) {
+            console.error("Password reset error:", error);
             if (error.message.includes("No account found")) {
                 throw error;
             }
-            throw new Error("Failed to send password reset email. Please try again.");
+            if (error.message.includes("no password is set")) {
+                throw error;
+            }
+            // Provide more specific error information
+            const errorMessage = error.code || error.message || 'Unknown error';
+            throw new Error(`Failed to send password reset email: ${errorMessage}`);
         }
     };
 
