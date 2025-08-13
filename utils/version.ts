@@ -3,7 +3,7 @@
 // Format: M.DD.YY-X where X is the push count for that day
 
 // Current version - update this for each push
-const CURRENT_VERSION = "8.13.25-6";
+const CURRENT_VERSION = "8.13.25-7";
 
 export const getAppVersion = (): string => {
   return CURRENT_VERSION;
