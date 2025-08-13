@@ -57,9 +57,9 @@ export const ScheduleView: React.FC = () => {
     // --- Data Hydration ---
     const hydratedMembers = useMemo(() => {
         if (!organization?.members) return members;
-        const userMap = new Map(organization.members.map(u => [u.uid, u.name]));
+        const userMap = new Map(organization.members.filter(u => u?.uid).map(u => [u.uid, u.name]));
         return members.map(member => {
-            if (member.uid && userMap.has(member.uid)) {
+            if (member?.uid && userMap.has(member.uid)) {
                 return { ...member, name: userMap.get(member.uid)! };
             }
             return member;
