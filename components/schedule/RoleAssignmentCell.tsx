@@ -21,6 +21,14 @@ export const RoleAssignmentCell: React.FC<{
             const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
             if (!currentMember) return [];
 
+            // Only show dropdown if role is unassigned OR if current user is assigned to this role
+            const isCurrentUserAssigned = assignedMemberId === currentMember.id;
+            const isRoleUnassigned = !assignedMemberId;
+            
+            if (!isRoleUnassigned && !isCurrentUserAssigned) {
+                return []; // Don't show dropdown for other members' assignments
+            }
+
             // Always show the current user so they can assign/unassign themselves
             const membersToShow = [currentMember];
 
