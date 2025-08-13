@@ -441,23 +441,15 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("Enter a valid email address.");
         }
 
-        // Check if user exists in Firebase Auth
+        // Send password reset email directly - Firebase will handle user existence check
         try {
             console.log("Step 1: Importing Firebase Auth...");
-            const { getAuth, fetchSignInMethodsForEmail, sendPasswordResetEmail: firebaseSendPasswordReset } = await import('firebase/auth');
+            const { getAuth, sendPasswordResetEmail: firebaseSendPasswordReset } = await import('firebase/auth');
             const auth = getAuth();
             
-            console.log("Step 2: Checking sign-in methods for:", emailLower);
-            const signInMethods = await fetchSignInMethodsForEmail(auth, emailLower);
-            console.log("Sign-in methods found:", signInMethods);
-            
-            if (signInMethods.length === 0) {
-                throw new Error(`User account exists but no password is set. The user needs to complete the signup process by setting a password first.`);
-            }
-
-            console.log("Step 3: Sending password reset email...");
+            console.log("Step 2: Sending password reset email to:", emailLower);
             await firebaseSendPasswordReset(auth, emailLower);
-            console.log("Step 4: Password reset email sent successfully");
+            console.log("Step 3: Password reset email sent successfully");
             
             // Send a notification email to the user
             await db.collection("mail").add({
@@ -478,13 +470,19 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
         } catch (error: any) {
             console.error("Password reset error:", error);
-            if (error.message.includes("No account found")) {
-                throw error;
+            
+            // Handle specific Firebase Auth error codes
+            if (error.code === 'auth/user-not-found') {
+                throw new Error("No account found with this email address. The user may need to complete their signup first.");
             }
-            if (error.message.includes("no password is set")) {
-                throw error;
+            if (error.code === 'auth/invalid-email') {
+                throw new Error("Invalid email address format.");
             }
-            // Provide more specific error information
+            if (error.code === 'auth/user-disabled') {
+                throw new Error("This user account has been disabled.");
+            }
+            
+            // For other errors, provide the specific Firebase error
             const errorMessage = error.code || error.message || 'Unknown error';
             throw new Error(`Failed to send password reset email: ${errorMessage}`);
         }
