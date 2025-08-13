@@ -352,8 +352,8 @@ export const ProfilePage = (): React.ReactElement | null => {
     const isPasswordUser = useMemo(() => user?.providerData.some(p => p.providerId === 'password'), [user]);
     const isAdmin = currentUser?.role === UserRole.Admin;
     const isClubAdmin = currentUser?.uid === ownerId;
-    const clubOwner = organization?.members.find(m => m.uid === ownerId);
-    const isLastAdmin = organization?.members.filter(m => m.role === UserRole.Admin).length === 1;
+    const clubOwner = organization?.members.find(m => m?.uid === ownerId);
+    const isLastAdmin = organization?.members.filter(m => m?.role === UserRole.Admin).length === 1;
 
     useEffect(() => {
         if (organization) {
