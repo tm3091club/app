@@ -447,8 +447,8 @@ export const ScheduleView: React.FC = () => {
                 const dateKey = meeting.date.split('T')[0];
                 const qualifiedMembers = members.filter(member => {
                     // Check availability
-                    const memberAvailability = availability.find(a => a.memberId === member.id);
-                    const availStatus = memberAvailability?.availability[dateKey];
+                    const memberAvailability = availability[member.id];
+                    const availStatus = memberAvailability?.[dateKey];
                     if (availStatus !== AvailabilityStatus.Available && availStatus !== AvailabilityStatus.Possible) {
                         return false;
                     }
