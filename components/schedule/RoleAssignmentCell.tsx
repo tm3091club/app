@@ -70,7 +70,7 @@ export const RoleAssignmentCell: React.FC<{
                 // Check if this is the current user
                 const isCurrentUser = currentUser && member.uid === currentUser.uid;
                 
-                // For members (non-admins), only allow them to assign themselves or unassign
+                // For members (non-admins), allow them to assign themselves to unassigned roles or unassign themselves
                 const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUser && assignedMemberId !== member.id;
 
                 return (
@@ -84,7 +84,7 @@ export const RoleAssignmentCell: React.FC<{
                                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                         } ${isDisabled ? 'opacity-50' : ''}`}
                     >
-                        {displayText} {isCurrentUser ? '(You)' : ''}
+                        {displayText}
                     </option>
                 );
             })}

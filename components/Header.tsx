@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                             <nav className="flex items-baseline space-x-4">
                                 <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
                                 <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
-                                    {currentUser?.role === 'Admin' ? 'Manage Members' : "Other Members' Availability"}
+                                    {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}
                                 </NavLink>
                             </nav>
                              <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-4"></div>
@@ -110,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                         <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
                         <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
-                            {currentUser?.role === 'Admin' ? 'Manage Members' : "Other Members' Availability"}
+                            {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}
                         </NavLink>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                         <div className="px-2 py-2">
