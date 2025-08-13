@@ -54,12 +54,13 @@ class EmailService {
           .cta-button { 
             display: inline-block; 
             background-color: #3b82f6; 
-            color: white; 
+            color: white !important; 
             padding: 12px 24px; 
             text-decoration: none; 
             border-radius: 6px; 
             margin: 20px 0;
             font-weight: bold;
+            font-size: 16px;
           }
           .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 20px; }
           .highlight { background-color: #dbeafe; padding: 10px; border-radius: 4px; margin: 15px 0; }
@@ -100,7 +101,7 @@ class EmailService {
             
             <p>Thank you for helping us plan successful meetings! 🎉</p>
             
-            <p>Best regards,<br>
+            <p>Looking forward to seeing you at our meetings!<br>
             <strong>${data.clubName} Leadership Team</strong></p>
           </div>
           <div class="footer">
@@ -133,7 +134,7 @@ If you have any questions, please reach out to your VPE or club officers.
 
 Thank you for helping us plan successful meetings!
 
-Best regards,
+Looking forward to seeing you at our meetings!
 ${data.clubName} Leadership Team
 
 ---

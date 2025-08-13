@@ -107,7 +107,7 @@ const NotificationScheduler: React.FC = () => {
         await emailService.sendAvailabilityRequest(
           emailRecipients,
           organization.name,
-          nextMonthInfo.displayName,
+          nextMonthInfo.displayName.split(' ')[0], // Just the month name (e.g., "September")
           nextMonthInfo.year,
           meetingDayName
         );
