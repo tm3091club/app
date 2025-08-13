@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-push hook to automatically update version
+
+echo "🔄 Auto-updating version before push..."
+
+# Run the version update script
+node scripts/update-version.js
+
+# If there were version changes, they're already committed
+# Now we need to push them too, but we'll let the original push handle this
+
+echo "✅ Version update complete"
