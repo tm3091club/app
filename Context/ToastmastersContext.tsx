@@ -96,21 +96,48 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const newName = invitedUserName || joiningUser.displayName || joiningUser.email!;
         const newUserToAdd: AppUser = { uid: joiningUser.uid, email: joiningUser.email!, name: newName, role: UserRole.Member };
     
-        await db.runTransaction(async (transaction) => {
-            const clubDoc = await transaction.get(clubDataDocRef);
-            if (!clubDoc.exists) {
-                throw new Error("The club you are trying to join no longer exists.");
-            }
-    
-            transaction.set(userPointerDocRef, { ownerId: ownerId, email: joiningUser.email, name: newName });
-            transaction.update(clubDataDocRef, {
-                'organization.members': FieldValue.arrayUnion(newUserToAdd),
-                'lastJoinToken': token // Temporary field for security rule validation
+        try {
+            await db.runTransaction(async (transaction) => {
+                const clubDoc = await transaction.get(clubDataDocRef);
+                if (!clubDoc.exists) {
+                    throw new Error("The club you are trying to join no longer exists.");
+                }
+        
+                // Check if user is already a member
+                const existingMembers = clubDoc.data()?.organization?.members || [];
+                const isAlreadyMember = existingMembers.some((m: AppUser) => m.uid === joiningUser.uid);
+                
+                if (isAlreadyMember) {
+                    throw new Error("You are already a member of this club.");
+                }
+        
+                // Create user pointer document
+                transaction.set(userPointerDocRef, { 
+                    ownerId: ownerId, 
+                    email: joiningUser.email, 
+                    name: newName,
+                    joinedAt: FieldValue.serverTimestamp()
+                });
+                
+                // Add user to club's member list
+                transaction.update(clubDataDocRef, {
+                    'organization.members': FieldValue.arrayUnion(newUserToAdd),
+                    'lastJoinToken': token // Temporary field for security rule validation
+                });
+                
+                // Mark invitation as completed
+                transaction.update(inviteRef, { 
+                    status: 'completed', 
+                    completedAt: FieldValue.serverTimestamp(),
+                    completedBy: joiningUser.uid
+                });
             });
-            transaction.update(inviteRef, { status: 'completed', completedAt: FieldValue.serverTimestamp() });
-        });
-    
-        return ownerId;
+            
+            return ownerId;
+        } catch (error: any) {
+            console.error("Error completing user join:", error);
+            throw new Error(`Failed to join club: ${error.message}`);
+        }
     }, []);
 
     const setupListeners = useCallback((ownerId: string) => {
@@ -214,12 +241,30 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 let ownerIdToUse: string | null = null;
                 
                 if (userPointerDoc.exists) {
+                    // User has a pointer document - they are a club member
                     ownerIdToUse = userPointerDoc.data()?.ownerId || user.uid;
                 } else {
-                    const token = sessionStorage.getItem('inviteToken');
-                    if (token) {
-                        ownerIdToUse = await completeUserJoin(token, user);
-                        sessionStorage.removeItem('inviteToken');
+                    // Check if user is a club owner (they have their own club)
+                    const potentialClubDoc = await db.collection('users').doc(user.uid).get();
+                    if (potentialClubDoc.exists && potentialClubDoc.data()?.organization) {
+                        ownerIdToUse = user.uid;
+                    } else {
+                        // Check for pending invitation token
+                        const token = sessionStorage.getItem('inviteToken');
+                        
+                        if (token) {
+                            try {
+                                ownerIdToUse = await completeUserJoin(token, user);
+                                sessionStorage.removeItem('inviteToken');
+                            } catch (joinError: any) {
+                                console.error(`User join failed:`, joinError);
+                                // If join fails, user is not authorized
+                                throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
+                            }
+                        } else {
+                            // No invitation token and no club association - user is not authorized
+                            throw new Error("You are not authorized to access this application. Please contact your club administrator for an invitation.");
+                        }
                     }
                 }
                 
@@ -227,12 +272,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     setDataOwnerId(ownerIdToUse);
                     setupListeners(ownerIdToUse);
                 } else {
-                    setError("Could not determine your club association. If you just signed up, please wait a moment or refresh. Otherwise, contact support.");
-                    setLoading(false);
+                    throw new Error("You are not authorized to access this application. Please contact your club administrator for an invitation.");
                 }
             } catch(e: any) {
                 console.error("Error initializing user session:", e);
-                setError(e.message || "Failed to initialize your account. Please refresh and try again.");
+                setError(e.message || "Access denied. Please contact your club administrator for assistance.");
                 setLoading(false);
             }
         };
@@ -360,11 +404,10 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
     const revokeInvite = async (inviteId: string) => {
         if (!dataOwnerId || !currentUser || (currentUser.uid !== dataOwnerId && currentUser.role !== UserRole.Admin)) {
-            throw new Error("You do not have permission to perform this action.");
+            throw new Error("Only club admins can revoke invitations.");
         }
         await db.collection('invitations').doc(inviteId).delete();
     };
-
 
     const linkMemberToAccount = async (payload: { memberId: string, uid: string | null }) => {
         const docRef = getDataDocRef();
@@ -551,8 +594,24 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             ) : error ? (
                 <div className="min-h-screen flex items-center justify-center bg-red-50 dark:bg-red-900/10 p-4">
                     <div className="text-center bg-white dark:bg-red-900/20 p-8 rounded-lg shadow-lg border border-red-200 dark:border-red-800">
-                       <h2 className="text-2xl font-bold text-red-800 dark:text-red-200">An Error Occurred</h2>
-                       <p className="text-red-600 dark:text-red-300 mt-2 max-w-md">{error}</p>
+                       <h2 className="text-2xl font-bold text-red-800 dark:text-red-200">Access Denied</h2>
+                       <p className="text-red-600 dark:text-red-300 mt-2 max-w-md">
+                           {error.includes("Could not determine your club association") 
+                               ? "You are not authorized to access this application. Please contact your club administrator for an invitation."
+                               : error
+                           }
+                       </p>
+                       <div className="mt-4">
+                           <button
+                               onClick={() => {
+                                   logOut();
+                                   setError(null);
+                               }}
+                               className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                           >
+                               Sign Out
+                           </button>
+                       </div>
                    </div>
                </div>
             ) : (

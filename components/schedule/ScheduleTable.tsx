@@ -16,6 +16,10 @@ interface ScheduleTableProps {
   onAssignmentChange: (meetingIndex: number, role: string, memberId: string | null) => void;
   renderAvailabilityLists: (meeting: Meeting) => JSX.Element;
   getMemberName: (id: string | null) => string;
+  // Granular permission functions
+  canEditRoleAssignment: (meetingIndex: number, role: string) => boolean;
+  canEditTheme: (meetingIndex: number) => boolean;
+  canToggleBlackout: (meetingIndex: number) => boolean;
 }
 
 const ReadOnlyRoleCell: React.FC<{ name: string | null }> = ({ name }) => (
@@ -35,6 +39,9 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   onAssignmentChange,
   renderAvailabilityLists,
   getMemberName,
+  canEditRoleAssignment,
+  canEditTheme,
+  canToggleBlackout,
 }) => {
   
   return (
@@ -53,13 +60,13 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
               <th key={index} scope="col" className="p-4 text-center text-sm font-semibold text-gray-900 dark:text-white min-w-[200px]">
                 {new Date(meeting.date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}
                 <div className="mt-2 font-normal">
-                    <label className={`flex items-center justify-center gap-2 text-xs ${!isEditable ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                    <label className={`flex items-center justify-center gap-2 text-xs ${!canToggleBlackout(index) ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                       <input
                         type="checkbox"
                         checked={!!meeting.isBlackout}
                         onChange={() => onToggleBlackout(index)}
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:pointer-events-none"
-                        disabled={!isEditable}
+                        disabled={!canToggleBlackout(index)}
                       />
                       Blackout
                     </label>
@@ -82,7 +89,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                     type="text"
                     value={meeting.theme}
                     onChange={(e) => onThemeChange(index, e.target.value)}
-                    disabled={!isEditable || !!meeting.isBlackout}
+                    disabled={!canEditTheme(index) || !!meeting.isBlackout}
                     className="w-full bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 rounded-md shadow-sm py-1.5 px-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm text-center disabled:bg-gray-200 dark:disabled:bg-gray-700/50 disabled:cursor-not-allowed"
                     placeholder="Enter meeting theme"
                   />
@@ -120,7 +127,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                             availableMembers={membersAvailableForMeeting}
                             onAssignmentChange={onAssignmentChange}
                             allAssignmentsForMeeting={meeting.assignments}
-                            disabled={!isEditable}
+                            disabled={!canEditRoleAssignment(index, role)}
                           />
                       )}
                     </td>
