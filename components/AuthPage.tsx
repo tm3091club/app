@@ -290,8 +290,8 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-red-800 dark:text-red-300">{error}</p>
-                    {/* Show Sign In button for used/revoked invitations */}
-                    {(error.includes('already been used') || error.includes('revoked') || error.includes('expired')) && (
+                    {/* Show Sign In button for used/revoked/invalid invitations */}
+                    {(error.includes('already been used') || error.includes('revoked') || error.includes('expired') || error.includes('invalid')) && (
                       <div className="mt-3">
                         <button
                           type="button"
