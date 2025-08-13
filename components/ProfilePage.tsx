@@ -544,8 +544,6 @@ export const ProfilePage = (): React.ReactElement | null => {
     const handleSendPasswordReset = async (member: AppUser) => {
         setIsSendingPasswordReset(member.uid);
         setTeamFeedback(null);
-        console.log(`Attempting password reset for member:`, member);
-        console.log(`Member email: "${member.email}"`);
         try {
             await sendPasswordResetEmail(member.email);
             setTeamFeedback({ 
