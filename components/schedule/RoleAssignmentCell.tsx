@@ -61,10 +61,21 @@ export const RoleAssignmentCell: React.FC<{
     };
 
     const isUnassigned = !assignedMemberId;
+    const assignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
 
     const baseClasses = "w-full rounded-md shadow-sm py-1.5 px-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm text-center transition-colors";
     const unassignedClasses = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 font-semibold border-red-300 dark:border-red-700";
     const assignedClasses = "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600";
+    const readOnlyClasses = "bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-300";
+
+    // If disabled and has no edit permissions, show read-only display
+    if (disabled && membersForThisRole.length === 0) {
+        return (
+            <div className={`${baseClasses} ${isUnassigned ? unassignedClasses : readOnlyClasses}`}>
+                {isUnassigned ? '-- Unassigned --' : assignedMember?.name || '-- Unknown --'}
+            </div>
+        );
+    }
 
     return (
         <select
