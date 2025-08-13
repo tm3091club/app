@@ -80,15 +80,19 @@ export const ScheduleView: React.FC = () => {
         const meeting = activeSchedule.meetings[meetingIndex];
         if (!meeting) return false;
         
+        // Find the member profile for the current user
+        const currentMember = hydratedMembers.find(m => m.uid === currentUser.uid);
+        if (!currentMember) return false;
+        
         // Check if the current user is assigned to this role in this meeting
-        const isAssignedToThisRole = meeting.assignments[role] === currentUser.uid;
+        const isAssignedToThisRole = meeting.assignments[role] === currentMember.id;
         
         // Check if this role is currently unassigned
         const isRoleUnassigned = !meeting.assignments[role];
         
         // Members can only edit if they're assigned to this role or if the role is unassigned
         return isAssignedToThisRole || isRoleUnassigned;
-    }, [isAdmin, activeSchedule, currentUser]);
+    }, [isAdmin, activeSchedule, currentUser, hydratedMembers]);
 
     const canEditTheme = useCallback((meetingIndex: number) => {
         if (isAdmin) return true; // Admins can edit everything
@@ -98,12 +102,16 @@ export const ScheduleView: React.FC = () => {
         const meeting = activeSchedule.meetings[meetingIndex];
         if (!meeting) return false;
         
+        // Find the member profile for the current user
+        const currentMember = hydratedMembers.find(m => m.uid === currentUser.uid);
+        if (!currentMember) return false;
+        
         // Check if the current user is assigned to any role in this meeting
-        const isAssignedToAnyRole = Object.values(meeting.assignments).some(assignment => assignment === currentUser.uid);
+        const isAssignedToAnyRole = Object.values(meeting.assignments).some(assignment => assignment === currentMember.id);
         
         // Members can only edit themes if they're assigned to a role in this meeting
         return isAssignedToAnyRole;
-    }, [isAdmin, activeSchedule, currentUser]);
+    }, [isAdmin, activeSchedule, currentUser, hydratedMembers]);
 
     const canToggleBlackout = useCallback((meetingIndex: number) => {
         // Only admins can toggle blackout
