@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "toastmasters-monthly-schedule"
-  }
+  },
+  "targets": {
+    "toastmasters-monthly-schedule": {
+      "hosting": {
+        "main": [
+          "toastmasters-monthly-schedule"
+        ],
+        "tmapp-club": [
+          "tmapp-club"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
