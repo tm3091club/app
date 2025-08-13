@@ -16,7 +16,20 @@ export const RoleAssignmentCell: React.FC<{
     const { currentUser } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
-        // For members (non-admins), show only the current user and currently assigned member
+        // Get the required qualification for this role
+        const requiredQualificationKey = {
+            'Toastmaster': 'isToastmaster',
+            'Table Topics Master': 'isTableTopicsMaster',
+            'General Evaluator': 'isGeneralEvaluator',
+            'Inspiration Award': 'isPastPresident'
+        }[role] as keyof Member;
+
+        // Get qualified members for this role
+        const qualifiedMembers = requiredQualificationKey 
+            ? availableMembers.filter(m => m[requiredQualificationKey])
+            : availableMembers;
+
+        // For members (non-admins), show only qualified members and currently assigned member
         if (currentUser?.role !== 'Admin') {
             const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
             if (!currentMember) return [];
@@ -29,8 +42,8 @@ export const RoleAssignmentCell: React.FC<{
                 return []; // Don't show dropdown for other members' assignments
             }
 
-            // Always show the current user so they can assign/unassign themselves
-            const membersToShow = [currentMember];
+            // Start with qualified members (including current user if qualified)
+            const membersToShow = qualifiedMembers.filter(m => m.id === currentMember.id);
 
             // If someone else is currently assigned, also show them (but they'll be disabled in the options)
             if (assignedMemberId && assignedMemberId !== currentMember.id) {
@@ -43,25 +56,12 @@ export const RoleAssignmentCell: React.FC<{
             return membersToShow;
         }
 
-        // For admins, use the original logic
-        const requiredQualificationKey = {
-            'Toastmaster': 'isToastmaster',
-            'Table Topics Master': 'isTableTopicsMaster',
-            'General Evaluator': 'isGeneralEvaluator',
-            'Inspiration Award': 'isPastPresident'
-        }[role] as keyof Member;
-
-        if (requiredQualificationKey) {
-            const qualifiedMembers = availableMembers.filter(m => m[requiredQualificationKey]);
-            
-            const currentlyAssignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
-            if (currentlyAssignedMember && !qualifiedMembers.some(m => m.id === currentlyAssignedMember.id)) {
-                return [currentlyAssignedMember, ...qualifiedMembers];
-            }
-            return qualifiedMembers;
+        // For admins, show all qualified members plus currently assigned member
+        const currentlyAssignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
+        if (currentlyAssignedMember && !qualifiedMembers.some(m => m.id === currentlyAssignedMember.id)) {
+            return [currentlyAssignedMember, ...qualifiedMembers];
         }
-        
-        return availableMembers;
+        return qualifiedMembers;
     }, [role, availableMembers, assignedMemberId, currentUser]);
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
