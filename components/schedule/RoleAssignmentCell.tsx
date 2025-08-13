@@ -16,13 +16,26 @@ export const RoleAssignmentCell: React.FC<{
     const { currentUser } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
-        // For members (non-admins), show only the current user when trying to assign to unassigned roles
-        if (currentUser?.role !== 'Admin' && !assignedMemberId) {
+        // For members (non-admins), handle both unassigned roles and roles they're assigned to
+        if (currentUser?.role !== 'Admin') {
             const currentMember = availableMembers.find(m => m.uid === currentUser.uid);
-            return currentMember ? [currentMember] : [];
+            if (!currentMember) return [];
+
+            // If role is unassigned, show only current user
+            if (!assignedMemberId) {
+                return [currentMember];
+            }
+
+            // If current user is assigned to this role, show only themselves (so they can unassign)
+            if (assignedMemberId === currentMember.id) {
+                return [currentMember];
+            }
+
+            // If someone else is assigned, don't show any options (member can't change other assignments)
+            return [];
         }
 
-        // For admins or when editing existing assignments, use the original logic
+        // For admins, use the original logic
         const requiredQualificationKey = {
             'Toastmaster': 'isToastmaster',
             'Table Topics Master': 'isTableTopicsMaster',
