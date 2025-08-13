@@ -16,23 +16,23 @@ export const RoleAssignmentCell: React.FC<{
     const { currentUser } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
-        // For members (non-admins), handle both unassigned roles and roles they're assigned to
+        // For members (non-admins), show only the current user and currently assigned member
         if (currentUser?.role !== 'Admin') {
             const currentMember = availableMembers.find(m => m.uid === currentUser.uid);
             if (!currentMember) return [];
 
-            // If role is unassigned, show only current user
-            if (!assignedMemberId) {
-                return [currentMember];
+            // Always show the current user so they can assign/unassign themselves
+            const membersToShow = [currentMember];
+
+            // If someone else is currently assigned, also show them (but they'll be disabled in the options)
+            if (assignedMemberId && assignedMemberId !== currentMember.id) {
+                const assignedMember = availableMembers.find(m => m.id === assignedMemberId);
+                if (assignedMember) {
+                    membersToShow.unshift(assignedMember); // Add at the beginning
+                }
             }
 
-            // If current user is assigned to this role, show only themselves (so they can unassign)
-            if (assignedMemberId === currentMember.id) {
-                return [currentMember];
-            }
-
-            // If someone else is assigned, don't show any options (member can't change other assignments)
-            return [];
+            return membersToShow;
         }
 
         // For admins, use the original logic
@@ -90,8 +90,8 @@ export const RoleAssignmentCell: React.FC<{
                 // Check if this is the current user
                 const isCurrentUser = currentUser && member.uid === currentUser.uid;
                 
-                // Since we've already filtered the members list appropriately, no need for additional disabling
-                const isDisabled = false;
+                // For members (non-admins), only allow them to select themselves or unassign
+                const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUser;
 
                 return (
                     <option 
