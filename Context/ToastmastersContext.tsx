@@ -46,6 +46,7 @@ interface ToastmastersState {
   removeUser: (uid: string) => Promise<void>;
   inviteUser: (payload: { email: string, name: string }) => Promise<void>;
   revokeInvite: (inviteId: string) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
   linkMemberToAccount: (payload: { memberId: string, uid: string | null }) => Promise<void>;
 }
 
@@ -374,6 +375,23 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (pendingInvites.some(inv => inv.email.toLowerCase() === emailLower)) {
           throw new Error("You’ve already sent an invite to this email.");
         }
+
+        // Check if user already exists in Firebase Auth
+        try {
+            const { getAuth, fetchSignInMethodsForEmail } = await import('firebase/auth');
+            const auth = getAuth();
+            const signInMethods = await fetchSignInMethodsForEmail(auth, emailLower);
+            
+            if (signInMethods.length > 0) {
+                throw new Error("This email is already registered. The user can sign in directly or use 'Forgot Password' to reset their password.");
+            }
+        } catch (error: any) {
+            if (error.message.includes("already registered")) {
+                throw error;
+            }
+            // If there's an error checking Firebase Auth, continue with the invitation
+            console.warn("Could not verify if user exists in Firebase Auth:", error);
+        }
         
         const newInviteRef = await db.collection("invitations").add({
           ownerId: dataOwnerId,
@@ -384,7 +402,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
           createdAt: FieldValue.serverTimestamp(),
         });
       
-        const joinUrl = `https://app.tmapp.club/#/${organization.clubNumber}/join?token=${newInviteRef.id}`;
+        const joinUrl = `https://tmapp.club/#/${organization.clubNumber}/join?token=${newInviteRef.id}`;
         
         await db.collection("mail").add({
           to: [emailLower],
@@ -407,6 +425,55 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("Only club admins can revoke invitations.");
         }
         await db.collection('invitations').doc(inviteId).delete();
+    };
+
+    const sendPasswordResetEmail = async (email: string) => {
+        if (!dataOwnerId || !currentUser || (currentUser.uid !== dataOwnerId && currentUser.role !== UserRole.Admin)) {
+            throw new Error("Only club admins can send password reset emails.");
+        }
+
+        const emailLower = email.trim().toLowerCase();
+        
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailLower)) {
+            throw new Error("Enter a valid email address.");
+        }
+
+        // Check if user exists in Firebase Auth
+        try {
+            const { getAuth, fetchSignInMethodsForEmail, sendPasswordResetEmail: firebaseSendPasswordReset } = await import('firebase/auth');
+            const auth = getAuth();
+            const signInMethods = await fetchSignInMethodsForEmail(auth, emailLower);
+            
+            if (signInMethods.length === 0) {
+                throw new Error("No account found with this email address.");
+            }
+
+            // Send password reset email
+            await firebaseSendPasswordReset(auth, emailLower);
+            
+            // Send a notification email to the user
+            await db.collection("mail").add({
+                to: [emailLower],
+                message: {
+                    subject: `Password Reset Request - ${organization?.name || 'Toastmasters Club'}`,
+                    html: `
+                        <div style="font-family:sans-serif">
+                            <h2>Password Reset Request</h2>
+                            <p>Hello,</p>
+                            <p>A password reset has been requested for your account at <strong>${organization?.name || 'Toastmasters Club'}</strong>.</p>
+                            <p>You should receive a password reset email from Firebase shortly. Please check your inbox and follow the instructions to reset your password.</p>
+                            <p>If you didn't request this reset, you can safely ignore this email.</p>
+                            <p style="margin-top:24px;font-size:12px;color:#555;">If you have any questions, please contact your club admin.</p>
+                        </div>`
+                }
+            });
+
+        } catch (error: any) {
+            if (error.message.includes("No account found")) {
+                throw error;
+            }
+            throw new Error("Failed to send password reset email. Please try again.");
+        }
     };
 
     const linkMemberToAccount = async (payload: { memberId: string, uid: string | null }) => {
@@ -576,7 +643,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         addMember, updateMemberName, updateMemberStatus, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setWorkingDate, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
-        linkMemberToAccount
+        sendPasswordResetEmail, linkMemberToAccount
     };
 
     return (
