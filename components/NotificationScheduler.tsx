@@ -1,0 +1,145 @@
+import React, { useState } from 'react';
+import { BellRing, Calendar, Users } from 'lucide-react';
+import { useToastmasters } from '../Context/ToastmastersContext';
+import { notificationService } from '../services/notificationService';
+import { AvailabilityStatus, MemberStatus } from '../types';
+import { getNextMonthInfo, shouldSendAvailabilityNotification } from '../utils/monthUtils';
+
+const NotificationScheduler: React.FC = () => {
+  const { members, schedules, availability, currentUser, organization } = useToastmasters();
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Only show for admins
+  if (currentUser?.role !== 'Admin') {
+    return null;
+  }
+
+  const sendRoleReminders = async () => {
+    setLoading(true);
+    setMessage(null);
+    
+    try {
+      const meetingDay = organization?.meetingDay ?? 2; // Default to Tuesday
+      
+      // Get next meeting day's date
+      const today = new Date();
+      const daysUntilMeeting = (meetingDay - today.getDay() + 7) % 7 || 7;
+      const nextMeetingDate = new Date(today);
+      nextMeetingDate.setDate(today.getDate() + daysUntilMeeting);
+      const nextMeetingStr = nextMeetingDate.toISOString().split('T')[0];
+
+      // Find schedule for next meeting
+      const activeSchedule = schedules.find(schedule => {
+        return schedule.meetings.some(meeting => 
+          meeting.date.split('T')[0] === nextMeetingStr
+        );
+      });
+
+      if (!activeSchedule) {
+        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][meetingDay];
+        setMessage({ type: 'error', text: `No schedule found for next ${dayName}` });
+        setLoading(false);
+        return;
+      }
+
+      const meeting = activeSchedule.meetings.find(m => 
+        m.date.split('T')[0] === nextMeetingStr
+      );
+
+      if (!meeting || meeting.isBlackout) {
+        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][meetingDay];
+        setMessage({ type: 'error', text: `Next ${dayName} is marked as blackout or not found` });
+        setLoading(false);
+        return;
+      }
+
+      // Send reminders for all assigned roles
+      await notificationService.sendRoleReminders(
+        activeSchedule.id,
+        nextMeetingDate.toLocaleDateString(),
+        meeting.assignments
+      );
+
+      setMessage({ type: 'success', text: 'Role reminders sent successfully!' });
+    } catch (error) {
+      console.error('Error sending role reminders:', error);
+      setMessage({ type: 'error', text: 'Failed to send role reminders' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendAvailabilityRequests = async () => {
+    setLoading(true);
+    setMessage(null);
+    
+    try {
+      const meetingDay = organization?.meetingDay ?? 2; // Default to Tuesday
+      const nextMonthInfo = getNextMonthInfo(meetingDay);
+      
+      const activeMembers = members.filter(m => 
+        m.status === MemberStatus.Active && m.uid
+      );
+
+      await notificationService.notifyAvailabilityRequest(activeMembers, nextMonthInfo.displayName);
+
+      setMessage({ type: 'success', text: 'Availability requests sent successfully!' });
+    } catch (error) {
+      console.error('Error sending availability requests:', error);
+      setMessage({ type: 'error', text: 'Failed to send availability requests' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 uppercase tracking-wider">
+        Notification Actions
+      </h3>
+      
+      <div className="space-y-4">
+        <div>
+          <button
+            onClick={sendRoleReminders}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <BellRing className="h-5 w-5" />
+            Send Role Reminders (Next {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][organization?.meetingDay ?? 2]})
+          </button>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Send reminders to all members assigned to roles for next {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][organization?.meetingDay ?? 2]}
+          </p>
+        </div>
+
+        <div>
+          <button
+            onClick={sendAvailabilityRequests}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Calendar className="h-5 w-5" />
+            Request Availability ({getNextMonthInfo(organization?.meetingDay ?? 2).displayName})
+          </button>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Request all active members to update their availability for {getNextMonthInfo(organization?.meetingDay ?? 2).displayName}
+          </p>
+        </div>
+      </div>
+
+      {message && (
+        <div className={`mt-4 p-3 rounded-md ${
+          message.type === 'success' 
+            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+        }`}>
+          {message.text}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default NotificationScheduler;

@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
+import NotificationBell from './NotificationBell';
 
 type View = 'schedule' | 'members' | 'profile';
 
@@ -55,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                     <div className="flex items-center">
                          {/* Desktop Nav */}
                         <div className="hidden md:flex items-center space-x-4">
+                            <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
                             <nav className="flex items-baseline space-x-4">
                                 <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
                                 <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
@@ -108,6 +110,10 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
             {isMobileMenuOpen && (
                 <div className="md:hidden" id="mobile-menu">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                        <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notifications</span>
+                            <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
+                        </div>
                         <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
                         <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
                             {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}

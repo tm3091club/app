@@ -4,6 +4,7 @@ import { useToastmasters } from '../Context/ToastmastersContext';
 import { useAuth } from '../Context/AuthContext';
 import { AppUser, UserRole, PendingInvite, Organization } from '../types';
 import { ConfirmationModal } from './common/ConfirmationModal';
+import NotificationScheduler from './NotificationScheduler';
 
 const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U']);
 
@@ -322,6 +323,8 @@ export const ProfilePage = (): React.ReactElement | null => {
     const [clubName, setClubName] = useState('');
     const [district, setDistrict] = useState('');
     const [clubNumber, setClubNumber] = useState('');
+    const [meetingDay, setMeetingDay] = useState<number>(2); // Default to Tuesday
+    const [autoNotificationDay, setAutoNotificationDay] = useState<number>(15); // Default to 15th of month
     const [profileFeedback, setProfileFeedback] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
     // State for email change form
@@ -357,6 +360,8 @@ export const ProfilePage = (): React.ReactElement | null => {
             setClubName(organization.name);
             setDistrict(organization.district);
             setClubNumber(organization.clubNumber);
+            setMeetingDay(organization.meetingDay ?? 2); // Default to Tuesday
+            setAutoNotificationDay(organization.autoNotificationDay ?? 15); // Default to 15th
         }
     }, [organization]);
 
@@ -377,7 +382,9 @@ export const ProfilePage = (): React.ReactElement | null => {
             await updateClubProfile({ 
                 name: clubName.trim(), 
                 district: district, 
-                clubNumber: clubNumber.trim() 
+                clubNumber: clubNumber.trim(),
+                meetingDay: meetingDay,
+                autoNotificationDay: autoNotificationDay
             });
             setProfileFeedback({ type: 'success', message: 'Club profile updated successfully!' });
         } catch (error: any) {
@@ -575,7 +582,9 @@ export const ProfilePage = (): React.ReactElement | null => {
     const hasClubProfileChanged = organization ? 
       clubName.trim() !== organization.name ||
       district !== organization.district ||
-      clubNumber.trim() !== organization.clubNumber
+      clubNumber.trim() !== organization.clubNumber ||
+      meetingDay !== (organization.meetingDay ?? 2) ||
+      autoNotificationDay !== (organization.autoNotificationDay ?? 15)
       : false;
 
     if (!currentUser || !organization) {
@@ -640,6 +649,36 @@ export const ProfilePage = (): React.ReactElement | null => {
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
                         />
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="meetingDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Meeting Day</label>
+                            <select id="meetingDay" value={meetingDay} onChange={(e) => setMeetingDay(parseInt(e.target.value))}
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                                disabled={!isAdmin}
+                            >
+                                <option value={0}>Sunday</option>
+                                <option value={1}>Monday</option>
+                                <option value={2}>Tuesday</option>
+                                <option value={3}>Wednesday</option>
+                                <option value={4}>Thursday</option>
+                                <option value={5}>Friday</option>
+                                <option value={6}>Saturday</option>
+                            </select>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Day of the week your club meets</p>
+                        </div>
+                        <div>
+                            <label htmlFor="autoNotificationDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Auto Notification Day</label>
+                            <select id="autoNotificationDay" value={autoNotificationDay} onChange={(e) => setAutoNotificationDay(parseInt(e.target.value))}
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                                disabled={!isAdmin}
+                            >
+                                {Array.from({length: 28}, (_, i) => (
+                                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                ))}
+                            </select>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Day of month to auto-send availability requests</p>
+                        </div>
+                    </div>
                     {isAdmin && (
                         <div className="flex justify-end">
                             <button type="submit" className="inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:opacity-50" disabled={!hasClubProfileChanged}>
@@ -648,6 +687,12 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </div>
                     )}
                 </form>
+                
+                {isAdmin && (
+                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <NotificationScheduler />
+                    </div>
+                )}
             </div>
             
             <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
@@ -810,6 +855,7 @@ export const ProfilePage = (): React.ReactElement | null => {
 
                 </div>
             )}
+
         </div>
     );
 };
