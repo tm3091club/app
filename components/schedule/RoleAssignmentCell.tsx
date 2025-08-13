@@ -16,6 +16,13 @@ export const RoleAssignmentCell: React.FC<{
     const { currentUser } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
+        // For members (non-admins), show only the current user when trying to assign to unassigned roles
+        if (currentUser?.role !== 'Admin' && !assignedMemberId) {
+            const currentMember = availableMembers.find(m => m.uid === currentUser.uid);
+            return currentMember ? [currentMember] : [];
+        }
+
+        // For admins or when editing existing assignments, use the original logic
         const requiredQualificationKey = {
             'Toastmaster': 'isToastmaster',
             'Table Topics Master': 'isTableTopicsMaster',
@@ -34,7 +41,7 @@ export const RoleAssignmentCell: React.FC<{
         }
         
         return availableMembers;
-    }, [role, availableMembers, assignedMemberId]);
+    }, [role, availableMembers, assignedMemberId, currentUser]);
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         onAssignmentChange(meetingIndex, role, e.target.value || null);
@@ -70,8 +77,8 @@ export const RoleAssignmentCell: React.FC<{
                 // Check if this is the current user
                 const isCurrentUser = currentUser && member.uid === currentUser.uid;
                 
-                // For members (non-admins), allow them to assign themselves to unassigned roles or unassign themselves
-                const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUser && assignedMemberId !== member.id;
+                // Since we've already filtered the members list appropriately, no need for additional disabling
+                const isDisabled = false;
 
                 return (
                     <option 
