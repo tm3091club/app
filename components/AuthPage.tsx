@@ -289,6 +289,23 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-red-800 dark:text-red-300">{error}</p>
+                    {/* Show Sign In button for used/revoked invitations */}
+                    {(error.includes('already been used') || error.includes('revoked') || error.includes('expired')) && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setView('login');
+                            setError(null);
+                            setEmail('');
+                            setPassword('');
+                          }}
+                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                        >
+                          Sign In to Your Account
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

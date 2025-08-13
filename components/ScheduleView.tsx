@@ -71,6 +71,45 @@ export const ScheduleView: React.FC = () => {
         return schedules.find(s => s.id === selectedScheduleId) || null;
     }, [schedules, selectedScheduleId]);
 
+    // --- Granular Permission Logic for Members ---
+    const canEditRoleAssignment = useCallback((meetingIndex: number, role: string) => {
+        if (isAdmin) return true; // Admins can edit everything
+        
+        if (!activeSchedule || !currentUser) return false;
+        
+        const meeting = activeSchedule.meetings[meetingIndex];
+        if (!meeting) return false;
+        
+        // Check if the current user is assigned to this role in this meeting
+        const isAssignedToThisRole = meeting.assignments[role] === currentUser.uid;
+        
+        // Check if this role is currently unassigned
+        const isRoleUnassigned = !meeting.assignments[role];
+        
+        // Members can only edit if they're assigned to this role or if the role is unassigned
+        return isAssignedToThisRole || isRoleUnassigned;
+    }, [isAdmin, activeSchedule, currentUser]);
+
+    const canEditTheme = useCallback((meetingIndex: number) => {
+        if (isAdmin) return true; // Admins can edit everything
+        
+        if (!activeSchedule || !currentUser) return false;
+        
+        const meeting = activeSchedule.meetings[meetingIndex];
+        if (!meeting) return false;
+        
+        // Check if the current user is assigned to any role in this meeting
+        const isAssignedToAnyRole = Object.values(meeting.assignments).some(assignment => assignment === currentUser.uid);
+        
+        // Members can only edit themes if they're assigned to a role in this meeting
+        return isAssignedToAnyRole;
+    }, [isAdmin, activeSchedule, currentUser]);
+
+    const canToggleBlackout = useCallback((meetingIndex: number) => {
+        // Only admins can toggle blackout
+        return isAdmin;
+    }, [isAdmin]);
+
     const activeMembers = useMemo(() => hydratedMembers.filter(m => m.status === MemberStatus.Active), [hydratedMembers]);
     const allPastThemes = useMemo(() => schedules.flatMap(s => s.meetings.map(m => m.theme)), [schedules]);
     
@@ -451,6 +490,9 @@ export const ScheduleView: React.FC = () => {
                         onAssignmentChange={handleAssignmentChange}
                         renderAvailabilityLists={renderAvailabilityLists}
                         getMemberName={getMemberName}
+                        canEditRoleAssignment={canEditRoleAssignment}
+                        canEditTheme={canEditTheme}
+                        canToggleBlackout={canToggleBlackout}
                     />
                     <ScheduleActions isMobile={false} {...{ isAdmin, hasUnassignedRoles, copySuccess }} onGenerateThemes={handleGenerateThemes} onGenerateSchedule={() => setIsGenerateConfirmOpen(true)} onShare={handleShare} onCopyToClipboard={handleCopyToClipboard} onExportToPdf={handleExportToPdf} />
                 </div>
