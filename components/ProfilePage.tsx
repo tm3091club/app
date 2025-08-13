@@ -558,6 +558,11 @@ export const ProfilePage = (): React.ReactElement | null => {
                     type: 'error', 
                     message: `${member.name} hasn't created an account yet. Send them an invitation instead using the "Invite New Member" button.` 
                 });
+            } else if (error.message.includes("no password is set")) {
+                setTeamFeedback({ 
+                    type: 'error', 
+                    message: `${member.name} started the signup process but never set a password. Send them a new invitation to complete their account setup.` 
+                });
             } else {
                 setTeamFeedback({ 
                     type: 'error', 

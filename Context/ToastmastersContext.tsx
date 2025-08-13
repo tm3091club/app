@@ -451,7 +451,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             console.log(`Sign-in methods found:`, signInMethods);
             
             if (signInMethods.length === 0) {
-                throw new Error(`No account found with this email address: ${emailLower}`);
+                throw new Error(`User account exists but no password is set. The user needs to complete the signup process by setting a password first.`);
             }
 
             // Send password reset email
