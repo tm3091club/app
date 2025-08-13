@@ -7,6 +7,7 @@ import { ProfilePage } from './components/ProfilePage';
 import { useAuth } from './Context/AuthContext';
 import { AuthPage } from './components/AuthPage';
 import { ToastmastersProvider } from './Context/ToastmastersContext';
+import { NotificationProvider } from './Context/NotificationContext';
 import { PublicSchedulePage } from './components/PublicSchedulePage';
 import { APP_VERSION } from './utils/version';
 
@@ -41,25 +42,27 @@ function App() {
 
     return (
       <ToastmastersProvider>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
-          <Header 
-              currentView={currentView} 
-              setCurrentView={setCurrentView} 
-              logOut={logOut} 
-              userEmail={user!.email} 
-          />
-          <main className="p-4 sm:p-6 lg:p-8">
-            <div className="max-w-screen-2xl mx-auto">
-              {renderView()}
-            </div>
-          </main>
-          {/* Version Footer */}
-          <footer className="text-center py-2 px-4">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Version: {APP_VERSION}
-            </span>
-          </footer>
-        </div>
+        <NotificationProvider>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
+            <Header 
+                currentView={currentView} 
+                setCurrentView={setCurrentView} 
+                logOut={logOut} 
+                userEmail={user!.email} 
+            />
+            <main className="p-4 sm:p-6 lg:p-8">
+              <div className="max-w-screen-2xl mx-auto">
+                {renderView()}
+              </div>
+            </main>
+            {/* Version Footer */}
+            <footer className="text-center py-2 px-4">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Version: {APP_VERSION}
+              </span>
+            </footer>
+          </div>
+        </NotificationProvider>
       </ToastmastersProvider>
     );
   };

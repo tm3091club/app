@@ -17,6 +17,8 @@ export interface Organization {
     district: string;
     clubNumber: string;
     ownerId: string;
+    meetingDay?: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+    autoNotificationDay?: number; // Day of month to send availability notifications (1-28)
 }
 
 export enum MemberStatus {
@@ -73,4 +75,35 @@ export interface PendingInvite {
   email: string;
   invitedUserName: string;
   ownerId: string;
+}
+
+export enum NotificationType {
+  SchedulePublished = 'SchedulePublished',
+  RoleReminder = 'RoleReminder',
+  AvailabilityRequest = 'AvailabilityRequest',
+  RoleChanged = 'RoleChanged',
+  RoleUnassigned = 'RoleUnassigned',
+  MeetingBlackout = 'MeetingBlackout',
+  SpeakerUnassigned = 'SpeakerUnassigned',
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  createdAt: Date;
+  readAt?: Date;
+  isRead: boolean;
+  isDismissed?: boolean;
+  dismissedAt?: Date;
+  metadata?: {
+    scheduleId?: string;
+    meetingDate?: string;
+    role?: string;
+    previousAssignee?: string;
+    newAssignee?: string;
+    evaluatorId?: string;
+  };
 }

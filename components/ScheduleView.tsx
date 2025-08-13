@@ -5,6 +5,7 @@ import { useToastmasters } from '../Context/ToastmastersContext';
 import { generateNewMonthSchedule, deepClone, getMeetingDatesForMonth } from '../services/scheduleLogic';
 import { generateThemes } from '../services/geminiService';
 import { exportScheduleToTsv } from '../services/googleSheetsService';
+import { notificationService } from '../services/notificationService';
 import { MAJOR_ROLES } from '../Constants';
 import { MemberStatus, Meeting, AvailabilityStatus, UserRole } from '../types';
 import { db } from '../services/firebase';
@@ -332,6 +333,14 @@ export const ScheduleView: React.FC = () => {
             await db.collection('publicSchedules').doc(firestoreDocId).set(publicScheduleData);
             await updateSchedule({ schedule: scheduleToShare });
             
+            // Notify all active members about the new schedule
+            const monthYear = `${new Date(scheduleToShare.year, scheduleToShare.month).toLocaleString('default', {month: 'long'})} ${scheduleToShare.year}`;
+            await notificationService.notifySchedulePublished(
+                members.filter(m => m.status === MemberStatus.Active),
+                scheduleToShare.id,
+                monthYear
+            );
+            
             const url = new URL(`#/${clubNumber}/share/${humanReadableShareId}`, window.location.origin).toString();
             setShareUrl(url);
             setIsShareModalOpen(true);
@@ -379,6 +388,36 @@ export const ScheduleView: React.FC = () => {
 
         const updatedSchedule = deepClone(activeSchedule);
         const assignments = updatedSchedule.meetings[meetingIndex].assignments;
+        const previousMemberId = assignments[role];
+        const meeting = updatedSchedule.meetings[meetingIndex];
+
+        // Check if user is unassigning themselves from a speaker role
+        if (previousMemberId && !newMemberId && currentUser?.role !== UserRole.Admin) {
+            const currentMember = members.find(m => m.id === previousMemberId);
+            if (currentMember?.uid === user?.uid && role.includes('Speaker')) {
+                // Show confirmation to find replacement
+                const shouldContinue = window.confirm(
+                    'You are unassigning yourself from a speaker role. Please make sure to find a replacement. ' +
+                    'Would you like to continue?'
+                );
+                if (!shouldContinue) return;
+
+                // Notify evaluator if one is assigned
+                const evaluatorRole = role.replace('Speaker', 'Evaluator');
+                const evaluatorId = assignments[evaluatorRole];
+                if (evaluatorId) {
+                    const evaluator = members.find(m => m.id === evaluatorId);
+                    if (evaluator?.uid) {
+                        await notificationService.notifySpeakerUnassigned(
+                            evaluator.uid,
+                            role,
+                            new Date(meeting.date).toLocaleDateString(),
+                            activeSchedule.id
+                        );
+                    }
+                }
+            }
+        }
 
         if (newMemberId && MAJOR_ROLES.includes(role)) {
             const currentMajorRole = Object.keys(assignments).find(r =>
@@ -389,8 +428,55 @@ export const ScheduleView: React.FC = () => {
             }
         }
         assignments[role] = newMemberId;
+
+        // Send notifications for role changes
+        if (previousMemberId !== newMemberId && currentUser?.role === UserRole.Admin) {
+            const previousMember = previousMemberId ? members.find(m => m.id === previousMemberId) : null;
+            const newMember = newMemberId ? members.find(m => m.id === newMemberId) : null;
+
+            await notificationService.notifyRoleChanged(
+                previousMember?.uid || null,
+                newMember?.uid || null,
+                role,
+                new Date(meeting.date).toLocaleDateString(),
+                activeSchedule.id
+            );
+
+            // If role becomes unassigned, notify qualified available/possible members
+            if (!newMemberId && previousMemberId) {
+                const dateKey = meeting.date.split('T')[0];
+                const qualifiedMembers = members.filter(member => {
+                    // Check availability
+                    const memberAvailability = availability.find(a => a.memberId === member.id);
+                    const availStatus = memberAvailability?.availability[dateKey];
+                    if (availStatus !== AvailabilityStatus.Available && availStatus !== AvailabilityStatus.Possible) {
+                        return false;
+                    }
+
+                    // Check qualifications
+                    if (role === 'Toastmaster' && !member.isToastmaster) return false;
+                    if (role === 'Table Topics Master' && !member.isTableTopicsMaster) return false;
+                    if (role === 'General Evaluator' && !member.isGeneralEvaluator) return false;
+                    if (role === 'Inspiration Award' && !member.isPastPresident) return false;
+
+                    // Don't notify members already assigned to this meeting
+                    const isAlreadyAssigned = Object.values(assignments).includes(member.id);
+                    return !isAlreadyAssigned && member.uid;
+                });
+
+                if (qualifiedMembers.length > 0) {
+                    await notificationService.notifyRoleUnassigned(
+                        qualifiedMembers,
+                        role,
+                        new Date(meeting.date).toLocaleDateString(),
+                        activeSchedule.id
+                    );
+                }
+            }
+        }
+
         await updateSchedule({ schedule: updatedSchedule });
-    }, [activeSchedule, updateSchedule]);
+    }, [activeSchedule, updateSchedule, members, availability, currentUser, user]);
     
     const handleThemeChange = useCallback(async (meetingIndex: number, theme: string) => {
         if (!activeSchedule) return;
@@ -403,15 +489,25 @@ export const ScheduleView: React.FC = () => {
         if (!activeSchedule) return;
         const updatedSchedule = deepClone(activeSchedule);
         const meeting = updatedSchedule.meetings[meetingIndex];
+        const wasBlackout = meeting.isBlackout;
         meeting.isBlackout = !meeting.isBlackout;
 
         if (meeting.isBlackout) {
             Object.keys(meeting.assignments).forEach(role => {
                 meeting.assignments[role] = null;
             });
+            
+            // Notify all active members about the blackout
+            if (!wasBlackout && currentUser?.role === UserRole.Admin) {
+                await notificationService.notifyMeetingBlackout(
+                    members.filter(m => m.status === MemberStatus.Active),
+                    new Date(meeting.date).toLocaleDateString(),
+                    activeSchedule.id
+                );
+            }
         }
         await updateSchedule({ schedule: updatedSchedule });
-    }, [activeSchedule, updateSchedule]);
+    }, [activeSchedule, updateSchedule, members, currentUser]);
 
 
     const renderAvailabilityLists = useCallback((meeting: Meeting) => {

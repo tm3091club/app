@@ -41,7 +41,7 @@ interface ToastmastersState {
   setSelectedScheduleId: (scheduleId: string | null) => void;
   deleteMember: (payload: { memberId: string }) => Promise<void>;
   updateUserName: (payload: { uid: string; newName: string; }) => Promise<void>;
-  updateClubProfile: (payload: { name: string; district: string; clubNumber: string; }) => Promise<void>;
+  updateClubProfile: (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; }) => Promise<void>;
   updateUserRole: (uid: string, newRole: UserRole) => Promise<void>;
   removeUser: (uid: string) => Promise<void>;
   inviteUser: (payload: { email: string, name: string }) => Promise<void>;
@@ -325,7 +325,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         await docRef.update({ 'organization.members': updatedMembers });
     };
 
-    const updateClubProfile = async (payload: { name: string; district: string; clubNumber: string; }) => {
+    const updateClubProfile = async (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; }) => {
         const docRef = getDataDocRef();
         if (!docRef || !organization) return;
         
@@ -333,7 +333,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             ...organization,
             name: payload.name,
             district: payload.district,
-            clubNumber: payload.clubNumber
+            clubNumber: payload.clubNumber,
+            ...(payload.meetingDay !== undefined && { meetingDay: payload.meetingDay }),
+            ...(payload.autoNotificationDay !== undefined && { autoNotificationDay: payload.autoNotificationDay })
         };
 
         await docRef.update({ organization: updatedOrg });

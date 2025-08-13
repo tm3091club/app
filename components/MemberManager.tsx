@@ -1,9 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { MemberStatus, Member, AvailabilityStatus, AppUser, UserRole, Organization } from '../types';
 import { getMeetingDatesForMonth } from '../services/scheduleLogic';
 import { WithTooltip } from './common/WithTooltip';
+import { getCurrentMonthInfo, getNextMonthInfo, getRelevantMonthsForAvailability } from '../utils/monthUtils';
 
 const LinkAccountModal: React.FC<{
     isOpen: boolean;
@@ -731,6 +732,17 @@ export const MemberManager: React.FC = () => {
     
     const isAdmin = currentUser?.role === UserRole.Admin;
 
+    // Auto-set working date based on organization meeting day and current month logic
+    useEffect(() => {
+        if (organization?.meetingDay !== undefined && !workingDate) {
+            const relevantMonths = getRelevantMonthsForAvailability(organization.meetingDay);
+            // Default to current month, but could be made smarter based on current date
+            const targetMonth = relevantMonths.current;
+            const newDate = `${targetMonth.year}-${String(targetMonth.month + 1).padStart(2, '0')}-01`;
+            setWorkingDate(newDate);
+        }
+    }, [organization?.meetingDay, workingDate, setWorkingDate]);
+
     const { year, month, day } = useMemo(() => {
         if (!workingDate) {
             const d = new Date();
@@ -742,21 +754,34 @@ export const MemberManager: React.FC = () => {
 
     const meetingDates = useMemo(() => {
         if (!workingDate) return [];
-        return getMeetingDatesForMonth(new Date(`${workingDate}T00:00:00Z`));
-    }, [workingDate]);
-
-    const handleDatePartChange = (part: 'year' | 'month' | 'day', value: number) => {
-        let newYear = year, newMonth = month, newDay = day;
-        if (part === 'year') newYear = value;
-        if (part === 'month') newMonth = value;
-        if (part === 'day') newDay = value;
-
-        const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
-        if (newDay > daysInNewMonth) {
-            newDay = daysInNewMonth;
+        // Use the organization's meeting day or default to Tuesday
+        const meetingDay = organization?.meetingDay ?? 2;
+        const dates: Date[] = [];
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        
+        // Find the first meeting day of the month
+        let currentDate = new Date(firstDay);
+        while (currentDate.getDay() !== meetingDay) {
+            currentDate.setDate(currentDate.getDate() + 1);
         }
         
-        const newDateStr = `${newYear}-${String(newMonth + 1).padStart(2, '0')}-${String(newDay).padStart(2, '0')}`;
+        // Add all meeting days for the month
+        while (currentDate <= lastDay) {
+            dates.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 7); // Next week
+        }
+        
+        return dates;
+    }, [workingDate, year, month, organization?.meetingDay]);
+
+    const handleDatePartChange = (part: 'year' | 'month', value: number) => {
+        let newYear = year, newMonth = month;
+        if (part === 'year') newYear = value;
+        if (part === 'month') newMonth = value;
+
+        // Always use the 1st day of the month since we calculate meeting days automatically
+        const newDateStr = `${newYear}-${String(newMonth + 1).padStart(2, '0')}-01`;
         setWorkingDate(newDateStr);
     };
 
@@ -913,33 +938,7 @@ export const MemberManager: React.FC = () => {
             />
             {linkError && <p className="text-red-500">{linkError}</p>}
             
-            <div className="flex flex-wrap gap-x-4 gap-y-3 items-center mb-6">
-                <label className="font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Availability For:</label>
-                    <select 
-                    value={month} 
-                    onChange={e => handleDatePartChange('month', Number(e.target.value))} 
-                    disabled={!isAdmin}
-                    className="w-auto pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                    {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
-                </select>
-                    <select 
-                    value={day} 
-                    onChange={e => handleDatePartChange('day', Number(e.target.value))}
-                    disabled={!isAdmin} 
-                    className="w-auto pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                    {Array.from({length: daysInMonth}, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
-                </select>
-                    <select 
-                    value={year} 
-                    onChange={e => handleDatePartChange('year', Number(e.target.value))} 
-                    disabled={!isAdmin}
-                    className="w-auto pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                    {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-            </div>
+
 
 
             {isAdmin && (
@@ -995,6 +994,32 @@ export const MemberManager: React.FC = () => {
                     </form>
                 </div>
             )}
+
+            {/* Availability Date Selector */}
+            <div className="flex flex-wrap gap-x-4 gap-y-3 items-center mb-6">
+                <label className="font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Availability For:</label>
+                <select 
+                    value={month} 
+                    onChange={e => handleDatePartChange('month', Number(e.target.value))} 
+                    disabled={!isAdmin}
+                    className="w-auto pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                    {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
+                </select>
+                <select 
+                    value={year} 
+                    onChange={e => handleDatePartChange('year', Number(e.target.value))} 
+                    disabled={!isAdmin}
+                    className="w-auto pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                    {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                {organization?.meetingDay !== undefined && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Meeting Day: {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][organization.meetingDay]}
+                    </span>
+                )}
+            </div>
 
             {isAdmin ? (
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
