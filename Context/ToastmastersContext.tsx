@@ -450,23 +450,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             console.log("Step 2: Sending password reset email to:", emailLower);
             await firebaseSendPasswordReset(auth, emailLower);
             console.log("Step 3: Password reset email sent successfully");
-            
-            // Send a notification email to the user
-            await db.collection("mail").add({
-                to: [emailLower],
-                message: {
-                    subject: `Password Reset Request - ${organization?.name || 'Toastmasters Club'}`,
-                    html: `
-                        <div style="font-family:sans-serif">
-                            <h2>Password Reset Request</h2>
-                            <p>Hello,</p>
-                            <p>A password reset has been requested for your account at <strong>${organization?.name || 'Toastmasters Club'}</strong>.</p>
-                            <p>You should receive a password reset email from Firebase shortly. Please check your inbox and follow the instructions to reset your password.</p>
-                            <p>If you didn't request this reset, you can safely ignore this email.</p>
-                            <p style="margin-top:24px;font-size:12px;color:#555;">If you have any questions, please contact your club admin.</p>
-                        </div>`
-                }
-            });
 
         } catch (error: any) {
             console.error("Password reset error:", error);
