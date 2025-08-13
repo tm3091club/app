@@ -445,13 +445,17 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         try {
             const { getAuth, fetchSignInMethodsForEmail, sendPasswordResetEmail: firebaseSendPasswordReset } = await import('firebase/auth');
             const auth = getAuth();
+            
+            console.log(`Checking Firebase Auth for email: "${emailLower}"`);
             const signInMethods = await fetchSignInMethodsForEmail(auth, emailLower);
+            console.log(`Sign-in methods found:`, signInMethods);
             
             if (signInMethods.length === 0) {
-                throw new Error("No account found with this email address.");
+                throw new Error(`No account found with this email address: ${emailLower}`);
             }
 
             // Send password reset email
+            console.log(`Sending password reset to: ${emailLower}`);
             await firebaseSendPasswordReset(auth, emailLower);
             
             // Send a notification email to the user
