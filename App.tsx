@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ScheduleView } from './components/ScheduleView';
 import { MemberManager } from './components/MemberManager';
@@ -24,6 +24,13 @@ function App() {
   const joinMatch = hash.match(/^\/(?:[^/]+\/)?join/);
   const urlParams = new URLSearchParams(hash.split('?')[1] || '');
   const inviteToken = urlParams.get('token');
+  
+  // Clean up URL if it ends with just a hash
+  useEffect(() => {
+    if (window.location.hash === '#') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
   // --- End Routing Logic ---
   
   const renderMainApp = () => {

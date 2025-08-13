@@ -145,6 +145,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const setupListeners = useCallback((ownerId: string) => {
+        if (!user?.uid) {
+            console.warn('Cannot setup listeners: user.uid is not available');
+            return;
+        }
+        
         const clubDataDocRef = db.collection('users').doc(ownerId);
 
         dataSubscription.current = clubDataDocRef.onSnapshot(async (doc) => {
@@ -157,9 +162,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             }
 
             const data = doc.data()!;
-            const me = data.organization?.members.find((m: AppUser) => m.uid === user?.uid) || null;
+            // Add comprehensive null checks for user and uid
+            const me = (user?.uid && data.organization?.members) 
+                ? data.organization.members.find((m: AppUser) => m.uid === user.uid) || null 
+                : null;
 
-            if (me && user?.email && me.email !== user.email) {
+            if (me && user?.email && user?.uid && me.email !== user.email) {
                 const updatedMembers = data.organization.members.map((m: AppUser) =>
                     m.uid === user.uid ? { ...m, email: user.email! } : m
                 );
@@ -174,7 +182,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setOrganization(deepClone(data.organization));
             setCurrentUser(me);
 
-            const hasInvitePermission = (user?.uid === ownerId) || (me?.role === UserRole.Admin);
+            const hasInvitePermission = (user?.uid && user.uid === ownerId) || (me?.role === UserRole.Admin);
 
             if (hasInvitePermission) {
                 if (!invitesSubscription.current) {
@@ -236,10 +244,17 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
+        // Add additional safety check to ensure user has required properties
+        if (!user.uid || !user.email) {
+            console.warn('User object is incomplete, waiting for authentication to complete');
+            return;
+        }
+
         setLoading(true);
 
         const initializeUserSession = async () => {
             try {
+                console.log('Initializing user session for:', user.email);
                 const userPointerDocRef = db.collection('users').doc(user.uid);
                 const userPointerDoc = await userPointerDocRef.get();
                 let ownerIdToUse: string | null = null;

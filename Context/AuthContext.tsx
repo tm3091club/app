@@ -31,7 +31,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((user) => {
+            console.log('Auth state changed:', user ? 'User signed in' : 'User signed out');
             setUser(user);
+            setLoading(false);
+        }, (error) => {
+            console.error('Auth state change error:', error);
+            setUser(null);
             setLoading(false);
         });
 
