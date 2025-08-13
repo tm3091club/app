@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { Member, RoleAssignment } from '../../types';
 import { MAJOR_ROLES } from '../../Constants';
+import { useToastmasters } from '../../Context/ToastmastersContext';
 
 export const RoleAssignmentCell: React.FC<{
   meetingIndex: number;
@@ -12,6 +13,7 @@ export const RoleAssignmentCell: React.FC<{
   allAssignmentsForMeeting: RoleAssignment;
   disabled: boolean;
 }> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled }) => {
+    const { currentUser } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
         const requiredQualificationKey = {
@@ -65,13 +67,24 @@ export const RoleAssignmentCell: React.FC<{
                     }
                 }
 
+                // Check if this is the current user
+                const isCurrentUser = currentUser && member.uid === currentUser.uid;
+                
+                // For members (non-admins), only allow them to assign themselves or unassign
+                const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUser && assignedMemberId !== member.id;
+
                 return (
                     <option 
                         key={member.id} 
                         value={member.id}
-                        className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal"
+                        disabled={isDisabled}
+                        className={`font-normal ${
+                            isCurrentUser 
+                                ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 font-semibold' 
+                                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                        } ${isDisabled ? 'opacity-50' : ''}`}
                     >
-                        {displayText}
+                        {displayText} {isCurrentUser ? '(You)' : ''}
                     </option>
                 );
             })}

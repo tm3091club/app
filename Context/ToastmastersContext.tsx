@@ -134,6 +134,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 });
             });
             
+            // Redirect to main app after successful join
+            window.location.hash = '';
+            
             return ownerId;
         } catch (error: any) {
             console.error("Error completing user join:", error);
