@@ -443,17 +443,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
         // Send password reset email directly - Firebase will handle user existence check
         try {
-            console.log("Step 1: Importing Firebase Auth...");
             const { getAuth, sendPasswordResetEmail: firebaseSendPasswordReset } = await import('firebase/auth');
             const auth = getAuth();
             
-            console.log("Step 2: Sending password reset email to:", emailLower);
             await firebaseSendPasswordReset(auth, emailLower);
-            console.log("Step 3: Password reset email sent successfully");
 
         } catch (error: any) {
-            console.error("Password reset error:", error);
-            
             // Handle specific Firebase Auth error codes
             if (error.code === 'auth/user-not-found') {
                 throw new Error("No account found with this email address. The user may need to complete their signup first.");
