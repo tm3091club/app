@@ -3,7 +3,7 @@ import { BellRing, Calendar, Users, Mail } from 'lucide-react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { notificationService } from '../services/notificationService';
 import { emailService } from '../services/emailService';
-import { AvailabilityStatus, MemberStatus, UserRole } from '../types';
+import { AvailabilityStatus, MemberStatus } from '../types';
 import { getNextMonthInfo, shouldSendAvailabilityNotification } from '../utils/monthUtils';
 
 const NotificationScheduler: React.FC = () => {
@@ -79,7 +79,7 @@ const NotificationScheduler: React.FC = () => {
       const meetingDay = organization?.meetingDay ?? 2; // Default to Tuesday
       const nextMonthInfo = getNextMonthInfo(meetingDay);
       
-      // Get active members with UIDs for notifications
+      // Get active members with UIDs for notifications (from Member objects)
       const activeMembers = members.filter(m => 
         m.status === MemberStatus.Active && m.uid
       );
@@ -87,16 +87,16 @@ const NotificationScheduler: React.FC = () => {
       // Send in-app notifications
       await notificationService.notifyAvailabilityRequest(activeMembers, nextMonthInfo.displayName);
 
-      // Get members with emails (excluding club admin role) for email notifications
-      const emailRecipients = members.filter(m => 
-        m.status === MemberStatus.Active && 
+      // Get email recipients from organization members (AppUser objects) - this is what shows in Team Management
+      const clubOwnerId = organization?.ownerId;
+      const emailRecipients = organization?.members.filter(m => 
         m.email && 
         m.email.trim() !== '' &&
-        m.role !== UserRole.Admin // Exclude club admin as requested
+        m.uid !== clubOwnerId // Exclude club owner (the person who created the club)
       ).map(m => ({
         email: m.email,
         name: m.name
-      }));
+      })) || [];
 
       if (emailRecipients.length > 0 && organization) {
         // Get meeting day name
@@ -164,7 +164,7 @@ const NotificationScheduler: React.FC = () => {
             Request Availability ({getNextMonthInfo(organization?.meetingDay ?? 2).displayName})
           </button>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Send in-app notifications and email requests to all active members (excluding club admin) to update their availability for {getNextMonthInfo(organization?.meetingDay ?? 2).displayName}
+            Send a notification and email all members to update their availability for {getNextMonthInfo(organization?.meetingDay ?? 2).displayName}
           </p>
         </div>
       </div>
