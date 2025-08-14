@@ -6,12 +6,13 @@ import { generateNewMonthSchedule, deepClone, getMeetingDatesForMonth } from '..
 import { generateThemes } from '../services/geminiService';
 import { exportScheduleToTsv } from '../services/googleSheetsService';
 import { notificationService } from '../services/notificationService';
-import { MAJOR_ROLES } from '../Constants';
+import { MAJOR_ROLES, TOASTMASTERS_ROLES } from '../Constants';
 import { MemberStatus, Meeting, AvailabilityStatus, UserRole } from '../types';
 import { db } from '../services/firebase';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../Context/AuthContext';
 import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 // Refactored Components
 import { ShareModal } from './common/ShareModal';
@@ -371,16 +372,203 @@ export const ScheduleView: React.FC = () => {
         
         try {
             const doc = new jsPDF({ orientation: 'portrait' });
-            doc.text(`Schedule for ${new Date(activeSchedule.year, activeSchedule.month).toLocaleString('default', {month: 'long'})}`, 10, 10)
+            
+            const monthYear = new Date(activeSchedule.year, activeSchedule.month).toLocaleString('default', { month: 'long', year: 'numeric' });
+            
+            // --- Title ---
+            doc.setFontSize(22);
+            doc.setTextColor(0, 65, 101); // Dark blue color
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${monthYear} Schedule`, 14, 20);
+
+            // --- Data Preparation ---
+            const head = [['Role', ...activeSchedule.meetings.map(m => new Date(m.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }))]];
+            
+            const themeRowData = ['Theme', ...activeSchedule.meetings.map(m => m.isBlackout ? '---' : (m.theme || ''))];
+
+            const roleRowsData = TOASTMASTERS_ROLES.map(role => [
+                role,
+                ...activeSchedule.meetings.map(m => {
+                    if (m.isBlackout) return 'BLACKOUT';
+                    return getMemberName(m.assignments[role]);
+                }),
+            ]);
+            
+            const allMeetingsAvailability = activeSchedule.meetings.map(meeting => {
+                if (meeting.isBlackout) {
+                    return { unavailable: [], possible: [], available: [] };
+                }
+                const assignedMemberIds = new Set(Object.values(meeting.assignments).filter(Boolean));
+                const lists = { unavailable: [] as string[], possible: [] as string[], available: [] as string[] };
+                
+                const keyMap = {
+                    [AvailabilityStatus.Available]: 'available',
+                    [AvailabilityStatus.Unavailable]: 'unavailable',
+                    [AvailabilityStatus.Possible]: 'possible',
+                } as const;
+
+                hydratedMembers.forEach(member => {
+                    if (assignedMemberIds.has(member.id)) return;
+                    let finalStatus: AvailabilityStatus;
+                    const dateKey = meeting.date.split('T')[0];
+                    if (member.status === MemberStatus.Unavailable || member.status === MemberStatus.Archived) {
+                        finalStatus = AvailabilityStatus.Unavailable;
+                    } else if (member.status === MemberStatus.Possible) {
+                        finalStatus = AvailabilityStatus.Possible;
+                    } else {
+                        finalStatus = availability[member.id]?.[dateKey] || AvailabilityStatus.Available;
+                    }
+                    
+                    const key = keyMap[finalStatus];
+                    if (key) {
+                        lists[key].push(member.name);
+                    }
+                });
+
+                lists.unavailable.sort();
+                lists.possible.sort();
+                lists.available.sort();
+                return lists;
+            });
+
+            const buildAvailabilityRows = (title: string, key: 'available' | 'possible' | 'unavailable') => {
+                const memberLists = allMeetingsAvailability.map(list => list[key]);
+                const maxLength = Math.max(0, ...memberLists.map(list => list.length));
+                if (maxLength === 0) return [];
+                const rows = [];
+                for (let i = 0; i < maxLength; i++) {
+                    const rowData = memberLists.map(list => list[i] || '');
+                    rows.push([i === 0 ? title : '', ...rowData]);
+                }
+                return rows;
+            };
+
+            const availableRows = buildAvailabilityRows('Available (Unassigned)', 'available');
+            const possibleRows = buildAvailabilityRows('Possibly Available', 'possible');
+            const unavailableRows = buildAvailabilityRows('Unavailable', 'unavailable');
+            
+            // Calculate consistent column widths
+            const pageWidth = 210; // A4 page width in mm
+            const margins = 10; // 5mm left + 5mm right
+            const availableWidth = pageWidth - margins;
+            const roleColumnWidth = 45;
+            const numberOfWeeklyColumns = activeSchedule.meetings.length;
+            const weeklyColumnWidth = (availableWidth - roleColumnWidth) / numberOfWeeklyColumns;
+
+            // --- Main Schedule Table ---
+            (doc as any).autoTable({
+                startY: 30,
+                head: head,
+                body: [themeRowData, ...roleRowsData],
+                theme: 'grid',
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2,
+                    halign: 'center',
+                    valign: 'middle',
+                },
+                headStyles: {
+                    fillColor: '#004165',
+                    textColor: '#FFFFFF',
+                    fontStyle: 'bold',
+                    halign: 'center',
+                },
+                columnStyles: Object.assign(
+                    { 0: { cellWidth: roleColumnWidth, fontStyle: 'bold', halign: 'left' } },
+                    ...Array.from({ length: numberOfWeeklyColumns }, (_, i) => ({
+                        [i + 1]: { cellWidth: weeklyColumnWidth }
+                    }))
+                ),
+                margin: { top: 30, right: 5, bottom: 5, left: 5 },
+                pageBreak: 'avoid',
+                didParseCell: (data: any) => {
+                    // Style first "Role" column
+                    if (data.column.index === 0) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.halign = 'left';
+                    } else {
+                        data.cell.styles.halign = 'center';
+                    }
+                    // Style "Theme" row
+                    if (data.row.index === 0 && data.section === 'body') {
+                        data.cell.styles.fillColor = '#F3F4F6'; // gray-100
+                        data.cell.styles.textColor = '#111827'; // gray-900
+                    }
+                    // Style "BLACKOUT" cells
+                    if (data.cell.raw === 'BLACKOUT') {
+                        data.cell.styles.fillColor = '#F3F4F6'; // gray-100
+                        data.cell.styles.textColor = '#6B7280'; // gray-500
+                        data.cell.styles.fontStyle = 'italic';
+                        data.cell.styles.halign = 'center';
+                    }
+                },
+            });
+            
+            let lastTableY = (doc as any).lastAutoTable.finalY;
+
+            // --- Availability Tables ---
+            const allAvailabilityRows = [...availableRows, ...possibleRows, ...unavailableRows];
+            
+            if (allAvailabilityRows.length > 0) {
+                (doc as any).autoTable({
+                    startY: lastTableY + 3,
+                    body: allAvailabilityRows,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2,
+                        halign: 'center',
+                        valign: 'middle',
+                    },
+                    columnStyles: Object.assign(
+                        { 0: { cellWidth: roleColumnWidth, fontStyle: 'bold', halign: 'left' } },
+                        ...Array.from({ length: numberOfWeeklyColumns }, (_, i) => ({
+                            [i + 1]: { cellWidth: weeklyColumnWidth }
+                        }))
+                    ),
+                    margin: { top: 3, right: 5, bottom: 5, left: 5 },
+                    pageBreak: 'avoid',
+                    didParseCell: (data: any) => {
+                        const rowIndex = data.row.index;
+                        const availableCount = availableRows.length;
+                        const possibleCount = possibleRows.length;
+                        
+                        // Determine which section this row belongs to
+                        if (rowIndex < availableCount) {
+                            // Available section
+                            data.cell.styles.fillColor = '#DCFCE7';
+                            data.cell.styles.textColor = '#166534';
+                        } else if (rowIndex < availableCount + possibleCount) {
+                            // Possible section
+                            data.cell.styles.fillColor = '#FEF3C7';
+                            data.cell.styles.textColor = '#92400E';
+                        } else {
+                            // Unavailable section
+                            data.cell.styles.fillColor = '#FEE2E2';
+                            data.cell.styles.textColor = '#991B1B';
+                        }
+                        
+                        if (data.column.index === 0) {
+                            data.cell.styles.fontStyle = 'bold';
+                            data.cell.styles.halign = 'left';
+                        } else {
+                            data.cell.styles.halign = 'center';
+                        }
+                    }
+                });
+            }
+
+            // --- Save and Open ---
             const blob = doc.output('blob');
             const blobURL = URL.createObjectURL(blob);
             window.open(blobURL, '_blank');
         } catch (e: any) {
+            console.error('PDF generation error:', e);
             setError("Could not generate PDF.");
         } finally {
             setIsLoading(false);
         }
-    }, [activeSchedule, hasUnassignedRoles]);
+    }, [activeSchedule, hasUnassignedRoles, members, availability]);
 
     // This function now updates the database directly via the context.
     const handleAssignmentChange = useCallback(async (meetingIndex: number, role: string, newMemberId: string | null) => {
