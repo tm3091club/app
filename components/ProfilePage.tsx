@@ -5,6 +5,7 @@ import { useAuth } from '../Context/AuthContext';
 import { AppUser, UserRole, PendingInvite, Organization } from '../types';
 import { ConfirmationModal } from './common/ConfirmationModal';
 import NotificationScheduler from './NotificationScheduler';
+import { db, FieldValue } from '../services/firebase';
 
 const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U']);
 
@@ -537,6 +538,44 @@ export const ProfilePage = (): React.ReactElement | null => {
             setUserToRevoke(null);
         }
     };
+
+    const handleResendInvite = async (invite: PendingInvite) => {
+        if (!organization) return;
+        
+        setTeamFeedback(null);
+        try {
+            // Send a new email using the existing invitation
+            const joinUrl = `https://tmapp.club/#/${organization.clubNumber}/join?token=${invite.id}`;
+            
+            await db.collection("mail").add({
+                to: [invite.email],
+                from: 'tmprofessionallyspeaking@gmail.com', // Use your verified Gmail address
+                replyTo: 'tmprofessionallyspeaking@gmail.com',
+                message: {
+                    subject: `Reminder: You're invited to join ${organization.name}!`,
+                    html: `
+                        <div style="font-family:sans-serif">
+                            <h2>Hello ${invite.invitedUserName || "Future Toastmaster"},</h2>
+                            <p>This is a friendly reminder that you've been invited by <strong>${organization.name}</strong> to join the Toastmasters Monthly Scheduler app.</p>
+                            <p>To accept the invitation, please click the link below and create an account using this email address (<strong>${invite.email}</strong>).</p>
+                            <a href="${joinUrl}" style="display:inline-block;padding:12px 20px;background:#004165;color:#fff;border-radius:6px;text-decoration:none">Sign Up & Join Now</a>
+                            <p style="margin-top:24px;font-size:12px;color:#555;">If you have any questions, please contact your club admin at tmprofessionallyspeaking@gmail.com.</p>
+                        </div>`
+                }
+            });
+            
+            // Update the invitation with resend info
+            await db.collection('invitations').doc(invite.id).update({
+                resentAt: FieldValue.serverTimestamp(),
+                resendCount: (invite.resendCount || 0) + 1
+            });
+            
+            setTeamFeedback({ type: 'success', message: `Invitation resent to ${invite.email} successfully!` });
+        } catch (error: any) {
+            console.error("Failed to resend invitation", error);
+            setTeamFeedback({ type: 'error', message: 'Failed to resend invitation. Please try again.' });
+        }
+    };
     
     const handleSaveUserName = async (payload: { uid: string, newName: string }) => {
         setTeamFeedback(null);
@@ -839,6 +878,11 @@ export const ProfilePage = (): React.ReactElement | null => {
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
                                                         Pending
                                                     </span>
+                                                    <button onClick={() => handleResendInvite(invite)} title="Resend Invitation" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full hover:bg-indigo-100 dark:hover:bg-gray-700 transition-colors">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    </button>
                                                     <button onClick={() => openRevokeModal(invite)} title="Revoke Invitation" className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-gray-700 transition-colors">
                                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />

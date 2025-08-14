@@ -1,0 +1,7 @@
+{
+  "SENDGRID_API_KEY": "your-sendgrid-api-key",
+  "DEFAULT_FROM": "Your Club Name <noreply@yourdomain.com>",
+  "DEFAULT_REPLY_TO": "your-email@gmail.com",
+  "LOCATION": "us-central1",
+  "COLLECTION_PATH": "mail"
+}

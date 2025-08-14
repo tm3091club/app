@@ -9,6 +9,7 @@ import { AuthPage } from './components/AuthPage';
 import { ToastmastersProvider } from './Context/ToastmastersContext';
 import { NotificationProvider } from './Context/NotificationContext';
 import { PublicSchedulePage } from './components/PublicSchedulePage';
+import { UnsubscribePage } from './components/UnsubscribePage';
 import { APP_VERSION } from './utils/version';
 
 type View = 'schedule' | 'members' | 'profile';
@@ -22,6 +23,8 @@ function App() {
   const publicShareMatch = hash.match(/^\/(\d+)\/share\/([a-zA-Z0-9-]+)/);
   // Matches /<club-number>/join or just /join
   const joinMatch = hash.match(/^\/(?:[^/]+\/)?join/);
+  // Matches /unsubscribe
+  const unsubscribeMatch = hash.match(/^\/unsubscribe/);
   const urlParams = new URLSearchParams(hash.split('?')[1] || '');
   const inviteToken = urlParams.get('token');
   
@@ -73,6 +76,11 @@ function App() {
       </ToastmastersProvider>
     );
   };
+
+  // Handle unsubscribe route (no authentication required)
+  if (unsubscribeMatch) {
+    return <UnsubscribePage />;
+  }
 
   if (publicShareMatch) {
     const clubNumber = publicShareMatch[1];
