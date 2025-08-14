@@ -5,6 +5,7 @@ import { useAuth } from '../Context/AuthContext';
 import { AppUser, UserRole, PendingInvite, Organization } from '../types';
 import { ConfirmationModal } from './common/ConfirmationModal';
 import NotificationScheduler from './NotificationScheduler';
+import { EmailTestComponent } from './EmailTestComponent';
 import { db, FieldValue } from '../services/firebase';
 
 const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U']);
@@ -897,6 +898,16 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </div>
                     )}
 
+                </div>
+            )}
+
+            {isAdmin && (
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Email Testing</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Test email functionality safely without sending to all members. Use your own email address to preview how emails will look.
+                    </p>
+                    <EmailTestComponent />
                 </div>
             )}
 

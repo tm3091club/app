@@ -33,21 +33,10 @@ class EmailService {
           html: emailData.html,
           text: emailData.text,
         },
-        // Add headers for better deliverability, especially for iCloud Mail
+        // Simplified headers that won't appear in email body
         headers: {
           'List-Unsubscribe': `<mailto:unsubscribe@toastmasters-scheduler.app?subject=unsubscribe>`,
-          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-          'Precedence': 'bulk',
-          'X-Auto-Response-Suppress': 'OOF, AutoReply',
-          'X-Mailer': 'Toastmasters Monthly Scheduler',
-          'X-Priority': '3',
-          'X-MSMail-Priority': 'Normal',
-          'Importance': 'Normal',
-          'Message-ID': `<${Date.now()}.${Math.random().toString(36).substr(2, 9)}@toastmasters-scheduler.app>`,
-          'Date': new Date().toUTCString(),
-          'MIME-Version': '1.0',
-          'Content-Type': 'text/html; charset=UTF-8',
-          ...emailData.headers
+          'X-Mailer': 'Toastmasters Monthly Scheduler'
         },
         // The extension will use the default FROM address you configured
       });
@@ -69,13 +58,13 @@ class EmailService {
       ? this.generateUnsubscribeLink(data.recipientEmail, data.clubId)
       : `${window.location.origin}/unsubscribe`;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${data.clubName} - Meeting Schedule Update</title>
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>${data.clubName} - Meeting Schedule Update</title>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -92,7 +81,7 @@ class EmailService {
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
           }
           .header { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #004165 0%, #002b45 100%);
             color: white; 
             text-align: center; 
             padding: 30px 20px;
@@ -120,31 +109,32 @@ class EmailService {
             background-color: #f7fafc;
             padding: 25px;
             border-radius: 8px;
-            border-left: 4px solid #4299e1;
+            border-left: 4px solid #004165;
             margin: 20px 0;
           }
           .cta-section {
             text-align: center;
             margin: 30px 0;
             padding: 20px;
-            background-color: #ebf8ff;
+            background-color: #f8fafc;
             border-radius: 8px;
+            border: 1px solid #e2e8f0;
           }
           .cta-button { 
             display: inline-block; 
-            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            background: linear-gradient(135deg, #004165 0%, #002b45 100%);
             color: white !important; 
             padding: 15px 30px; 
             text-decoration: none; 
             border-radius: 8px; 
             font-weight: 600;
             font-size: 16px;
-            box-shadow: 0 4px 6px rgba(66, 153, 225, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 65, 101, 0.3);
             transition: all 0.3s ease;
           }
           .cta-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(66, 153, 225, 0.4);
+            box-shadow: 0 6px 12px rgba(0, 65, 101, 0.4);
           }
           .benefits {
             background-color: #f0fff4;
@@ -249,7 +239,6 @@ class EmailService {
             
             <p>Thank you for your participation in making our club meetings successful!</p>
             
-            <p>Best regards,<br>
             <strong>${data.clubName} Leadership Team</strong></p>
           </div>
           
@@ -266,11 +255,9 @@ class EmailService {
           </div>
         </div>
       </body>
-      </html>
-    `;
+      </html>`;
 
-    const text = `
-${data.clubName} - Meeting Schedule Update for ${data.month} ${data.year}
+    const text = `${data.clubName} - Meeting Schedule Update for ${data.month} ${data.year}
 
 Hello ${data.recipientName},
 
@@ -304,8 +291,7 @@ This is an official communication from ${data.clubName}.
 © ${data.year} ${data.clubName} - Toastmasters International
 
 To unsubscribe from these communications, visit: ${unsubscribeLink}
-${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}
-    `;
+${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`;
 
     return { html, text };
   }
@@ -340,12 +326,12 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}
 
       const emailRequest: EmailRequest = {
         to: emailAddresses,
-        subject: `${data.clubName} - Meeting Schedule Update for ${data.month} ${data.year}`,
+        subject: `${clubName} - Meeting Schedule Update for ${month} ${year}`,
         html: emailData.html,
         text: emailData.text,
-        from: `${data.clubName} <noreply@toastmasters-scheduler.app>`,
+        from: `${clubName} <noreply@toastmasters-scheduler.app>`,
         headers: {
-          'X-Club-Name': data.clubName,
+          'X-Club-Name': clubName,
           'X-Email-Type': 'meeting-schedule',
           'X-Priority': '3',
           'X-MSMail-Priority': 'Normal',
@@ -386,12 +372,12 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}
 
       const emailRequest: EmailRequest = {
         to: [recipient.email],
-        subject: `${data.clubName} - Meeting Schedule Update for ${data.month} ${data.year}`,
+        subject: `${clubName} - Meeting Schedule Update for ${month} ${year}`,
         html: emailData.html,
         text: emailData.text,
-        from: `${data.clubName} <noreply@toastmasters-scheduler.app>`,
+        from: `${clubName} <noreply@toastmasters-scheduler.app>`,
         headers: {
-          'X-Club-Name': data.clubName,
+          'X-Club-Name': clubName,
           'X-Email-Type': 'meeting-schedule',
           'X-Recipient-Name': recipient.name,
           'X-Priority': '3',

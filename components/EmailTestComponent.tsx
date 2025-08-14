@@ -52,12 +52,9 @@ export const EmailTestComponent: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Email Test Component</h2>
-      
-      <div className="space-y-4">
+    <div className="space-y-4">
         <div>
-          <label htmlFor="testEmail" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="testEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Test Email Address
           </label>
           <input
@@ -66,7 +63,7 @@ export const EmailTestComponent: React.FC = () => {
             value={testEmail}
             onChange={(e) => setTestEmail(e.target.value)}
             placeholder="Enter your email address"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
         </div>
 
@@ -99,12 +96,11 @@ export const EmailTestComponent: React.FC = () => {
           </div>
         )}
 
-        <div className="text-xs text-gray-500 mt-4">
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-4">
           <p><strong>Note:</strong> This component is for testing purposes only.</p>
           <p>Make sure your Firebase Email Extension is properly configured.</p>
           <p>Check the Firebase Console Extensions section for email delivery status.</p>
         </div>
-      </div>
     </div>
   );
 };

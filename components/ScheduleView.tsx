@@ -379,7 +379,14 @@ export const ScheduleView: React.FC = () => {
             doc.setFontSize(22);
             doc.setTextColor(0, 65, 101); // Dark blue color
             doc.setFont('helvetica', 'bold');
-            doc.text(`${monthYear} Schedule`, 14, 20);
+            
+            // Add club name if available
+            const clubName = organization?.name || 'Toastmasters Club';
+            doc.text(clubName, 14, 20);
+            
+            // Add month and year below club name
+            doc.setFontSize(18);
+            doc.text(`${monthYear} Schedule`, 14, 30);
 
             // --- Data Preparation ---
             const head = [['Role', ...activeSchedule.meetings.map(m => new Date(m.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }))]];
@@ -457,7 +464,7 @@ export const ScheduleView: React.FC = () => {
 
             // --- Main Schedule Table ---
             (doc as any).autoTable({
-                startY: 30,
+                startY: 40,
                 head: head,
                 body: [themeRowData, ...roleRowsData],
                 theme: 'grid',
