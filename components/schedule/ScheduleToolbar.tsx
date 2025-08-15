@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MonthlySchedule } from '../../types';
+import { getNextScheduleMonth, getCurrentMonthInfo } from '../../utils/monthUtils';
 
 interface ScheduleToolbarProps {
   schedules: MonthlySchedule[];
@@ -12,6 +13,14 @@ interface ScheduleToolbarProps {
   hasActiveSchedule: boolean;
   hasPreviousSchedule: boolean;
   isAdmin: boolean;
+  onShare: () => void;
+  onCopyToClipboard: () => void;
+  onExportToPdf: () => void;
+  onGenerateSchedule: () => void;
+  onPrepareSchedule: (type: 'next' | 'previous') => void;
+  hasUnassignedRoles: boolean;
+  copySuccess: boolean;
+  meetingDay?: number;
 }
 
 export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
@@ -24,7 +33,56 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   hasActiveSchedule,
   hasPreviousSchedule,
   isAdmin,
+  onShare,
+  onCopyToClipboard,
+  onExportToPdf,
+  onGenerateSchedule,
+  onPrepareSchedule,
+  hasUnassignedRoles,
+  copySuccess,
+  meetingDay = 2,
 }) => {
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const renderExportButton = () => (
+    <div className="relative" ref={exportMenuRef}>
+      <button
+        onClick={() => setIsExportMenuOpen(prev => !prev)}
+        disabled={hasUnassignedRoles}
+        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+        title={hasUnassignedRoles ? "Please assign all major roles to enable export" : "Export Schedule"}
+      >
+        Export
+      </button>
+      {isExportMenuOpen && (
+        <div
+          className="origin-top-right absolute right-0 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-20 top-full mt-2"
+          role="menu"
+        >
+          <div className="py-1" role="none">
+            <button onClick={() => { onCopyToClipboard(); setIsExportMenuOpen(false); }} className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
+              {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
+            </button>
+            <button onClick={() => { onExportToPdf(); setIsExportMenuOpen(false); }} className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
+              Export as PDF
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 no-print">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
@@ -34,15 +92,82 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={selectedScheduleId || ''}
-            onChange={e => onSelectSchedule(e.target.value || null)}
-            className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-center md:text-left md:pl-3 md:pr-10"
+            onChange={e => {
+              const value = e.target.value;
+              if (value === 'prepare-next') {
+                onPrepareSchedule('next');
+              } else if (value === 'prepare-previous') {
+                onPrepareSchedule('previous');
+              } else {
+                onSelectSchedule(value || null);
+              }
+            }}
+            className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center md:text-left md:pl-3 md:pr-10 appearance-none min-w-[200px]"
           >
             <option value="">-- Select a Schedule --</option>
-            {schedules.map(s => (
-              <option key={s.id} value={s.id}>
-                {new Date(s.year, s.month).toLocaleString('default', { month: 'long', year: 'numeric' })}
-              </option>
-            ))}
+            
+            {/* Prepare Previous Option */}
+            {(() => {
+              if (schedules.length === 0) return null;
+              
+              // Find the earliest schedule
+              const earliestSchedule = schedules.reduce((earliest, schedule) => {
+                const earliestDate = new Date(earliest.year, earliest.month);
+                const scheduleDate = new Date(schedule.year, schedule.month);
+                return scheduleDate < earliestDate ? schedule : earliest;
+              });
+              
+              // Calculate previous month
+              let prevYear = earliestSchedule.year;
+              let prevMonth = earliestSchedule.month - 1;
+              if (prevMonth < 0) {
+                prevMonth = 11;
+                prevYear--;
+              }
+              
+              const prevMonthId = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+              const prevMonthExists = schedules.some(s => s.id === prevMonthId);
+              
+              if (!prevMonthExists && isAdmin) {
+                const prevMonthName = new Date(prevYear, prevMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
+                return (
+                  <option key="prepare-previous" value="prepare-previous" className="text-blue-600 dark:text-blue-400">
+                    📋 Prepare {prevMonthName}
+                  </option>
+                );
+              }
+              return null;
+            })()}
+            
+            {/* Existing Schedules */}
+            {schedules
+              .sort((a, b) => {
+                const dateA = new Date(a.year, a.month);
+                const dateB = new Date(b.year, b.month);
+                return dateA.getTime() - dateB.getTime();
+              })
+              .map(s => (
+                <option key={s.id} value={s.id}>
+                  {new Date(s.year, s.month).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </option>
+              ))}
+            
+            {/* Prepare Next Option */}
+            {(() => {
+              if (!isAdmin) return null;
+              
+              const nextMonthInfo = getNextScheduleMonth(schedules, meetingDay);
+              const nextMonthExists = schedules.some(s => s.id === `${nextMonthInfo.year}-${String(nextMonthInfo.month + 1).padStart(2, '0')}`);
+              
+              if (!nextMonthExists) {
+                return (
+                  <option key="prepare-next" value="prepare-next" className="text-blue-600 dark:text-blue-400">
+                    📋 Prepare {nextMonthInfo.displayName}
+                  </option>
+                );
+              }
+              return null;
+            })()}
           </select>
           {isAdmin && (
             <button onClick={onDeleteSchedule} disabled={!selectedScheduleId} title="Delete Schedule" className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-100 dark:hover:bg-gray-700 transition-colors">
@@ -53,22 +178,38 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
       </div>
       {hasActiveSchedule && (
         <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-            <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">View Options:</span>
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
-                    <input
-                        type="checkbox"
-                        checked={showPrevious}
-                        onChange={onToggleShowPrevious}
-                        disabled={!hasPreviousSchedule}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <span className={!hasPreviousSchedule ? 'opacity-50' : ''}>Compare with Previous Month</span>
-                </label>
-                 {!hasPreviousSchedule && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 italic">(No previous month's schedule found)</span>
-                )}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">View Options:</span>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                        <input
+                            type="checkbox"
+                            checked={showPrevious}
+                            onChange={onToggleShowPrevious}
+                            disabled={!hasPreviousSchedule}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <span className={!hasPreviousSchedule ? 'opacity-50' : ''}>Compare with Previous Month</span>
+                    </label>
+                     {!hasPreviousSchedule && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">(No previous month's schedule found)</span>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {isAdmin && (
+                        <button onClick={onGenerateSchedule} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition">
+                            Generate Schedule
+                        </button>
+                    )}
+                    <button onClick={onShare} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md transition">
+                        Share
+                    </button>
+                    {renderExportButton()}
+                </div>
             </div>
+            {hasUnassignedRoles && (
+                <p className="text-sm text-red-500 dark:text-red-400 mt-2 font-semibold">Please assign all major roles before exporting the schedule.</p>
+            )}
         </div>
       )}
     </div>

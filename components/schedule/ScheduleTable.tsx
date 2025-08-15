@@ -128,6 +128,8 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                             onAssignmentChange={onAssignmentChange}
                             allAssignmentsForMeeting={meeting.assignments}
                             disabled={!canEditRoleAssignment(index, role)}
+                            meetingDate={meeting.date}
+                            availability={availability}
                           />
                       )}
                     </td>

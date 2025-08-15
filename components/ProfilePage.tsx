@@ -72,7 +72,7 @@ const InviteModal: React.FC<{
                                     id="invite-email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                                    className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                                     required
                                     autoFocus
                                 />
@@ -85,7 +85,7 @@ const InviteModal: React.FC<{
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="e.g., Jane Doe"
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                                    className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                                 />
                             </div>
                         </div>
@@ -163,7 +163,7 @@ const EditableUser: React.FC<{
                         id={`name-${user.uid}`}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                        className="block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                         required
                     />
                 </div>
@@ -171,7 +171,7 @@ const EditableUser: React.FC<{
              <div>
                 <label htmlFor={`email-${user.uid}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
                 <input type="email" id={`email-${user.uid}`} value={user.email || ''} disabled
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
+                    className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
                 />
             </div>
             <div className="flex justify-end">
@@ -266,7 +266,7 @@ const TeamMemberListItem: React.FC<{
                                     onChange={(e) => onRoleChange(member.uid, e.target.value as UserRole)}
                                     disabled={cannotChangeRole}
                                     title={tooltipText}
-                                    className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="bg-gray-50 dark:bg-gray-700 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none text-gray-900 dark:text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <option value={UserRole.Admin}>Admin</option>
                                     <option value={UserRole.Member}>Member</option>
@@ -658,7 +658,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                     <div>
                         <label htmlFor="clubName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Club Name</label>
                         <input type="text" id="clubName" value={clubName} onChange={(e) => setClubName(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                             required
                             disabled={!isAdmin}
                         />
@@ -667,7 +667,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                         <div>
                             <label htmlFor="district" className="block text-sm font-medium text-gray-700 dark:text-gray-300">District</label>
                             <select id="district" value={district} onChange={(e) => setDistrict(e.target.value)}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                                className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                                 required
                                 disabled={!isAdmin}
                             >
@@ -677,7 +677,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                         <div>
                             <label htmlFor="clubNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Club #</label>
                             <input type="text" id="clubNumber" value={clubNumber} onChange={(e) => setClubNumber(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                                className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                                 required
                                 disabled={!isAdmin}
                             />
@@ -686,14 +686,14 @@ export const ProfilePage = (): React.ReactElement | null => {
                     <div>
                         <label htmlFor="clubAdminEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Club Admin Email</label>
                         <input type="email" id="clubAdminEmail" value={clubOwner?.email || ''} disabled
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
                         />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="meetingDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Meeting Day</label>
                             <select id="meetingDay" value={meetingDay} onChange={(e) => setMeetingDay(parseInt(e.target.value))}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                                className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                                 disabled={!isAdmin}
                             >
                                 <option value={0}>Sunday</option>
@@ -709,7 +709,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                         <div>
                             <label htmlFor="autoNotificationDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Auto Notification Day</label>
                             <select id="autoNotificationDay" value={autoNotificationDay} onChange={(e) => setAutoNotificationDay(parseInt(e.target.value))}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                                className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                                 disabled={!isAdmin}
                             >
                                 {Array.from({length: 28}, (_, i) => (
@@ -759,7 +759,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             id="new-email"
                             value={newEmail}
                             onChange={(e) => setNewEmail(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                             required
                         />
                     </div>
@@ -771,7 +771,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                                 id="email-change-password"
                                 value={emailChangePassword}
                                 onChange={(e) => setEmailChangePassword(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                                className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                                 required
                             />
                         </div>
@@ -799,21 +799,21 @@ export const ProfilePage = (): React.ReactElement | null => {
                      <div>
                         <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
                         <input type="password" id="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                             required
                         />
                     </div>
                      <div>
                         <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
                         <input type="password" id="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                             required
                         />
                     </div>
                     <div>
                         <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
                         <input type="password" id="confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
                             required
                         />
                     </div>
