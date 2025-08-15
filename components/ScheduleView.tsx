@@ -159,7 +159,11 @@ export const ScheduleView: React.FC = () => {
 
     // Handlers now perform actions that will be immediately reflected
     const handleNewSchedule = useCallback(async () => {
+        console.log('🚀 handleNewSchedule called!');
+        console.log('📋 Organization meetingDay:', organization?.meetingDay);
+        
         if (!organization?.meetingDay) {
+            console.log('❌ No meeting day set in organization');
             setError("Please set a meeting day in the 'Manage Members' tab first.");
             return;
         }
@@ -167,6 +171,7 @@ export const ScheduleView: React.FC = () => {
         // Automatically determine the next month to generate
         const nextMonthInfo = getNextScheduleMonth(schedules, organization.meetingDay);
         const { year, month } = nextMonthInfo;
+        console.log('📅 Next month info:', nextMonthInfo);
         
         const id = `${year}-${String(month + 1).padStart(2, '0')}`;
         if (schedules.some(s => s.id === id)) {
@@ -189,23 +194,32 @@ export const ScheduleView: React.FC = () => {
             
             if (numThemes > 0) {
                 try {
-                    console.log('Environment check:');
-                    console.log('- process.env.API_KEY:', process.env.API_KEY ? 'Present' : 'Missing');
-                    console.log('- process.env.GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
-                    console.log('- Actual API_KEY value (first 10 chars):', process.env.API_KEY ? process.env.API_KEY.substring(0, 10) + '...' : 'None');
+                    console.log('🎯 Starting theme generation process...');
+                    console.log('📊 Theme generation parameters:', {
+                        month: new Date(year, month).toLocaleString('default', { month: 'long' }),
+                        year,
+                        numThemes,
+                        pastThemesCount: allPastThemes.length
+                    });
                     
+                    console.log('🔧 About to call generateThemes function...');
                     themes = await generateThemes(
                         new Date(year, month).toLocaleString('default', { month: 'long' }),
                         year,
                         allPastThemes,
                         numThemes
                     );
-                    console.log('Successfully generated themes:', themes);
+                    console.log('✅ Successfully generated themes:', themes);
                 } catch (themeError) {
-                    console.error('Failed to generate themes:', themeError);
+                    console.error('❌ Failed to generate themes:', themeError);
+                    console.error('Error details:', {
+                        message: themeError instanceof Error ? themeError.message : 'Unknown error',
+                        stack: themeError instanceof Error ? themeError.stack : 'No stack trace'
+                    });
                     // Set error message to show user what went wrong
                     setError(`Failed to generate themes: ${themeError instanceof Error ? themeError.message : 'Unknown error'}`);
-                    themes = Array(numThemes).fill('');
+                    // Create fallback themes instead of empty strings
+                    themes = Array(numThemes).fill(0).map((_, i) => `Meeting Theme ${i + 1}`);
                 }
             }
 
@@ -319,7 +333,9 @@ export const ScheduleView: React.FC = () => {
 
 
     const handleConfirmGenerateSchedule = useCallback(async () => {
-        if (!activeSchedule) return;
+        if (!activeSchedule) {
+            return;
+        }
         setIsGenerateConfirmOpen(false);
         setIsLoading(true);
         setLoadingMessage('Generating schedule and themes...');
@@ -327,36 +343,39 @@ export const ScheduleView: React.FC = () => {
         try {
             // Get existing themes or generate new ones
             let themes = activeSchedule.meetings.map(m => m.theme || '');
+            
             const meetingDates = activeSchedule.meetings.map(m => new Date(m.date));
+            
             const nonBlackoutMeetings = activeSchedule.meetings.filter(m => !m.isBlackout);
             
+            const needsThemes = nonBlackoutMeetings.some(m => 
+                !m.theme || 
+                m.theme.trim() === '' || 
+                m.theme.startsWith('Meeting Theme ')
+            );
+            
             // Generate themes for meetings that don't have them yet
-            if (nonBlackoutMeetings.some(m => !m.theme || m.theme.trim() === '')) {
+            if (needsThemes) {
                 try {
-                    console.log('Regenerating themes - Environment check:');
-                    console.log('- process.env.API_KEY:', process.env.API_KEY ? 'Present' : 'Missing');
-                    console.log('- process.env.GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
-                    console.log('- Actual API_KEY value (first 10 chars):', process.env.API_KEY ? process.env.API_KEY.substring(0, 10) + '...' : 'None');
-                    
                     const newThemes = await generateThemes(
                         new Date(activeSchedule.year, activeSchedule.month).toLocaleString('default', { month: 'long' }),
                         activeSchedule.year,
                         allPastThemes,
                         nonBlackoutMeetings.length
                     );
-                    console.log('Successfully generated new themes:', newThemes);
                     
-                    // Replace empty themes with generated ones
+                    // Replace empty or default themes with generated ones
                     let themeIndex = 0;
                     themes = activeSchedule.meetings.map(meeting => {
                         if (meeting.isBlackout) return meeting.theme || '';
-                        if (!meeting.theme || meeting.theme.trim() === '') {
+                        if (!meeting.theme || 
+                            meeting.theme.trim() === '' || 
+                            meeting.theme.startsWith('Meeting Theme ')) {
                             return newThemes[themeIndex++] || '';
                         }
                         return meeting.theme;
                     });
                 } catch (themeError) {
-                    console.error('Failed to generate themes, using existing ones:', themeError);
                     setError(`Failed to generate themes: ${themeError instanceof Error ? themeError.message : 'Unknown error'}`);
                 }
             }
@@ -370,6 +389,7 @@ export const ScheduleView: React.FC = () => {
                 availability,
                 schedules
             );
+            
             const finalSchedule = { ...activeSchedule, meetings: regeneratedSchedule.meetings };
 
             finalSchedule.meetings.forEach((meeting, index) => {
@@ -383,6 +403,7 @@ export const ScheduleView: React.FC = () => {
 
             await updateSchedule({ schedule: finalSchedule });
         } catch (e: any) {
+            console.error('❌ Error in regenerate process:', e);
             setError(e.message || 'Failed to generate the schedule.');
         } finally {
             setIsLoading(false);
@@ -891,7 +912,9 @@ export const ScheduleView: React.FC = () => {
                 onShare={handleShare}
                 onCopyToClipboard={handleCopyToClipboard}
                 onExportToPdf={handleExportToPdf}
-                onGenerateSchedule={() => setIsGenerateConfirmOpen(true)}
+                onGenerateSchedule={() => {
+                    setIsGenerateConfirmOpen(true);
+                }}
                 onPrepareSchedule={handlePrepareSchedule}
                 hasUnassignedRoles={hasUnassignedRoles}
                 copySuccess={copySuccess}
@@ -931,7 +954,9 @@ export const ScheduleView: React.FC = () => {
                                             Ready to generate the schedule for <strong className="text-gray-900 dark:text-white">{nextMonthInfo.displayName}</strong> with AI-powered themes and role assignments.
                                         </p>
                                         <button 
-                                            onClick={handleNewSchedule} 
+                                            onClick={() => {
+                                                handleNewSchedule();
+                                            }}
                                             disabled={nextMonthExists || !isAdmin} 
                                             className="w-full sm:w-auto inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:bg-indigo-400 dark:disabled:bg-indigo-800 disabled:cursor-not-allowed"
                                         >
