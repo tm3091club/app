@@ -29,3 +29,6 @@ build/
 .env.*
 .firebase/
 firebase-debug.log
+
+# Version tracking
+.push-count

@@ -410,6 +410,46 @@ export const ScheduleView: React.FC = () => {
         }
     }, [activeSchedule, availability, hydratedMembers, schedules, updateSchedule, allPastThemes]);
 
+    const handleGenerateThemes = useCallback(async () => {
+        if (!activeSchedule) return;
+        
+        setIsLoading(true);
+        setLoadingMessage('Generating creative themes with AI...');
+        setError(null);
+        
+        try {
+            const nonBlackoutMeetings = activeSchedule.meetings.filter(m => !m.isBlackout);
+            
+            if (nonBlackoutMeetings.length === 0) {
+                setIsLoading(false);
+                return;
+            }
+            
+            const newThemes = await generateThemes(
+                new Date(activeSchedule.year, activeSchedule.month).toLocaleString('default', { month: 'long' }),
+                activeSchedule.year,
+                allPastThemes,
+                nonBlackoutMeetings.length
+            );
+            
+            // Update all non-blackout meetings with new themes
+            const updatedSchedule = deepClone(activeSchedule);
+            let themeIndex = 0;
+            updatedSchedule.meetings.forEach((meeting) => {
+                if (!meeting.isBlackout) {
+                    meeting.theme = newThemes[themeIndex] || meeting.theme;
+                    themeIndex++;
+                }
+            });
+            
+            await updateSchedule({ schedule: updatedSchedule });
+        } catch (e: any) {
+            setError(e.message || 'Failed to generate themes.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [activeSchedule, allPastThemes, updateSchedule]);
+
     const handleShare = useCallback(async () => {
         if (!activeSchedule || !user || !organization?.clubNumber) {
             if (!organization?.clubNumber) {
@@ -912,6 +952,7 @@ export const ScheduleView: React.FC = () => {
                 onShare={handleShare}
                 onCopyToClipboard={handleCopyToClipboard}
                 onExportToPdf={handleExportToPdf}
+                onGenerateThemes={handleGenerateThemes}
                 onGenerateSchedule={() => {
                     setIsGenerateConfirmOpen(true);
                 }}
