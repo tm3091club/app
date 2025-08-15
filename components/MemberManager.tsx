@@ -35,7 +35,7 @@ const LinkAccountModal: React.FC<{
                                     </div>
                                     <button
                                         onClick={() => onLink(user.uid)}
-                                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa]"
                                     >
                                         Link
                                     </button>
@@ -52,7 +52,7 @@ const LinkAccountModal: React.FC<{
                     <button
                         type="button"
                         onClick={onClose}
-                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm"
+                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm"
                     >
                         Cancel
                     </button>
@@ -104,7 +104,7 @@ const ConfirmationModal: React.FC<{
                     <button
                         type="button"
                         onClick={onClose}
-                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm"
+                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm"
                     >
                         Cancel
                     </button>
@@ -124,7 +124,7 @@ const InlineCheckbox: React.FC<{ id: string; name: string; label: string; checke
             checked={checked}
             onChange={onChange}
             disabled={disabled}
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+            className="h-4 w-4 text-indigo-600 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] border-gray-300 rounded disabled:opacity-50"
         />
         <label htmlFor={id} className={`ml-2 text-sm text-gray-900 dark:text-gray-300 font-medium ${disabled ? 'opacity-50' : ''}`}>{label}</label>
     </div>
@@ -226,7 +226,7 @@ const MemberRow: React.FC<{
                                     if (e.key === 'Enter') onSaveEdit();
                                     if (e.key === 'Escape') onCancelEdit();
                                 }}
-                                className="w-full px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                                className="w-full px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] dark:bg-gray-700 dark:text-white"
                                 autoFocus
                             />
                             <button onClick={onSaveEdit} className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-gray-700 rounded-full" aria-label="Save name">
@@ -292,7 +292,7 @@ const MemberRow: React.FC<{
                     onChange={handleStatusChange}
                     aria-label={`Status for ${displayName}`}
                     disabled={!canEditRow}
-                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
                 >
                     {Object.values(MemberStatus).map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -314,7 +314,7 @@ const MemberRow: React.FC<{
                                         value={currentStatus}
                                         onChange={e => handleAvailabilityChange(dateKey, e.target.value as AvailabilityStatus)}
                                         disabled={isWeeklyAvailabilityDisabled || !canEditAvailability}
-                                        className="w-auto bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1 pr-7 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-xs text-center text-gray-900 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                                        className="w-auto bg-white dark:bg-gray-700 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none appearance-none rounded-md shadow-sm py-1 pr-7 focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-xs text-center text-gray-900 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
                                     >
                                         {Object.values(AvailabilityStatus).map(s => <option key={s} value={s}>{availabilityDisplayMap[s]}</option>)}
                                     </select>
@@ -393,7 +393,7 @@ const MobileMemberCard: React.FC<{
                                         if (e.key === 'Enter') onSaveEdit();
                                         if (e.key === 'Escape') onCancelEdit();
                                     }}
-                                    className="w-full text-lg font-bold px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                                    className="w-full text-lg font-bold px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] dark:bg-gray-700 dark:text-white"
                                     autoFocus
                                 />
                                 <div className="flex items-center gap-2">
@@ -432,7 +432,7 @@ const MobileMemberCard: React.FC<{
                             onChange={handleStatusChange}
                             aria-label={`Status for ${displayName}`}
                             disabled={!canEditRow}
-                            className={`w-auto border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                            className={`w-auto border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
                         >
                             {Object.values(MemberStatus).map(status => (
                                 <option key={status} value={status}>{status}</option>
@@ -457,7 +457,7 @@ const MobileMemberCard: React.FC<{
                                         value={currentStatus}
                                         onChange={e => handleAvailabilityChange(dateKey, e.target.value as AvailabilityStatus)}
                                         disabled={isWeeklyAvailabilityDisabled || !canEditAvailability}
-                                        className="w-auto bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1 pr-7 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-xs text-center text-gray-900 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                                        className="w-auto bg-white dark:bg-gray-700 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none appearance-none rounded-md shadow-sm py-1 pr-7 focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-xs text-center text-gray-900 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
                                     >
                                         {Object.values(AvailabilityStatus).map(s => <option key={s} value={s}>{availabilityDisplayMap[s]}</option>)}
                                     </select>
@@ -522,7 +522,7 @@ const ArchivedMemberRow: React.FC<{ member: Member; onDelete: (member: Member) =
                     value={member.status}
                     onChange={handleStatusChange}
                     aria-label={`Status for archived member ${member.name}`}
-                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
+                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
                 >
                     {Object.values(MemberStatus).map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -558,7 +558,7 @@ const ArchivedMobileMemberCard: React.FC<{ member: Member; onDelete: (member: Me
                     value={member.status}
                     onChange={handleStatusChange}
                     aria-label={`Status for archived member ${member.name}`}
-                    className={`mt-2 w-full sm:w-auto border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
+                    className={`mt-2 w-full sm:w-auto border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
                 >
                     {Object.values(MemberStatus).map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -589,7 +589,7 @@ const AddMemberCheckbox: React.FC<{ id: string; label: string; checked: boolean;
                 type="checkbox"
                 checked={checked}
                 onChange={onChange}
-                className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                className="focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] h-4 w-4 text-indigo-600 border-gray-300 rounded"
             />
         </div>
         <div className="ml-3 text-sm">
@@ -956,7 +956,7 @@ export const MemberManager: React.FC = () => {
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
                                     placeholder="e.g., Jane Doe"
-                                    className="mt-1 flex-grow w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                                    className="mt-1 flex-grow w-full px-4 py-2 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] dark:bg-gray-700 dark:text-white"
                                     required
                                 />
                             </div>
@@ -966,7 +966,7 @@ export const MemberManager: React.FC = () => {
                                     id="status"
                                     value={status}
                                     onChange={(e) => setStatus(e.target.value as MemberStatus)}
-                                    className="mt-1 block w-full pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center"
+                                    className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10"
                                 >
                                     {Object.values(MemberStatus).filter(s => s !== MemberStatus.Archived).map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
@@ -1006,7 +1006,7 @@ export const MemberManager: React.FC = () => {
                     value={month} 
                     onChange={e => handleDatePartChange('month', Number(e.target.value))} 
                     disabled={!isAdmin}
-                    className="w-auto pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:opacity-70 disabled:cursor-not-allowed min-w-[120px]"
                 >
                     {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
                 </select>
@@ -1014,7 +1014,7 @@ export const MemberManager: React.FC = () => {
                     value={year} 
                     onChange={e => handleDatePartChange('year', Number(e.target.value))} 
                     disabled={!isAdmin}
-                    className="w-auto pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md text-center disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:opacity-70 disabled:cursor-not-allowed min-w-[120px]"
                 >
                     {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
                 </select>

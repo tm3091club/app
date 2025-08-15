@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
-import { Member, RoleAssignment } from '../../types';
-import { MAJOR_ROLES } from '../../Constants';
+import { Member, RoleAssignment, AvailabilityStatus } from '../../types';
+import { MAJOR_ROLES, TOASTMASTERS_ROLES } from '../../Constants';
 import { useToastmasters } from '../../Context/ToastmastersContext';
 
 export const RoleAssignmentCell: React.FC<{
@@ -12,7 +12,9 @@ export const RoleAssignmentCell: React.FC<{
   onAssignmentChange: (meetingIndex: number, role: string, memberId: string | null) => void;
   allAssignmentsForMeeting: RoleAssignment;
   disabled: boolean;
-}> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled }) => {
+  meetingDate: string;
+  availability: { [memberId: string]: any };
+}> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled, meetingDate, availability }) => {
     const { currentUser } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
@@ -56,13 +58,59 @@ export const RoleAssignmentCell: React.FC<{
             return membersToShow;
         }
 
-        // For admins, show all qualified members plus currently assigned member
+        // For admins, order by current role hierarchy (Toastmaster first ... Inspiration Award last),
+        // then members with no role; among no-role members, place "available" at the bottom
+        const dateKey = meetingDate.split('T')[0];
+
+        // Get all qualified members plus currently assigned member
+        let allMembers = [...qualifiedMembers];
         const currentlyAssignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
         if (currentlyAssignedMember && !qualifiedMembers.some(m => m.id === currentlyAssignedMember.id)) {
-            return [currentlyAssignedMember, ...qualifiedMembers];
+            allMembers.unshift(currentlyAssignedMember);
         }
-        return qualifiedMembers;
-    }, [role, availableMembers, assignedMemberId, currentUser]);
+
+        type MemberSortInfo = {
+            member: Member;
+            roleIndexes: number[]; // indexes of roles this member holds in this meeting
+            hasAnyRole: boolean;
+            isAvailableNoRole: boolean; // only relevant when hasAnyRole === false
+        };
+
+        const sortInfos: MemberSortInfo[] = allMembers.map(member => {
+            const rolesInMeeting = Object.keys(allAssignmentsForMeeting).filter(r => allAssignmentsForMeeting[r] === member.id);
+            const roleIndexes = rolesInMeeting.map(r => TOASTMASTERS_ROLES.indexOf(r)).filter(i => i >= 0);
+            const hasAnyRole = roleIndexes.length > 0;
+
+            const availStatus = availability[member.id]?.[dateKey];
+            const isAvailable = availStatus === AvailabilityStatus.Available || availStatus === undefined;
+            return {
+                member,
+                roleIndexes,
+                hasAnyRole,
+                isAvailableNoRole: !hasAnyRole && isAvailable,
+            };
+        });
+
+        sortInfos.sort((a, b) => {
+            // Members with roles come first, ordered by their earliest role index
+            if (a.hasAnyRole && !b.hasAnyRole) return -1;
+            if (!a.hasAnyRole && b.hasAnyRole) return 1;
+
+            if (a.hasAnyRole && b.hasAnyRole) {
+                const aIdx = Math.min(...a.roleIndexes);
+                const bIdx = Math.min(...b.roleIndexes);
+                if (aIdx !== bIdx) return aIdx - bIdx;
+                return a.member.name.localeCompare(b.member.name);
+            }
+
+            // Neither has a role: push available members to the bottom
+            if (a.isAvailableNoRole && !b.isAvailableNoRole) return 1;
+            if (!a.isAvailableNoRole && b.isAvailableNoRole) return -1;
+            return a.member.name.localeCompare(b.member.name);
+        });
+
+        return sortInfos.map(s => s.member);
+    }, [role, availableMembers, assignedMemberId, currentUser, allAssignmentsForMeeting, meetingDate, availability]);
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         onAssignmentChange(meetingIndex, role, e.target.value || null);
@@ -71,10 +119,10 @@ export const RoleAssignmentCell: React.FC<{
     const isUnassigned = !assignedMemberId;
     const assignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
 
-    const baseClasses = "w-full rounded-md shadow-sm py-1.5 px-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm text-center transition-colors";
-    const unassignedClasses = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 font-semibold border-red-300 dark:border-red-700";
-    const assignedClasses = "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600";
-    const readOnlyClasses = "bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-300";
+    const baseClasses = "w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center appearance-none min-w-0";
+    const unassignedClasses = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 font-semibold !border-red-300 dark:!border-red-700";
+    const assignedClasses = "bg-white dark:bg-gray-700 !border-gray-300 dark:!border-gray-600";
+    const readOnlyClasses = "bg-gray-100 dark:bg-gray-600 !border-gray-300 dark:!border-gray-500 text-gray-700 dark:text-gray-300";
 
     // If disabled and has no edit permissions, show read-only display
     if (disabled && membersForThisRole.length === 0) {
@@ -95,16 +143,23 @@ export const RoleAssignmentCell: React.FC<{
         >
             <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">-- Unassigned --</option>
             {membersForThisRole.map(member => {
-                let displayText = member.name;
+                const dateKey = meetingDate.split('T')[0];
+                const memberAvailability = availability[member.id]?.[dateKey];
+                const isAvailable = memberAvailability === AvailabilityStatus.Available || 
+                                  memberAvailability === undefined; // Default to available if not set
                 
-                if (member.id !== assignedMemberId) {
-                    const assignedRolesForMember = Object.keys(allAssignmentsForMeeting).filter(
-                        r => allAssignmentsForMeeting[r] === member.id
-                    );
-                    if (assignedRolesForMember.length > 0) {
-                        displayText = `${member.name} (as ${assignedRolesForMember.join(', ')})`;
-                    }
+                // Get current roles for this member (excluding the current role being assigned)
+                const assignedRolesForMember = Object.keys(allAssignmentsForMeeting).filter(
+                    r => allAssignmentsForMeeting[r] === member.id && r !== role
+                );
+                
+                // New format: "Name (Role)" instead of "Name (as Role)"
+                let displayText = member.name;
+                if (assignedRolesForMember.length > 0 && member.id !== assignedMemberId) {
+                    displayText = `${member.name} (${assignedRolesForMember.join(', ')})`;
                 }
+                
+                // Note: Green styling will be applied via CSS for available members without roles
 
                 // Check if this is the current user
                 const isCurrentUser = currentUser?.uid && member.uid === currentUser.uid;
@@ -122,6 +177,11 @@ export const RoleAssignmentCell: React.FC<{
                                 ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 font-semibold' 
                                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                         } ${isDisabled ? 'opacity-50' : ''}`}
+                        style={{
+                            ...(isAvailable && assignedRolesForMember.length === 0 && {
+                                color: 'rgba(34, 197, 94, 0.7)' // More translucent green
+                            })
+                        }}
                     >
                         {displayText}
                     </option>

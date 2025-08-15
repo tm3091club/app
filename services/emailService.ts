@@ -318,7 +318,7 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`
         month,
         year,
         meetingDay,
-        recipientName: 'Team Member', // Generic greeting for batch emails
+        recipientName: 'Fellow Toastmaster', // Generic greeting for batch emails
         appUrl,
         recipientEmail: emailAddresses[0], // Pass first email for unsubscribe link
         clubId: clubId || 'default'

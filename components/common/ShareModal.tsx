@@ -49,11 +49,11 @@ export const ShareModal: React.FC<{
                             type="text"
                             readOnly
                             value={shareUrl}
-                            className="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300"
+                            className="focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-indigo-500 flex-1 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300"
                         />
                         <button
                             onClick={handleCopy}
-                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-r-md text-white ${copyStatus === 'copied' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#004165] hover:bg-[#003554]'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors`}
+                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-r-md text-white ${copyStatus === 'copied' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#004165] hover:bg-[#003554]'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] transition-colors`}
                         >
                              {copyStatus === 'copied' ? (
                                 <>
@@ -77,7 +77,7 @@ export const ShareModal: React.FC<{
                     <button
                         type="button"
                         onClick={onClose}
-                        className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:w-auto sm:text-sm"
+                        className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] dark:focus:ring-offset-gray-800 sm:w-auto sm:text-sm"
                     >
                         Close
                     </button>
