@@ -149,6 +149,189 @@ exports.emailHealthCheck = functions.https.onRequest((req, res) => {
 });
 
 /**
+ * Clean up old data from the database (notifications older than 30 days)
+ * This function can be triggered manually or scheduled to run daily
+ */
+exports.cleanupOldData = functions.https.onRequest(async (req, res) => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    let totalDeleted = 0;
+    
+    // 1. Clean up old notifications (older than 30 days) - ALL statuses
+    console.log('🧹 Starting notifications cleanup...');
+    const oldNotificationsQuery = await db.collection('notifications')
+      .where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+      .get();
+    
+    if (!oldNotificationsQuery.empty) {
+      const statusCounts = {};
+      oldNotificationsQuery.docs.forEach(doc => {
+        const data = doc.data();
+        const status = data.isRead ? 'read' : 'unread';
+        const dismissed = data.isDismissed ? 'dismissed' : 'active';
+        const key = `${status}_${dismissed}`;
+        statusCounts[key] = (statusCounts[key] || 0) + 1;
+      });
+      
+      const batch = db.batch();
+      oldNotificationsQuery.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      totalDeleted += oldNotificationsQuery.size;
+      console.log(`✅ Deleted ${oldNotificationsQuery.size} old notifications:`, statusCounts);
+    }
+    
+    // 2. Clean up old email queue items (older than 30 days) - ALL statuses
+    console.log('🧹 Starting email queue cleanup...');
+    const oldEmailsQuery = await db.collection('mail')
+      .where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+      .get();
+    
+    if (!oldEmailsQuery.empty) {
+      const statusCounts = {};
+      oldEmailsQuery.docs.forEach(doc => {
+        const data = doc.data();
+        const status = data.status || 'unknown';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      
+      const batch = db.batch();
+      oldEmailsQuery.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      totalDeleted += oldEmailsQuery.size;
+      console.log(`✅ Deleted ${oldEmailsQuery.size} old email records:`, statusCounts);
+    }
+    
+    // 3. Clean up old public schedules (older than 90 days) - more conservative
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    
+    console.log('🧹 Starting old public schedules cleanup...');
+    const oldSchedulesQuery = await db.collection('publicSchedules')
+      .where('createdAt', '<', admin.firestore.Timestamp.fromDate(ninetyDaysAgo))
+      .get();
+    
+    if (!oldSchedulesQuery.empty) {
+      const batch = db.batch();
+      oldSchedulesQuery.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      totalDeleted += oldSchedulesQuery.size;
+      console.log(`✅ Deleted ${oldSchedulesQuery.size} old public schedules`);
+    }
+    
+    // 4. Clean up expired invitations (older than 7 days) - ALL statuses
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    console.log('🧹 Starting expired invitations cleanup...');
+    const expiredInvitationsQuery = await db.collection('invitations')
+      .where('createdAt', '<', admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+      .get();
+    
+    if (!expiredInvitationsQuery.empty) {
+      const statusCounts = {};
+      expiredInvitationsQuery.docs.forEach(doc => {
+        const data = doc.data();
+        const status = data.isUsed ? 'used' : 'pending';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      
+      const batch = db.batch();
+      expiredInvitationsQuery.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      totalDeleted += expiredInvitationsQuery.size;
+      console.log(`✅ Deleted ${expiredInvitationsQuery.size} expired invitations:`, statusCounts);
+    }
+    
+    console.log(`🎉 Cleanup completed! Total items deleted: ${totalDeleted}`);
+    
+    res.json({
+      success: true,
+      message: `Database cleanup completed successfully`,
+      details: {
+        totalDeleted,
+        cleanupDate: new Date().toISOString(),
+        thresholds: {
+          notifications: '30 days',
+          emailQueue: '30 days',
+          publicSchedules: '90 days',
+          invitations: '7 days'
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error during cleanup:', error);
+    res.status(500).json({
+      error: 'Database cleanup failed',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Scheduled cleanup function (runs daily at 2 AM UTC)
+ * To enable this, deploy the function and create a Cloud Scheduler job
+ */
+exports.scheduledCleanup = functions.pubsub
+  .schedule('0 2 * * *') // Every day at 2 AM UTC
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    console.log('🕐 Running scheduled database cleanup...');
+    
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      let totalDeleted = 0;
+      
+      // Clean up old notifications
+      const oldNotificationsQuery = await db.collection('notifications')
+        .where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+        .get();
+      
+      if (!oldNotificationsQuery.empty) {
+        const batch = db.batch();
+        oldNotificationsQuery.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        totalDeleted += oldNotificationsQuery.size;
+      }
+      
+      // Clean up old email records
+      const oldEmailsQuery = await db.collection('mail')
+        .where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+        .get();
+      
+      if (!oldEmailsQuery.empty) {
+        const batch = db.batch();
+        oldEmailsQuery.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        totalDeleted += oldEmailsQuery.size;
+      }
+      
+      console.log(`✅ Scheduled cleanup completed. Deleted ${totalDeleted} old records.`);
+      return null;
+      
+    } catch (error) {
+      console.error('❌ Scheduled cleanup failed:', error);
+      throw error;
+    }
+  });
+
+/**
  * Generate themes using Gemini AI
  */
 exports.generateThemes = functions.https.onCall(async (data, context) => {

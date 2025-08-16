@@ -82,15 +82,19 @@ export const PublicSchedulePage: React.FC<{ clubNumber: string; shareId: string 
         return null;
     }
 
-    const clubDisplayName = scheduleData.clubName ? `${scheduleData.clubName} ` : '';
+    const clubDisplayName = scheduleData.clubName || 'Toastmasters Club';
+    const scheduleTitle = new Date(scheduleData.year, scheduleData.month).toLocaleString('default', { month: 'long', year: 'numeric' }) + ' Schedule';
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans p-4 sm:p-6 lg:p-8">
             <header className="max-w-screen-2xl mx-auto mb-6 text-center">
                 <img className="mx-auto h-12 w-auto mb-4" src="https://www.toastmasters.org/content/images/globals/toastmasters-logo@2x.png" alt="Toastmasters International Logo" />
-                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-                    {clubDisplayName}{new Date(scheduleData.year, scheduleData.month).toLocaleString('default', { month: 'long', year: 'numeric' })} Schedule
+                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
+                    {clubDisplayName}
                 </h1>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                    {scheduleTitle}
+                </h2>
                 <p className="mt-2 text-md text-gray-600 dark:text-gray-400">
                     This is a view-only schedule. Changes are updated in real-time for everyone.
                 </p>

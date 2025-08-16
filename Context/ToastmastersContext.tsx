@@ -307,6 +307,16 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         };
     }, [user, cleanupSubscriptions, completeUserJoin, setupListeners]);
 
+    // Effect to update working date when selected schedule changes
+    useEffect(() => {
+        if (selectedScheduleId && schedules.length > 0) {
+            const schedule = schedules.find(s => s.id === selectedScheduleId);
+            if (schedule && schedule.meetings.length > 0) {
+                const newWorkingDate = schedule.meetings[0].date.split('T')[0];
+                setWorkingDate(newWorkingDate);
+            }
+        }
+    }, [selectedScheduleId, schedules]);
 
     const setWorkingDate = async (date: string | null) => {
         setWorkingDateState(date);
@@ -316,16 +326,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const setSelectedScheduleId = (scheduleId: string | null) => {
+    const setSelectedScheduleId = useCallback((scheduleId: string | null) => {
         setSelectedScheduleIdState(scheduleId);
-        if (scheduleId) {
-            const schedule = schedules.find(s => s.id === scheduleId);
-            if (schedule && schedule.meetings.length > 0) {
-                const newWorkingDate = schedule.meetings[0].date.split('T')[0];
-                setWorkingDate(newWorkingDate);
-            }
-        }
-    };
+    }, []);
 
     const updateUserName = async (payload: { uid: string, newName: string }) => {
         const { uid, newName } = payload;
