@@ -99,7 +99,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
           {TOASTMASTERS_ROLES.map(role => (
-            <tr key={role} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <tr key={role}>
               <td className="sticky left-0 bg-white dark:bg-gray-800 p-4 text-sm font-medium text-gray-900 dark:text-gray-200 whitespace-nowrap z-10">{role}</td>
               {previousScheduleToShow?.map((meeting, index) => (
                 <td key={`prev-role-${index}`} className="p-2 align-top bg-blue-50 dark:bg-blue-900/20">
@@ -114,7 +114,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                   });
 
                   return (
-                    <td key={index} className={`p-2 align-top ${meeting.isBlackout ? 'bg-gray-100 dark:bg-gray-900/50' : ''}`}>
+                    <td key={index} className={`p-2 align-top hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 ${meeting.isBlackout ? 'bg-gray-100 dark:bg-gray-900/50' : ''}`}>
                       {meeting.isBlackout ? (
                         <div className="w-full text-center py-1.5 px-2 text-sm text-gray-500 dark:text-gray-400 font-semibold italic h-[39px] flex items-center justify-center">
                           BLACKOUT

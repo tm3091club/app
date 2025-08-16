@@ -118,19 +118,33 @@ export const RoleAssignmentCell: React.FC<{
 
     const isUnassigned = !assignedMemberId;
     const assignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
+    
+    // Check if current user is assigned to this role and account is linked
+    const isCurrentUserAssigned = currentUser?.uid && assignedMember?.uid === currentUser.uid;
 
     const baseClasses = "w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center appearance-none min-w-0";
     const unassignedClasses = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 font-semibold !border-red-300 dark:!border-red-700";
     const assignedClasses = "bg-white dark:bg-gray-700 !border-gray-300 dark:!border-gray-600";
+    const currentUserAssignedClasses = "bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 font-semibold !border-blue-400 dark:!border-blue-500 shadow-md hover:shadow-lg transition-shadow duration-200";
     const readOnlyClasses = "bg-gray-100 dark:bg-gray-600 !border-gray-300 dark:!border-gray-500 text-gray-700 dark:text-gray-300";
 
     // If disabled and has no edit permissions, show read-only display
     if (disabled && membersForThisRole.length === 0) {
         return (
-            <div className={`${baseClasses} ${isUnassigned ? unassignedClasses : readOnlyClasses}`}>
-                {isUnassigned ? '-- Unassigned --' : assignedMember?.name || '-- Unknown --'}
+            <div className={`${baseClasses} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}>
+                {isUnassigned ? '-- Unassigned --' : (isCurrentUserAssigned ? `👤 ${assignedMember?.name} (You)` : assignedMember?.name || '-- Unknown --')}
             </div>
         );
+    }
+
+    // Determine which style class to use for the dropdown
+    let dropdownClasses;
+    if (isUnassigned) {
+        dropdownClasses = unassignedClasses;
+    } else if (isCurrentUserAssigned) {
+        dropdownClasses = currentUserAssignedClasses;
+    } else {
+        dropdownClasses = assignedClasses;
     }
 
     return (
@@ -138,8 +152,9 @@ export const RoleAssignmentCell: React.FC<{
             value={assignedMemberId || ''}
             onChange={handleChange}
             disabled={disabled}
-            className={`${baseClasses} ${isUnassigned ? unassignedClasses : assignedClasses} ${disabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''}`}
+            className={`${baseClasses} ${dropdownClasses} ${disabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''}`}
             aria-label={`Assign role for ${role}`}
+            title={isCurrentUserAssigned ? "This is your assignment - click to change or unassign" : undefined}
         >
             <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">-- Unassigned --</option>
             {membersForThisRole.map(member => {
@@ -161,11 +176,23 @@ export const RoleAssignmentCell: React.FC<{
                 
                 // Note: Green styling will be applied via CSS for available members without roles
 
-                // Check if this is the current user
+                // Check if this is the current user and account is linked
                 const isCurrentUser = currentUser?.uid && member.uid === currentUser.uid;
+                const isAccountLinked = currentUser?.uid && member.uid === currentUser.uid;
                 
                 // For members (non-admins), only allow them to select themselves or unassign
                 const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUser;
+
+                // Enhanced display text for current user when account is linked
+                let finalDisplayText = displayText;
+                if (isAccountLinked) {
+                    const hasRoles = assignedRolesForMember.length > 0;
+                    if (!hasRoles || member.id === assignedMemberId) {
+                        finalDisplayText = `👤 ${member.name} (You)`;
+                    } else {
+                        finalDisplayText = `👤 ${displayText} - You`;
+                    }
+                }
 
                 return (
                     <option 
@@ -173,17 +200,17 @@ export const RoleAssignmentCell: React.FC<{
                         value={member.id}
                         disabled={isDisabled}
                         className={`font-normal ${
-                            isCurrentUser 
-                                ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 font-semibold' 
+                            isAccountLinked 
+                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 font-bold border-l-4 border-blue-500' 
                                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                         } ${isDisabled ? 'opacity-50' : ''}`}
                         style={{
-                            ...(isAvailable && assignedRolesForMember.length === 0 && {
-                                color: 'rgba(34, 197, 94, 0.7)' // More translucent green
+                            ...(isAvailable && assignedRolesForMember.length === 0 && !isAccountLinked && {
+                                color: 'rgba(34, 197, 94, 0.7)' // More translucent green for available members
                             })
                         }}
                     >
-                        {displayText}
+                        {finalDisplayText}
                     </option>
                 );
             })}
