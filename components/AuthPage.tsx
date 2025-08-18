@@ -109,9 +109,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
         console.error(err);
       }
     } finally {
-      if (isLoading) {
-          setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
