@@ -308,15 +308,18 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     }, [user, cleanupSubscriptions, completeUserJoin, setupListeners]);
 
     // Effect to update working date when selected schedule changes
-    useEffect(() => {
-        if (selectedScheduleId && schedules.length > 0) {
-            const schedule = schedules.find(s => s.id === selectedScheduleId);
-            if (schedule && schedule.meetings.length > 0) {
-                const newWorkingDate = schedule.meetings[0].date.split('T')[0];
-                setWorkingDate(newWorkingDate);
-            }
-        }
-    }, [selectedScheduleId, schedules]);
+    // REMOVED: This was causing conflicts between schedule viewing and availability management
+    // The workingDate should only be changed manually by the user, not automatically
+    // when viewing different schedules
+    // useEffect(() => {
+    //     if (selectedScheduleId && schedules.length > 0) {
+    //         const schedule = schedules.find(s => s.id === selectedScheduleId);
+    //         if (schedule && schedule.meetings.length > 0) {
+    //         const newWorkingDate = schedule.meetings[0].date.split('T')[0];
+    //         setWorkingDate(newWorkingDate);
+    //     }
+    //     }
+    // }, [selectedScheduleId, schedules]);
 
     const setWorkingDate = async (date: string | null) => {
         setWorkingDateState(date);
