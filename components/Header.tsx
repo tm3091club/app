@@ -22,7 +22,7 @@ const NavLink: React.FC<{
     return (
         <button
             onClick={onClick}
-            className={`block w-full text-left md:w-auto md:text-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${isActive ? activeClasses : inactiveClasses}`}
+            className={`block w-full text-left md:w-auto md:text-center px-4 py-3 rounded-md text-base md:text-sm font-semibold md:font-medium transition-colors duration-150 ${isActive ? activeClasses : inactiveClasses}`}
         >
             {children}
         </button>
@@ -67,14 +67,14 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                              <div className="flex items-center space-x-3">
                                 <button
                                     onClick={() => handleNavClick('profile')}
-                                    className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md p-1 transition-colors"
+                                    className="text-base font-semibold text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                     title={displayName || 'View Profile'}
                                 >
                                     {displayName}
                                 </button>
                                 <button
                                     onClick={logOut}
-                                    className="px-3 py-1.5 text-sm font-medium text-white bg-[#004165] hover:bg-[#003554] rounded-md transition-colors"
+                                    className="px-4 py-2 text-base font-semibold text-white bg-[#004165] hover:bg-[#003554] rounded-md transition-colors"
                                 >
                                     Log Out
                                 </button>
@@ -110,26 +110,38 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
             {isMobileMenuOpen && (
                 <div className="md:hidden" id="mobile-menu">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                        <div className="flex items-center justify-between px-3 py-2">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notifications</span>
+                        {/* Club Name with Profile */}
+                        <div className="flex items-center justify-between px-3 py-3 bg-gray-50 dark:bg-gray-700 rounded-md mb-3">
+                            <div className="flex items-center gap-3">
+                                <span className="text-base font-semibold text-gray-900 dark:text-white truncate">{displayName}</span>
+                                <button
+                                    onClick={() => handleNavClick('profile')}
+                                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-2 py-1 rounded border border-blue-200 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                >
+                                    Profile
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {/* Notifications */}
+                        <div className="flex items-center justify-between px-3 py-3">
+                            <span className="text-base font-semibold text-gray-700 dark:text-gray-300">Notifications</span>
                             <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
                         </div>
+                        
+                        {/* Navigation Links */}
                         <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
                         <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
                             {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}
                         </NavLink>
-                        <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                        
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
+                        
+                        {/* Log Out */}
                         <div className="px-2 py-2">
                              <button
-                                onClick={() => handleNavClick('profile')}
-                                className="text-sm font-medium text-gray-600 dark:text-gray-300 truncate mb-2 w-full text-left p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
-                                title={displayName || 'View Profile'}
-                            >
-                                {displayName}
-                             </button>
-                             <button
                                 onClick={() => { logOut(); setIsMobileMenuOpen(false); }}
-                                className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-white bg-[#004165] hover:bg-[#003554]"
+                                className="w-full text-left block px-4 py-3 rounded-md text-base font-semibold text-white bg-[#004165] hover:bg-[#003554] transition-colors"
                             >
                                 Log Out
                             </button>
