@@ -1118,8 +1118,8 @@ export const MemberManager: React.FC = () => {
             )}
 
             {/* NEW: Availability Month Selector - COMPLETELY INDEPENDENT of workingDate */}
-            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 mb-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Availability Management</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -1128,10 +1128,10 @@ export const MemberManager: React.FC = () => {
                     </div>
                     
                     {/* Quick Month Selector */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto">
                         <button
                             onClick={() => handleQuickMonthSelect('current')}
-                            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                            className={`flex-1 sm:flex-initial px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                                 availabilityMonth && availabilityMonth.year === new Date().getFullYear() && availabilityMonth.month === new Date().getMonth()
                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-2 border-blue-300 dark:border-blue-700'
                                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -1141,7 +1141,7 @@ export const MemberManager: React.FC = () => {
                         </button>
                         <button
                             onClick={() => handleQuickMonthSelect('planning')}
-                            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                            className={`flex-1 sm:flex-initial px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                                 availabilityMonth && workingDate && availabilityMonth.year === new Date(`${workingDate}T00:00:00Z`).getUTCFullYear() && availabilityMonth.month === new Date(`${workingDate}T00:00:00Z`).getUTCMonth()
                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-2 border-blue-300 dark:border-blue-700'
                                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -1153,26 +1153,30 @@ export const MemberManager: React.FC = () => {
                 </div>
 
                 {/* Month/Year Selector */}
-                <div className="flex flex-wrap gap-x-4 gap-y-3 items-center">
-                    <label className="font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Availability For:</label>
-                    <select 
-                        value={availabilityMonthInfo.month} 
-                        onChange={e => handleAvailabilityMonthChange('month', Number(e.target.value))} 
-                        className="w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
-                    >
-                        {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
-                    </select>
-                    <select 
-                        value={availabilityMonthInfo.year} 
-                        onChange={e => handleAvailabilityMonthChange('year', Number(e.target.value))} 
-                        className="w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
-                    >
-                        {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    
-                    {/* Current Month Indicator */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                    <label className="font-medium text-gray-700 dark:text-gray-300 text-sm sm:text-base">Availability For:</label>
+                    <div className="flex gap-3 sm:gap-4">
+                        <select 
+                            value={availabilityMonthInfo.month} 
+                            onChange={e => handleAvailabilityMonthChange('month', Number(e.target.value))} 
+                            className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
+                        >
+                            {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
+                        </select>
+                        <select 
+                            value={availabilityMonthInfo.year} 
+                            onChange={e => handleAvailabilityMonthChange('year', Number(e.target.value))} 
+                            className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
+                        >
+                            {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+                </div>
+                
+                {/* Current Month Indicator and Meeting Day */}
+                <div className="flex flex-col gap-3 mt-3 sm:flex-row sm:items-center sm:justify-between">
                     {currentMonthHasRemainingMeetings && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md w-fit">
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -1190,27 +1194,29 @@ export const MemberManager: React.FC = () => {
 
             {/* Schedule Planning Date Selector (Admin Only) - This affects workingDate for schedule generation */}
             {isAdmin && (
-                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
-                    <div className="flex flex-wrap gap-x-4 gap-y-3 items-center">
-                        <label className="font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Schedule Planning For:</label>
-                        <select 
-                            value={month} 
-                            onChange={e => handleDatePartChange('month', Number(e.target.value))} 
-                            className="w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
-                        >
-                            {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
-                        </select>
-                        <select 
-                            value={year} 
-                            onChange={e => handleDatePartChange('year', Number(e.target.value))} 
-                            className="w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
-                        >
-                            {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                            (This affects schedule generation, not availability updates)
-                        </span>
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 mb-6">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        <label className="font-medium text-gray-700 dark:text-gray-300 text-sm sm:text-base">Schedule Planning For:</label>
+                        <div className="flex gap-3 sm:gap-4">
+                            <select 
+                                value={month} 
+                                onChange={e => handleDatePartChange('month', Number(e.target.value))} 
+                                className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
+                            >
+                                {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
+                            </select>
+                            <select 
+                                value={year} 
+                                onChange={e => handleDatePartChange('year', Number(e.target.value))} 
+                                className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
+                            >
+                                {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                        </div>
                     </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+                        (This affects schedule generation, not availability updates)
+                    </p>
                 </div>
             )}
 
