@@ -55,7 +55,7 @@ const InviteModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md transform transition-all">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md transform transition-all mx-4">
                 <form onSubmit={handleSubmit}>
                     <div className="p-6">
                         <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
@@ -188,6 +188,75 @@ const EditableUser: React.FC<{
 };
 
 
+const CopyableEmail: React.FC<{ email: string }> = ({ email }) => {
+    const [copied, setCopied] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(email);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = email;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            } catch (err) {
+                console.error('Failed to copy email:', err);
+            }
+            document.body.removeChild(textArea);
+        }
+    };
+
+    return (
+        <div className="relative group w-full">
+            <button
+                onClick={handleCopy}
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors cursor-pointer py-1 rounded text-left"
+                title={email}
+                style={{display: "block"}}
+            >
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 inline" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                    style={{verticalAlign: "middle"}}
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>{email}
+            </button>
+
+            {/* Tooltip/Feedback */}
+            {(showTooltip || copied) && (
+                <div className="absolute z-10 px-3 py-2 text-xs sm:text-sm text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg bottom-full left-0 mb-1 whitespace-nowrap transform -translate-x-2">
+                    {copied ? (
+                        <span className="flex items-center gap-1">
+                            <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Copied!
+                        </span>
+                    ) : email}
+                    <div className="absolute top-full left-4 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const TeamMemberListItem: React.FC<{
     member: AppUser;
     isClubAdmin: boolean;
@@ -226,34 +295,98 @@ const TeamMemberListItem: React.FC<{
         : "";
 
     return (
-        <li className="py-4">
-            <div className="flex items-center space-x-4">
+        <li className="py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                    {isEditingName ? (
-                        <div className="flex items-center gap-2">
-                             <input
-                                type="text"
-                                value={editedName}
-                                onChange={(e) => setEditedName(e.target.value)}
-                                onBlur={handleSave}
-                                onKeyDown={e => e.key === 'Enter' && handleSave()}
-                                className="w-full text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-indigo-500 rounded-md px-2 py-1"
-                                autoFocus
-                            />
+                    <div className="flex items-center justify-between mb-1">
+                        <div className="flex-1 min-w-0 mr-2">
+                            {isEditingName ? (
+                                <input
+                                    type="text"
+                                    value={editedName}
+                                    onChange={(e) => setEditedName(e.target.value)}
+                                    onBlur={handleSave}
+                                    onKeyDown={e => e.key === 'Enter' && handleSave()}
+                                    className="w-full text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-indigo-500 rounded-md px-2 py-1"
+                                    autoFocus
+                                />
+                            ) : (
+                                <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2 break-words">
+                                   {member.name}
+                                   {isAdminView && (
+                                     <button onClick={() => setIsEditingName(true)} className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex-shrink-0" aria-label={`Edit name for ${member.name}`}>
+                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
+                                     </button>
+                                   )}
+                                </p>
+                            )}
                         </div>
-                    ) : (
-                        <p className="text-sm font-medium text-gray-900 truncate dark:text-white flex items-center gap-2">
-                           {member.name}
-                           {isAdminView && (
-                             <button onClick={() => setIsEditingName(true)} className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" aria-label={`Edit name for ${member.name}`}>
-                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
-                             </button>
-                           )}
-                        </p>
-                    )}
-                    <p className="text-sm text-gray-500 truncate dark:text-gray-400">{member.email}</p>
+                        <div className="flex items-center gap-2 sm:hidden">
+                            {isAdminView ? (
+                                <>
+                                    {isClubAdmin ? (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 whitespace-nowrap">
+                                            Club Admin
+                                        </span>
+                                    ) : (
+                                        <select
+                                            value={member.role}
+                                            onChange={(e) => onRoleChange(member.uid, e.target.value as UserRole)}
+                                            disabled={cannotChangeRole}
+                                            title={tooltipText}
+                                            className="bg-gray-50 dark:bg-gray-700 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none text-gray-900 dark:text-gray-200 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <option value={UserRole.Admin}>Admin</option>
+                                            <option value={UserRole.Member}>Member</option>
+                                        </select>
+                                    )}
+                                    <button
+                                        onClick={() => onSendPasswordReset(member)}
+                                        disabled={isSendingPasswordReset}
+                                        title="Reset password"
+                                        className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded-full hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        aria-label={`Send password reset to ${member.name}`}
+                                    >
+                                        {isSendingPasswordReset ? (
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => onRemove(member)}
+                                        disabled={isClubAdmin}
+                                        title={isClubAdmin ? "The Club Admin cannot be removed." : ""}
+                                        className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        aria-label={`Remove ${member.name}`}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>
+                                    </button>
+                                </>
+                            ) : (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isClubAdmin 
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
+                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                                }`}>
+                                    {isClubAdmin ? 'Club Admin' : member.role}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="w-full">
+                        <CopyableEmail email={member.email} />
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
+                
+                {/* Desktop Controls */}
+                <div className="hidden sm:flex items-center gap-2">
                     {isAdminView ? (
                         <>
                             {isClubAdmin ? (
@@ -568,7 +701,7 @@ export const ProfilePage = (): React.ReactElement | null => {
             // Update the invitation with resend info
             await db.collection('invitations').doc(invite.id).update({
                 resentAt: FieldValue.serverTimestamp(),
-                resendCount: (invite.resendCount || 0) + 1
+                resendCount: ((invite as any).resendCount || 0) + 1
             });
             
             setTeamFeedback({ type: 'success', message: `Invitation resent to ${invite.email} successfully!` });
@@ -632,7 +765,7 @@ export const ProfilePage = (): React.ReactElement | null => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-0">
             <ConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} title="Remove User">
                 <p>Are you sure you want to remove <strong className="text-gray-900 dark:text-white">{userToManage?.email}</strong> from your club? They will lose all access. This action cannot be undone.</p>
             </ConfirmationModal>
@@ -647,8 +780,8 @@ export const ProfilePage = (): React.ReactElement | null => {
                 organization={organization}
             />
 
-            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Club Profile</h2>
+            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">Club Profile</h2>
                 {profileFeedback && (
                     <div className={`rounded-md ${profileFeedback.type === 'success' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'} p-4 mb-4`}>
                         <p className={`text-sm font-medium ${profileFeedback.type === 'success' ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>{profileFeedback.message}</p>
@@ -663,7 +796,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             disabled={!isAdmin}
                         />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="district" className="block text-sm font-medium text-gray-700 dark:text-gray-300">District</label>
                             <select id="district" value={district} onChange={(e) => setDistrict(e.target.value)}
@@ -689,7 +822,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
                         />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="meetingDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Meeting Day</label>
                             <select id="meetingDay" value={meetingDay} onChange={(e) => setMeetingDay(parseInt(e.target.value))}
@@ -720,8 +853,8 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </div>
                     </div>
                     {isAdmin && (
-                        <div className="flex justify-end">
-                            <button type="submit" className="inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:opacity-50" disabled={!hasClubProfileChanged}>
+                        <div className="flex justify-stretch sm:justify-end">
+                            <button type="submit" className="w-full sm:w-auto inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-semibold py-3 px-6 rounded-md transition duration-150 disabled:opacity-50" disabled={!hasClubProfileChanged}>
                                 Save Club Profile
                             </button>
                         </div>
@@ -735,13 +868,13 @@ export const ProfilePage = (): React.ReactElement | null => {
                 )}
             </div>
             
-            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">My Profile</h2>
+            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
+                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">My Profile</h2>
                  <EditableUser user={currentUser} isCurrentUser={true} onSaveName={handleSaveUserName} />
             </div>
 
-            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Change Sign-in Email</h2>
+            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">Change Sign-in Email</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     For your security, you must re-verify your identity to change your sign-in email.
                     {isPasswordUser ? " Please provide your current password." : " A popup will ask you to sign in again."}
@@ -776,10 +909,10 @@ export const ProfilePage = (): React.ReactElement | null => {
                             />
                         </div>
                     )}
-                    <div className="flex justify-end">
+                    <div className="flex justify-stretch sm:justify-end">
                         <button
                             type="submit"
-                            className="inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:opacity-50"
+                            className="w-full sm:w-auto inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-semibold py-3 px-6 rounded-md transition duration-150 disabled:opacity-50"
                             disabled={isUpdatingEmail || !newEmail || (isPasswordUser && !emailChangePassword)}
                         >
                             {isUpdatingEmail ? 'Updating...' : 'Change Email'}
@@ -789,7 +922,7 @@ export const ProfilePage = (): React.ReactElement | null => {
             </div>
 
             {isPasswordUser && <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">My Security</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">My Security</h2>
                 {passwordFeedback && (
                     <div className={`rounded-md ${passwordFeedback.type === 'success' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'} p-4 mb-4`}>
                         <p className={`text-sm font-medium ${passwordFeedback.type === 'success' ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>{passwordFeedback.message}</p>
@@ -817,8 +950,8 @@ export const ProfilePage = (): React.ReactElement | null => {
                             required
                         />
                     </div>
-                    <div className="flex justify-end">
-                        <button type="submit" className="inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:opacity-50" disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword}>
+                    <div className="flex justify-stretch sm:justify-end">
+                        <button type="submit" className="w-full sm:w-auto inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-semibold py-3 px-6 rounded-md transition duration-150 disabled:opacity-50" disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword}>
                             {isUpdatingPassword ? 'Updating...' : 'Update Password'}
                         </button>
                     </div>
@@ -826,10 +959,10 @@ export const ProfilePage = (): React.ReactElement | null => {
             </div>}
             
             {isAdmin && (
-                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Team Management</h2>
-                        {isClubAdmin && <button onClick={() => setIsInviteModalOpen(true)} className="mt-3 sm:mt-0 w-full sm:w-auto inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-150">
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-0">Team Management</h2>
+                        {isClubAdmin && <button onClick={() => setIsInviteModalOpen(true)} className="w-full sm:w-auto inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-5 rounded-md transition duration-150 shadow-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 -ml-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
                             Invite New Member
                         </button>}
@@ -840,7 +973,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </div>
                     )}
                     
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members.length})</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members.length})</h3>
                     <div className="flow-root">
                         <ul role="list" className="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
                             {organization.members.map((member) => (
@@ -863,19 +996,42 @@ export const ProfilePage = (): React.ReactElement | null => {
 
                     {isClubAdmin && pendingInvites.length > 0 && (
                         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Pending Invitations ({pendingInvites.length})</h3>
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Pending Invitations ({pendingInvites.length})</h3>
                             <div className="flow-root">
                                 <ul role="list" className="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
                                     {pendingInvites.map((invite) => (
-                                        <li key={invite.id} className="py-4">
-                                            <div className="flex items-center space-x-4">
+                                        <li key={invite.id} className="py-3">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-gray-900 truncate dark:text-white">
-                                                        {invite.invitedUserName || invite.email}
-                                                    </p>
-                                                    <p className="text-sm text-gray-500 truncate dark:text-gray-400">{invite.email}</p>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <div className="flex-1 min-w-0 mr-2">
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-white break-words">
+                                                                {invite.invitedUserName || invite.email}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 sm:hidden">
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                                                                Pending
+                                                            </span>
+                                                            <button onClick={() => handleResendInvite(invite)} title="Resend Invitation" className="p-1.5 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full hover:bg-indigo-100 dark:hover:bg-gray-700 transition-colors">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                                </svg>
+                                                            </button>
+                                                            <button onClick={() => openRevokeModal(invite)} title="Revoke Invitation" className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-gray-700 transition-colors">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full">
+                                                        <CopyableEmail email={invite.email} />
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                
+                                                {/* Desktop Controls */}
+                                                <div className="hidden sm:flex items-center gap-2">
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
                                                         Pending
                                                     </span>
@@ -902,8 +1058,8 @@ export const ProfilePage = (): React.ReactElement | null => {
             )}
 
             {isAdmin && (
-                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Email Testing</h2>
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">Email Testing</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                         Test email functionality safely without sending to all members. Use your own email address to preview how emails will look.
                     </p>

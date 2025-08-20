@@ -75,7 +75,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
   const readNotifications = notifications.filter(n => n.isRead);
 
   return (
-    <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-w-[calc(100vw-2rem)] mx-2 sm:mx-0">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -206,7 +206,7 @@ interface NotificationItemProps {
   notification: Notification;
   onClick: () => void;
   onDelete: () => void;
-  getIcon: (type: NotificationType) => JSX.Element;
+  getIcon: (type: NotificationType) => React.ReactElement;
   isRead?: boolean;
   isPreviousView?: boolean;
 }
