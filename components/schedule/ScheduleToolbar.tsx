@@ -58,11 +58,11 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   }, []);
 
   const renderExportButton = () => (
-    <div className="relative" ref={exportMenuRef}>
+    <div className="relative w-full sm:w-auto" ref={exportMenuRef}>
       <button
         onClick={() => setIsExportMenuOpen(prev => !prev)}
         disabled={hasUnassignedRoles}
-        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto whitespace-nowrap"
         title={hasUnassignedRoles ? "Please assign all major roles to enable export" : "Export Schedule"}
       >
         Export
@@ -86,12 +86,12 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 no-print">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 no-print">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Schedule Manager</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Schedule Manager</h2>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <select
             value={selectedScheduleId || ''}
             onChange={e => {
@@ -104,7 +104,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 onSelectSchedule(value || null);
               }
             }}
-            className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center md:text-left md:pl-3 md:pr-10 appearance-none min-w-[200px]"
+            className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center sm:text-left sm:pl-3 sm:pr-10 appearance-none w-full sm:min-w-[200px] sm:w-auto"
           >
             <option value="">-- Select a Schedule --</option>
             
@@ -172,7 +172,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             })()}
           </select>
           {isAdmin && (
-            <button onClick={onDeleteSchedule} disabled={!selectedScheduleId} title="Delete Schedule" className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-100 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={onDeleteSchedule} disabled={!selectedScheduleId} title="Delete Schedule" className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-100 dark:hover:bg-gray-700 transition-colors self-start sm:self-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>
             </button>
           )}
@@ -180,8 +180,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
       </div>
       {hasActiveSchedule && (
         <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">View Options:</span>
                     <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
                         <input
@@ -197,21 +197,23 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">(No previous month's schedule found)</span>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     {isAdmin && (
-                        <button onClick={onGenerateThemes} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md transition">
+                        <button onClick={onGenerateThemes} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition flex-1 sm:flex-initial whitespace-nowrap">
                             Generate Themes
                         </button>
                     )}
                     {isAdmin && (
-                        <button onClick={onGenerateSchedule} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition">
+                        <button onClick={onGenerateSchedule} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition flex-1 sm:flex-initial whitespace-nowrap">
                             Generate Schedule
                         </button>
                     )}
-                    <button onClick={onShare} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md transition">
+                    <button onClick={onShare} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition flex-1 sm:flex-initial whitespace-nowrap">
                         Share
                     </button>
-                    {renderExportButton()}
+                    <div className="flex-1 sm:flex-initial">
+                        {renderExportButton()}
+                    </div>
                 </div>
             </div>
             {hasUnassignedRoles && (
