@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
-import { MemberStatus, Member, AvailabilityStatus, AppUser, UserRole, Organization } from '../types';
+import { MemberStatus, Member, AvailabilityStatus, AppUser, UserRole, Organization, MonthlySchedule } from '../types';
 import { getMeetingDatesForMonth } from '../services/scheduleLogic';
 import { WithTooltip } from './common/WithTooltip';
-import { getCurrentMonthInfo, getNextMonthInfo, getRelevantMonthsForAvailability } from '../utils/monthUtils';
+import { getCurrentMonthInfo, getNextMonthInfo, getRelevantMonthsForAvailability, getNextScheduleMonth } from '../utils/monthUtils';
 
 const LinkAccountModal: React.FC<{
     isOpen: boolean;
@@ -704,7 +704,7 @@ const MembersTable: React.FC<{
 
 
 export const MemberManager: React.FC = () => {
-    const { members, workingDate, setWorkingDate, addMember, deleteMember, updateMemberName, currentUser, organization, linkMemberToAccount } = useToastmasters();
+    const { members, schedules, addMember, deleteMember, updateMemberName, currentUser, organization, linkMemberToAccount } = useToastmasters();
     const [fullName, setFullName] = useState('');
     const [status, setStatus] = useState<MemberStatus>(MemberStatus.Active);
     const [qualifications, setQualifications] = useState({
@@ -734,17 +734,7 @@ export const MemberManager: React.FC = () => {
     
     const isAdmin = currentUser?.role === UserRole.Admin;
 
-    // Auto-set working date based on organization meeting day and current month logic
-    // This ONLY affects schedule planning, not availability management
-    useEffect(() => {
-        if (organization?.meetingDay !== undefined && !workingDate) {
-            const relevantMonths = getRelevantMonthsForAvailability(organization.meetingDay);
-            // Default to current month, but could be made smarter based on current date
-            const targetMonth = relevantMonths.current;
-            const newDate = `${targetMonth.year}-${String(targetMonth.month + 1).padStart(2, '0')}-01`;
-            setWorkingDate(newDate);
-        }
-    }, [organization?.meetingDay, workingDate, setWorkingDate]);
+
 
     // NEW: Auto-set availability month to current month for better UX
     // This is completely independent of workingDate and schedule planning
@@ -755,17 +745,7 @@ export const MemberManager: React.FC = () => {
         }
     }, [organization?.meetingDay, availabilityMonth]);
 
-    // Get schedule planning month info (for admin display only)
-    const { year, month, day } = useMemo(() => {
-        if (!workingDate) {
-            const d = new Date();
-            return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
-        }
-        const d = new Date(`${workingDate}T00:00:00Z`);
-        return { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate() };
-    }, [workingDate]);
-
-    // NEW: Get availability month info - COMPLETELY INDEPENDENT
+    // Get availability month info
     const availabilityMonthInfo = useMemo(() => {
         if (!availabilityMonth) {
             const d = new Date();
@@ -774,29 +754,7 @@ export const MemberManager: React.FC = () => {
         return availabilityMonth;
     }, [availabilityMonth]);
 
-    // Get meeting dates for schedule planning month (workingDate)
-    const meetingDates = useMemo(() => {
-        if (!workingDate) return [];
-        // Use the organization's meeting day or default to Tuesday
-        const meetingDay = organization?.meetingDay ?? 2;
-        const dates: Date[] = [];
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        
-        // Find the first meeting day of the month
-        let currentDate = new Date(firstDay);
-        while (currentDate.getDay() !== meetingDay) {
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-        
-        // Add all meeting days for the month
-        while (currentDate <= lastDay) {
-            dates.push(new Date(currentDate));
-            currentDate.setDate(currentDate.getDate() + 7); // Next week
-        }
-        
-        return dates;
-    }, [workingDate, year, month, organization?.meetingDay]);
+
 
     // NEW: Get meeting dates for availability month - COMPLETELY INDEPENDENT
     const availabilityMeetingDates = useMemo(() => {
@@ -821,16 +779,7 @@ export const MemberManager: React.FC = () => {
         return dates;
     }, [availabilityMonth, availabilityMonthInfo, organization?.meetingDay]);
 
-    // Handle schedule planning date change (workingDate) - ONLY affects schedule generation
-    const handleDatePartChange = (part: 'year' | 'month', value: number) => {
-        let newYear = year, newMonth = month;
-        if (part === 'year') newYear = value;
-        if (part === 'month') newMonth = value;
 
-        // Always use the 1st day of the month since we calculate meeting days automatically
-        const newDateStr = `${newYear}-${String(newMonth + 1).padStart(2, '0')}-01`;
-        setWorkingDate(newDateStr);
-    };
 
     // NEW: Handle availability month change - COMPLETELY INDEPENDENT of workingDate
     const handleAvailabilityMonthChange = (part: 'year' | 'month', value: number) => {
@@ -855,13 +804,8 @@ export const MemberManager: React.FC = () => {
                 target = relevantMonths.current;
                 break;
             case 'planning':
-                // Use the schedule planning month (workingDate)
-                if (workingDate) {
-                    const d = new Date(`${workingDate}T00:00:00Z`);
-                    target = { year: d.getUTCFullYear(), month: d.getUTCMonth() };
-                } else {
-                    target = relevantMonths.next;
-                }
+                // Use the next month for planning
+                target = relevantMonths.next;
                 break;
         }
         
@@ -992,15 +936,14 @@ export const MemberManager: React.FC = () => {
         return organization.members.filter(user => !linkedUids.has(user.uid));
     }, [organization?.members, members]);
 
-    const monthName = new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' });
+
     
-    // NEW: Get availability month name - COMPLETELY INDEPENDENT
+    // Get availability month name
     const availabilityMonthName = availabilityMonth 
         ? new Date(availabilityMonth.year, availabilityMonth.month).toLocaleString('default', { month: 'long', year: 'numeric' })
-        : monthName;
+        : '';
     
     const today = new Date();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
     
     const commonTableProps = {
         meetingDates: availabilityMeetingDates, // Use availability meeting dates instead
@@ -1142,12 +1085,12 @@ export const MemberManager: React.FC = () => {
                         <button
                             onClick={() => handleQuickMonthSelect('planning')}
                             className={`flex-1 sm:flex-initial px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                                availabilityMonth && workingDate && availabilityMonth.year === new Date(`${workingDate}T00:00:00Z`).getUTCFullYear() && availabilityMonth.month === new Date(`${workingDate}T00:00:00Z`).getUTCMonth()
+                                availabilityMonth && availabilityMonth.year === getNextScheduleMonth(schedules, organization?.meetingDay ?? 2).year && availabilityMonth.month === getNextScheduleMonth(schedules, organization?.meetingDay ?? 2).month
                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-2 border-blue-300 dark:border-blue-700'
                                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                             }`}
                         >
-                            Planning Month
+                            Next Month
                         </button>
                     </div>
                 </div>
@@ -1192,33 +1135,7 @@ export const MemberManager: React.FC = () => {
                 </div>
             </div>
 
-            {/* Schedule Planning Date Selector (Admin Only) - This affects workingDate for schedule generation */}
-            {isAdmin && (
-                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 mb-6">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                        <label className="font-medium text-gray-700 dark:text-gray-300 text-sm sm:text-base">Schedule Planning For:</label>
-                        <div className="flex gap-3 sm:gap-4">
-                            <select 
-                                value={month} 
-                                onChange={e => handleDatePartChange('month', Number(e.target.value))} 
-                                className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
-                            >
-                                {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
-                            </select>
-                            <select 
-                                value={year} 
-                                onChange={e => handleDatePartChange('year', Number(e.target.value))} 
-                                className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
-                            >
-                                {Array.from({length: 10}, (_, i) => today.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-                        (This affects schedule generation, not availability updates)
-                    </p>
-                </div>
-            )}
+
 
             {isAdmin ? (
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
