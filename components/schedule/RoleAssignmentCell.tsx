@@ -131,8 +131,15 @@ export const RoleAssignmentCell: React.FC<{
     // If disabled and has no edit permissions, show read-only display
     if (disabled && membersForThisRole.length === 0) {
         return (
-            <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}>
-                {isUnassigned ? '-- Unassigned --' : (isCurrentUserAssigned ? `👤 ${assignedMember?.name} (You)` : assignedMember?.name || '-- Unknown --')}
+            <div className="relative w-full">
+                <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3').replace('text-center', '')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}
+                     style={{
+                         // Safari-specific fixes for text centering
+                         textAlign: 'center',
+                         WebkitTextAlign: 'center'
+                     }}>
+                    {isUnassigned ? '-- Unassigned --' : (isCurrentUserAssigned ? `👤 ${assignedMember?.name} (You)` : assignedMember?.name || '-- Unknown --')}
+                </div>
             </div>
         );
     }
@@ -148,14 +155,26 @@ export const RoleAssignmentCell: React.FC<{
     }
 
     return (
-        <select
-            value={assignedMemberId || ''}
-            onChange={handleChange}
-            disabled={disabled}
-            className={`${baseClasses} ${dropdownClasses} ${disabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''}`}
-            aria-label={`Assign role for ${role}`}
-            title={isCurrentUserAssigned ? "This is your assignment - click to change or unassign" : undefined}
-        >
+        <div className="relative w-full">
+            <select
+                value={assignedMemberId || ''}
+                onChange={handleChange}
+                disabled={disabled}
+                className={`${baseClasses.replace('text-center', '')} ${dropdownClasses} ${disabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''}`}
+                aria-label={`Assign role for ${role}`}
+                title={isCurrentUserAssigned ? "This is your assignment - click to change or unassign" : undefined}
+                style={{
+                    // Safari-specific fixes for text centering
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    appearance: 'none',
+                    textAlign: 'center',
+                    // Force centering for Safari
+                    textAlignLast: 'center',
+                    // Additional Safari-specific properties
+                    WebkitTextAlign: 'center'
+                }}
+            >
             <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">-- Unassigned --</option>
             {membersForThisRole.map(member => {
                 const dateKey = meetingDate.split('T')[0];
@@ -219,6 +238,7 @@ export const RoleAssignmentCell: React.FC<{
                     </option>
                 );
             })}
-        </select>
+            </select>
+        </div>
     );
 };
