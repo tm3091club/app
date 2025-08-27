@@ -1,0 +1,66 @@
+[1mdiff --git a/components/schedule/RoleAssignmentCell.tsx b/components/schedule/RoleAssignmentCell.tsx[m
+[1mindex 22fbc19..1d814a0 100644[m
+[1m--- a/components/schedule/RoleAssignmentCell.tsx[m
+[1m+++ b/components/schedule/RoleAssignmentCell.tsx[m
+[36m@@ -131,8 +131,15 @@[m [mexport const RoleAssignmentCell: React.FC<{[m
+     // If disabled and has no edit permissions, show read-only display[m
+     if (disabled && membersForThisRole.length === 0) {[m
+         return ([m
+[31m-            <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}>[m
+[31m-                {isUnassigned ? '-- Unassigned --' : (isCurrentUserAssigned ? `👤 ${assignedMember?.name} (You)` : assignedMember?.name || '-- Unknown --')}[m
+[32m+[m[32m            <div className="relative w-full">[m
+[32m+[m[32m                <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3').replace('text-center', '')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}[m
+[32m+[m[32m                     style={{[m
+[32m+[m[32m                         // Safari-specific fixes for text centering[m
+[32m+[m[32m                         textAlign: 'center',[m
+[32m+[m[32m                         WebkitTextAlign: 'center'[m
+[32m+[m[32m                     }}>[m
+[32m+[m[32m                    {isUnassigned ? '-- Unassigned --' : (isCurrentUserAssigned ? `👤 ${assignedMember?.name} (You)` : assignedMember?.name || '-- Unknown --')}[m
+[32m+[m[32m                </div>[m
+             </div>[m
+         );[m
+     }[m
+[36m@@ -148,14 +155,26 @@[m [mexport const RoleAssignmentCell: React.FC<{[m
+     }[m
+ [m
+     return ([m
+[31m-        <select[m
+[31m-            value={assignedMemberId || ''}[m
+[31m-            onChange={handleChange}[m
+[31m-            disabled={disabled}[m
+[31m-            className={`${baseClasses} ${dropdownClasses} ${disabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''}`}[m
+[31m-            aria-label={`Assign role for ${role}`}[m
+[31m-            title={isCurrentUserAssigned ? "This is your assignment - click to change or unassign" : undefined}[m
+[31m-        >[m
+[32m+[m[32m        <div className="relative w-full">[m
+[32m+[m[32m            <select[m
+[32m+[m[32m                value={assignedMemberId || ''}[m
+[32m+[m[32m                onChange={handleChange}[m
+[32m+[m[32m                disabled={disabled}[m
+[32m+[m[32m                className={`${baseClasses.replace('text-center', '')} ${dropdownClasses} ${disabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''}`}[m
+[32m+[m[32m                aria-label={`Assign role for ${role}`}[m
+[32m+[m[32m                title={isCurrentUserAssigned ? "This is your assignment - click to change or unassign" : undefined}[m
+[32m+[m[32m                style={{[m
+[32m+[m[32m                    // Safari-specific fixes for text centering[m
+[32m+[m[32m                    WebkitAppearance: 'none',[m
+[32m+[m[32m                    MozAppearance: 'none',[m
+[32m+[m[32m                    appearance: 'none',[m
+[32m+[m[32m                    textAlign: 'center',[m
+[32m+[m[32m                    // Force centering for Safari[m
+[32m+[m[32m                    textAlignLast: 'center',[m
+[32m+[m[32m                    // Additional Safari-specific properties[m
+[32m+[m[32m                    WebkitTextAlign: 'center'[m
+[32m+[m[32m                }}[m
+[32m+[m[32m            >[m
+             <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">-- Unassigned --</option>[m
+             {membersForThisRole.map(member => {[m
+                 const dateKey = meetingDate.split('T')[0];[m
+[36m@@ -219,6 +238,7 @@[m [mexport const RoleAssignmentCell: React.FC<{[m
+                     </option>[m
+                 );[m
+             })}[m
+[31m-        </select>[m
+[32m+[m[32m            </select>[m
+[32m+[m[32m        </div>[m
+     );[m
+ };[m
