@@ -291,7 +291,18 @@ const MemberRow: React.FC<{
                     onChange={handleStatusChange}
                     aria-label={`Status for ${displayName}`}
                     disabled={!canEditRow}
-                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                    style={{
+                        // Safari-specific fixes for text centering
+                        WebkitAppearance: 'none',
+                        MozAppearance: 'none',
+                        appearance: 'none',
+                        textAlign: 'center',
+                        // Force centering for Safari
+                        textAlignLast: 'center',
+                        // Additional Safari-specific properties
+                        WebkitTextAlign: 'center'
+                    }}
                 >
                     {Object.values(MemberStatus).map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -313,7 +324,18 @@ const MemberRow: React.FC<{
                                         value={currentStatus}
                                         onChange={e => handleAvailabilityChange(dateKey, e.target.value as AvailabilityStatus)}
                                         disabled={isWeeklyAvailabilityDisabled || !canEditAvailability}
-                                        className="w-auto bg-white dark:bg-gray-700 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none appearance-none rounded-md shadow-sm py-1 pr-7 focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-xs text-center text-gray-900 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                                        className="w-auto bg-white dark:bg-gray-700 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none appearance-none rounded-md shadow-sm py-1 pr-7 focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-xs text-gray-900 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                                        style={{
+                                            // Safari-specific fixes for text centering
+                                            WebkitAppearance: 'none',
+                                            MozAppearance: 'none',
+                                            appearance: 'none',
+                                            textAlign: 'center',
+                                            // Force centering for Safari
+                                            textAlignLast: 'center',
+                                            // Additional Safari-specific properties
+                                            WebkitTextAlign: 'center'
+                                        }}
                                     >
                                         {Object.values(AvailabilityStatus).map(s => <option key={s} value={s}>{availabilityDisplayMap[s]}</option>)}
                                     </select>

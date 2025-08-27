@@ -58,11 +58,11 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   }, []);
 
   const renderExportButton = () => (
-    <div className="relative w-full sm:w-auto" ref={exportMenuRef}>
+    <div className="relative w-full md:w-auto" ref={exportMenuRef}>
       <button
         onClick={() => setIsExportMenuOpen(prev => !prev)}
         disabled={hasUnassignedRoles}
-        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto whitespace-nowrap"
+        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto md:whitespace-nowrap"
         title={hasUnassignedRoles ? "Please assign all major roles to enable export" : "Export Schedule"}
       >
         Export
@@ -104,7 +104,18 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 onSelectSchedule(value || null);
               }
             }}
-            className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center sm:text-left sm:pl-3 sm:pr-10 appearance-none flex-1 sm:flex-initial sm:min-w-[200px]"
+            className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] sm:text-left sm:pl-3 sm:pr-10 appearance-none flex-1 sm:flex-initial sm:min-w-[200px]"
+            style={{
+              // Safari-specific fixes for text centering
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              appearance: 'none',
+              textAlign: 'center',
+              // Force centering for Safari
+              textAlignLast: 'center',
+              // Additional Safari-specific properties
+              WebkitTextAlign: 'center'
+            }}
           >
             <option value="">-- Select a Schedule --</option>
             
@@ -197,21 +208,21 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">(No previous month's schedule found)</span>
                     )}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 gap-1 md:flex md:flex-row md:items-center md:gap-2 lg:gap-3">
                     {isAdmin && (
-                        <button onClick={onGenerateThemes} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition flex-1 sm:flex-initial whitespace-nowrap">
+                        <button onClick={onGenerateThemes} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition w-full md:flex-initial md:whitespace-nowrap">
                             Generate Themes
                         </button>
                     )}
                     {isAdmin && (
-                        <button onClick={onGenerateSchedule} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition flex-1 sm:flex-initial whitespace-nowrap">
+                        <button onClick={onGenerateSchedule} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition w-full md:flex-initial md:whitespace-nowrap">
                             Generate Schedule
                         </button>
                     )}
-                    <button onClick={onShare} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-2 sm:px-4 text-xs sm:text-sm rounded-md transition flex-1 sm:flex-initial whitespace-nowrap">
+                    <button onClick={onShare} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition w-full md:flex-initial md:whitespace-nowrap">
                         Share
                     </button>
-                    <div className="flex-1 sm:flex-initial">
+                    <div className="w-full md:flex-initial">
                         {renderExportButton()}
                     </div>
                 </div>
