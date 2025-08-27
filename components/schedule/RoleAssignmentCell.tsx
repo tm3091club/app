@@ -122,7 +122,7 @@ export const RoleAssignmentCell: React.FC<{
     // Check if current user is assigned to this role and account is linked
     const isCurrentUserAssigned = currentUser?.uid && assignedMember?.uid === currentUser.uid;
 
-    const baseClasses = "w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center appearance-none min-w-0";
+    const baseClasses = "w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-1.5 px-1 sm:py-2 sm:px-3 text-[12px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center appearance-none min-w-0 overflow-hidden";
     const unassignedClasses = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 font-semibold !border-red-300 dark:!border-red-700";
     const assignedClasses = "bg-white dark:bg-gray-700 !border-gray-300 dark:!border-gray-600";
     const currentUserAssignedClasses = "bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 font-semibold !border-blue-400 dark:!border-blue-500 shadow-md hover:shadow-lg transition-shadow duration-200";
@@ -131,7 +131,7 @@ export const RoleAssignmentCell: React.FC<{
     // If disabled and has no edit permissions, show read-only display
     if (disabled && membersForThisRole.length === 0) {
         return (
-            <div className={`${baseClasses} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}>
+            <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}>
                 {isUnassigned ? '-- Unassigned --' : (isCurrentUserAssigned ? `👤 ${assignedMember?.name} (You)` : assignedMember?.name || '-- Unknown --')}
             </div>
         );
@@ -171,7 +171,11 @@ export const RoleAssignmentCell: React.FC<{
                 // New format: "Name (Role)" instead of "Name (as Role)"
                 let displayText = member.name;
                 if (assignedRolesForMember.length > 0 && member.id !== assignedMemberId) {
-                    displayText = `${member.name} (${assignedRolesForMember.join(', ')})`;
+                    // Truncate long role lists for better mobile display
+                    const rolesText = assignedRolesForMember.length > 2
+                        ? `${assignedRolesForMember.slice(0, 2).join(', ')}...`
+                        : assignedRolesForMember.join(', ');
+                    displayText = `${member.name} (${rolesText})`;
                 }
                 
                 // Note: Green styling will be applied via CSS for available members without roles
@@ -195,13 +199,13 @@ export const RoleAssignmentCell: React.FC<{
                 }
 
                 return (
-                    <option 
-                        key={member.id} 
+                    <option
+                        key={member.id}
                         value={member.id}
                         disabled={isDisabled}
-                        className={`font-normal ${
-                            isAccountLinked 
-                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 font-bold border-l-4 border-blue-500' 
+                        className={`font-normal text-[12px] sm:text-sm py-1 ${
+                            isAccountLinked
+                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 font-bold border-l-4 border-blue-500'
                                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                         } ${isDisabled ? 'opacity-50' : ''}`}
                         style={{
@@ -209,6 +213,7 @@ export const RoleAssignmentCell: React.FC<{
                                 color: 'rgba(34, 197, 94, 0.7)' // More translucent green for available members
                             })
                         }}
+                        title={finalDisplayText} // Show full text on hover for truncated items
                     >
                         {finalDisplayText}
                     </option>
