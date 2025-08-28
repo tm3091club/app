@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import NotificationBell from './NotificationBell';
 
-type View = 'schedule' | 'members' | 'profile';
+type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda';
 
 interface HeaderProps {
     currentView: View;
@@ -58,7 +58,8 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                         <div className="hidden md:flex items-center space-x-4">
                             <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
                             <nav className="flex items-baseline space-x-4">
-                                <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
+                                <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Monthly Schedule</NavLink>
+                                <NavLink isActive={currentView === 'weekly-agenda'} onClick={() => handleNavClick('weekly-agenda')}>Weekly Agenda</NavLink>
                                 <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
                                     {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}
                                 </NavLink>
@@ -130,7 +131,8 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                         </div>
                         
                         {/* Navigation Links */}
-                        <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Schedule</NavLink>
+                        <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Monthly Schedule</NavLink>
+                        <NavLink isActive={currentView === 'weekly-agenda'} onClick={() => handleNavClick('weekly-agenda')}>Weekly Agenda</NavLink>
                         <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
                             {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}
                         </NavLink>

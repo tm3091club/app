@@ -1,7 +1,7 @@
 
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Member, MonthlySchedule, MemberStatus, MemberAvailability, AvailabilityStatus, Organization, AppUser, UserRole, PendingInvite } from '../types';
+import { Member, MonthlySchedule, MemberStatus, MemberAvailability, AvailabilityStatus, Organization, AppUser, UserRole, PendingInvite, WeeklyAgenda } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { deepClone } from '../services/scheduleLogic';
 import { useAuth } from './AuthContext';
@@ -27,6 +27,7 @@ interface ToastmastersState {
   currentUser: AppUser | null;
   ownerId: string | null;
   pendingInvites: PendingInvite[];
+  weeklyAgendas: WeeklyAgenda[];
   loading: boolean;
   error: string | null;
   addMember: (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => Promise<void>;
@@ -48,6 +49,8 @@ interface ToastmastersState {
   revokeInvite: (inviteId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   linkMemberToAccount: (payload: { memberId: string, uid: string | null }) => Promise<void>;
+  saveWeeklyAgenda: (agenda: WeeklyAgenda) => Promise<void>;
+  deleteWeeklyAgenda: (agendaId: string) => Promise<void>;
 }
 
 const ToastmastersContext = createContext<ToastmastersState | undefined>(undefined);
@@ -64,11 +67,13 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
     const [dataOwnerId, setDataOwnerId] = useState<string | null>(null);
     const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+    const [weeklyAgendas, setWeeklyAgendas] = useState<WeeklyAgenda[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const dataSubscription = useRef<(() => void) | null>(null);
     const invitesSubscription = useRef<(() => void) | null>(null);
+    const agendasSubscription = useRef<(() => void) | null>(null);
 
     const getDataDocRef = useCallback(() => {
         if (!dataOwnerId) return null;
@@ -180,6 +185,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setSchedules(loadedSchedules);
             setAvailability(deepClone(data.availability || {}));
             setOrganization(deepClone(data.organization));
+            setWeeklyAgendas(deepClone(data.weeklyAgendas || []));
             setCurrentUser(me);
 
             const hasInvitePermission = (user?.uid && user.uid === ownerId) || (me?.role === UserRole.Admin);
@@ -653,12 +659,46 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         });
     };
 
+    const saveWeeklyAgenda = async (agenda: WeeklyAgenda) => {
+        const docRef = getDataDocRef();
+        if (!docRef) return;
+        
+        const existingAgendaIndex = weeklyAgendas.findIndex(a => a.id === agenda.id);
+        let updatedAgendas: WeeklyAgenda[];
+        
+        if (existingAgendaIndex >= 0) {
+            // Update existing agenda
+            updatedAgendas = [...weeklyAgendas];
+            updatedAgendas[existingAgendaIndex] = {
+                ...agenda,
+                updatedAt: new Date(),
+            };
+        } else {
+            // Add new agenda
+            updatedAgendas = [...weeklyAgendas, {
+                ...agenda,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            }];
+        }
+        
+        await docRef.update({ weeklyAgendas: updatedAgendas });
+    };
+
+    const deleteWeeklyAgenda = async (agendaId: string) => {
+        const docRef = getDataDocRef();
+        if (!docRef) return;
+        
+        const updatedAgendas = weeklyAgendas.filter(a => a.id !== agendaId);
+        await docRef.update({ weeklyAgendas: updatedAgendas });
+    };
+
     const value = {
-        members, schedules, availability, workingDate, selectedScheduleId, organization, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites,
+        members, schedules, availability, workingDate, selectedScheduleId, organization, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
         addMember, updateMemberName, updateMemberStatus, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setWorkingDate, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
-        sendPasswordResetEmail, linkMemberToAccount
+        sendPasswordResetEmail, linkMemberToAccount, saveWeeklyAgenda, deleteWeeklyAgenda
     };
 
     return (

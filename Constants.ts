@@ -1,6 +1,7 @@
 
 
 export const TOASTMASTERS_ROLES = [
+  'President',
   'Toastmaster',
   'Pledge',
   'Thought of the Day',
