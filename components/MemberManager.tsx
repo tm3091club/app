@@ -1107,7 +1107,7 @@ export const MemberManager: React.FC = () => {
                         <button
                             onClick={() => handleQuickMonthSelect('planning')}
                             className={`flex-1 sm:flex-initial px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                                availabilityMonth && availabilityMonth.year === getNextScheduleMonth(schedules, organization?.meetingDay ?? 2).year && availabilityMonth.month === getNextScheduleMonth(schedules, organization?.meetingDay ?? 2).month
+                                availabilityMonth && availabilityMonth.year === getRelevantMonthsForAvailability(organization?.meetingDay ?? 2).next.year && availabilityMonth.month === getRelevantMonthsForAvailability(organization?.meetingDay ?? 2).next.month
                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-2 border-blue-300 dark:border-blue-700'
                                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                             }`}
@@ -1124,7 +1124,7 @@ export const MemberManager: React.FC = () => {
                         <select 
                             value={availabilityMonthInfo.month} 
                             onChange={e => handleAvailabilityMonthChange('month', Number(e.target.value))} 
-                            className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[120px]"
+                            className="flex-1 sm:w-auto bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 min-w-[140px]"
                         >
                             {Array.from({length: 12}, (_, i) => <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>)}
                         </select>

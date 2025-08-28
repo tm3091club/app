@@ -107,3 +107,36 @@ export interface Notification {
     evaluatorId?: string;
   };
 }
+
+export interface AgendaItem {
+  id: string;
+  time: string; // e.g., "7:00-7:03" or "7:00"
+  programEvent: string; // e.g., "President calls meeting to order"
+  person: string; // Name of member or free text
+  description: string; // Description of role or task
+  roleKey?: string; // Optional: if tied to a role, this is the role name from TOASTMASTERS_ROLES
+  isManualOverride?: boolean; // True if user has manually overridden the auto-populated person
+  rowColor?: 'normal' | 'highlight' | 'space'; // Manual row color selection
+}
+
+export interface WeeklyAgenda {
+  id: string; // Format: "YYYY-MM-weekN" e.g., "2024-07-week1"
+  scheduleId: string; // Reference to the monthly schedule ID
+  meetingDate: string; // ISO date string
+  theme: string;
+  items: AgendaItem[];
+  nextMeetingInfo?: {
+    toastmaster: string;
+    speakers: string[];
+    tableTopicsMaster: string;
+    isManualOverride?: boolean;
+  };
+  websiteUrl?: string; // Custom website URL
+  createdAt?: Date;
+  updatedAt?: Date;
+  ownerId?: string;
+}
+
+export interface AgendaTemplate {
+  items: Omit<AgendaItem, 'id'>[];
+}

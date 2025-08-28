@@ -4,15 +4,16 @@ import { Header } from './components/Header';
 import { ScheduleView } from './components/ScheduleView';
 import { MemberManager } from './components/MemberManager';
 import { ProfilePage } from './components/ProfilePage';
+import WeeklyAgenda from './components/WeeklyAgenda';
 import { useAuth } from './Context/AuthContext';
 import { AuthPage } from './components/AuthPage';
-import { ToastmastersProvider } from './Context/ToastmastersContext';
+import { ToastmastersProvider, useToastmasters } from './Context/ToastmastersContext';
 import { NotificationProvider } from './Context/NotificationContext';
 import { PublicSchedulePage } from './components/PublicSchedulePage';
 import { UnsubscribePage } from './components/UnsubscribePage';
 import { APP_VERSION } from './utils/version';
 
-type View = 'schedule' | 'members' | 'profile';
+type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda';
 
 function App() {
   const { user, loading, logOut } = useAuth();
@@ -37,6 +38,20 @@ function App() {
   // --- End Routing Logic ---
   
   const renderMainApp = () => {
+    const WeeklyAgendaWrapper = () => {
+      const { selectedScheduleId } = useToastmasters();
+      if (!selectedScheduleId) {
+        return (
+          <div className="p-4 text-center">
+            <p className="text-gray-600 dark:text-gray-400">
+              Please select a monthly schedule first to view the weekly agenda.
+            </p>
+          </div>
+        );
+      }
+      return <WeeklyAgenda scheduleId={selectedScheduleId} />;
+    };
+
     const renderView = () => {
       switch (currentView) {
         case 'schedule':
@@ -45,6 +60,8 @@ function App() {
           return <MemberManager />;
         case 'profile':
           return <ProfilePage />;
+        case 'weekly-agenda':
+          return <WeeklyAgendaWrapper />;
         default:
           return <ScheduleView />;
       }
