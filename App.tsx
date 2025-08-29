@@ -22,6 +22,7 @@ function App() {
   // --- Top-level Routing Logic ---
   const hash = window.location.hash.substring(1); // Remove the leading '#'
   const publicShareMatch = hash.match(/^\/(\d+)\/share\/([a-zA-Z0-9-]+)/);
+  const agendaShareMatch = hash.match(/^\/(\d+)\/agenda\/([a-zA-Z0-9-]+)/);
   // Matches /<club-number>/join or just /join
   const joinMatch = hash.match(/^\/(?:[^/]+\/)?join/);
   // Matches /unsubscribe
@@ -97,6 +98,27 @@ function App() {
   // Handle unsubscribe route (no authentication required)
   if (unsubscribeMatch) {
     return <UnsubscribePage />;
+  }
+
+  // Agenda Share Route - Show message that feature is coming soon
+  if (agendaShareMatch) {
+    const clubNumber = agendaShareMatch[1];
+    const shareId = agendaShareMatch[2];
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Agenda Sharing Coming Soon!
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Weekly agenda sharing is being developed and will be available in a future update.
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            Club: {clubNumber} • Agenda: {shareId}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (publicShareMatch) {
