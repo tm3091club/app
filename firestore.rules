@@ -53,6 +53,15 @@ service cloud.firestore {
       allow create, update, delete: if isAuthenticated();
     }
 
+    // --- Public Agendas Collection ---
+    match /publicAgendas/{docId} {
+      // Anyone can read public agendas
+      allow get, list: if true;
+      
+      // Allow authenticated users to create/update/delete (will be filtered by app logic)
+      allow create, update, delete: if isAuthenticated();
+    }
+
     // --- Email Trigger Extension Collection ---
     match /mail/{docId} {
       allow create: if isAuthenticated();
