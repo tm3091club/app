@@ -132,8 +132,11 @@ export const exportWeeklyAgendaToPDF = (
   doc.setFontSize(8);
   doc.text(`Website: ${agenda.websiteUrl || `${window.location.origin} tmapp.club`}`, 20, finalY + 18);
   
-  // Save the PDF
-  const fileName = `agenda-${format(meetingDate, 'yyyy-MM-dd')}.pdf`;
+  // Save the PDF with proper naming: TM - Club Name - Theme - Month Day - Agenda
+  const monthDay = format(meetingDate, 'MMMM d');
+  const clubName = organization?.name || 'Toastmasters Club';
+  const theme = agenda.theme || 'No Theme';
+  const fileName = `TM - ${clubName} - ${theme} - ${monthDay} - Agenda.pdf`;
   doc.save(fileName);
 };
 
@@ -141,44 +144,55 @@ export const exportWeeklyAgendaToTSV = (
   agenda: WeeklyAgenda,
   organization: Organization | null,
   meetingDate: Date
-) => {
-  const lines: string[] = [];
+): string => {
+  const dataGrid: string[][] = [];
+  const clubName = organization?.name || 'Toastmasters Club';
+  const clubNumber = organization?.clubNumber || 'XXXXX';
+  const dateStr = format(meetingDate, 'MMMM d, yyyy');
   
-  // Header metadata
-  lines.push(`Club\t${organization?.name || 'Toastmasters Club'}`);
-  lines.push(`Club #\t${organization?.clubNumber || 'XXXXX'}`);
-  lines.push(`Title\tMeeting Agenda`);
-  lines.push(`Date\t${format(meetingDate, 'MMMM d, yyyy')}`);
+  // Header row - spans all columns
+  dataGrid.push([`${clubName} TM-${clubNumber} Meeting Agenda for ${dateStr}`, '', '', '']);
+  
+  // Theme row - spans all columns
   if (agenda.theme) {
-    lines.push(`Theme\t${agenda.theme}`);
+    dataGrid.push([`The Theme for this meeting is "${agenda.theme}"`, '', '', '']);
   }
-  lines.push(''); // Empty line
   
-  // Table header
-  lines.push('Time\tProgram Event\tMember\tDescription');
+  // Empty row
+  dataGrid.push(['', '', '', '']);
+  
+  // Table headers
+  dataGrid.push(['Time', 'Program Event', 'Member', 'Description of Role or Task']);
   
   // Table data
   agenda.items.forEach(item => {
-    lines.push(`${item.time}\t${item.programEvent}\t${item.person}\t${item.description}`);
+    if (item.rowColor === 'space') {
+      // For space rows, put all content in Program Event column and span
+      dataGrid.push([
+        item.time || '',
+        item.programEvent || item.person || item.description || '',
+        '',
+        ''
+      ]);
+    } else {
+      dataGrid.push([
+        item.time || '',
+        item.programEvent || '',
+        item.person || '',
+        item.description || ''
+      ]);
+    }
   });
   
-  lines.push(''); // Empty line
+  // Empty row
+  dataGrid.push(['', '', '', '']);
   
   // Footer
   if (agenda.nextMeetingInfo) {
-    lines.push(`Next Meeting\tTM: ${agenda.nextMeetingInfo.toastmaster}, Speakers: ${agenda.nextMeetingInfo.speakers.join(', ')}, TT: ${agenda.nextMeetingInfo.tableTopicsMaster}`);
+    dataGrid.push([`Next Meeting – TM: ${agenda.nextMeetingInfo.toastmaster}, Speakers: ${agenda.nextMeetingInfo.speakers.filter(s => s).join(', ')}, TT: ${agenda.nextMeetingInfo.tableTopicsMaster}`, '', '', '']);
   }
-  lines.push(`Website\t${agenda.websiteUrl || `${window.location.origin} tmapp.club`}`);
+  dataGrid.push([agenda.websiteUrl || `${window.location.origin} tmapp.club`, '', '', '']);
   
-  // Create and download the file
-  const content = lines.join('\n');
-  const blob = new Blob([content], { type: 'text/tab-separated-values;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `agenda-${format(meetingDate, 'yyyy-MM-dd')}.tsv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Convert 2D array to TSV string
+  return dataGrid.map(row => row.join('\t')).join('\n');
 };

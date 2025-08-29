@@ -35,6 +35,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const schedule = monthlySchedules.find(s => s.id === scheduleId);
@@ -217,18 +218,35 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   };
 
   const handleShare = async () => {
+    console.log('Share button clicked');
+    console.log('Current agenda:', agenda);
+    console.log('Current user:', user);
+    console.log('Current organization:', organization);
+    
     if (!agenda || !user || !organization?.clubNumber) {
+      if (!agenda) {
+        alert("No agenda found. Please make sure the agenda is loaded.");
+        return;
+      }
+      if (!user) {
+        alert("You must be logged in to share agendas.");
+        return;
+      }
       if (!organization?.clubNumber) {
-        console.error("Please set a club number in your profile before you can share agendas.");
+        alert("Please set a club number in your profile before you can share agendas.");
+        return;
       }
       return;
     }
     
+    console.log('Starting share process...');
     setIsSaving(true);
     
     try {
       const agendaToShare = { ...agenda };
       const clubNumber = organization.clubNumber;
+      
+      console.log('Creating share ID...');
       
       // Create share ID with format: agenda-THEME-month-day-vX
       const meetingDate = new Date(agenda.meetingDate);
@@ -238,12 +256,16 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       const themeSlug = agenda.theme ? agenda.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
       
       const docIdPrefix = `${clubNumber}_agenda-${themeSlug}-${monthName}-${day}-${year}-v`;
+      console.log('Document prefix:', docIdPrefix);
       
       // Check for existing versions
+      console.log('Checking for existing versions...');
       const querySnapshot = await db.collection('publicAgendas')
         .where(firebase.firestore.FieldPath.documentId(), '>=', docIdPrefix)
         .where(firebase.firestore.FieldPath.documentId(), '<', docIdPrefix + 'z')
         .get();
+      
+      console.log('Query completed, found', querySnapshot.size, 'existing versions');
 
       let maxVersion = 0;
       querySnapshot.forEach(doc => {
@@ -261,6 +283,10 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       const humanReadableShareId = `agenda-${themeSlug}-${monthName}-${day}-${year}-v${newVersion}`;
       const firestoreDocId = `${clubNumber}_${humanReadableShareId}`;
       
+      console.log('Creating version', newVersion);
+      console.log('Share ID:', humanReadableShareId);
+      console.log('Firestore doc ID:', firestoreDocId);
+      
       // Mark agenda as shared
       agendaToShare.shareId = humanReadableShareId;
       agendaToShare.isShared = true;
@@ -273,22 +299,29 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
         clubName: organization.name,
       };
       
+      console.log('Saving to publicAgendas collection...');
       // Save to publicAgendas collection
       await db.collection('publicAgendas').doc(firestoreDocId).set(publicAgendaData);
+      console.log('Successfully saved to publicAgendas');
       
       // Update the local agenda with sharing info
       if (saveWeeklyAgenda) {
+        console.log('Updating local agenda...');
         await saveWeeklyAgenda(agendaToShare);
+        console.log('Local agenda updated');
       }
       
       // Create share URL
       const url = `${window.location.origin}/#/${clubNumber}/agenda/${humanReadableShareId}`;
+      console.log('Generated share URL:', url);
       setShareUrl(url);
       setIsShareModalOpen(true);
+      console.log('Share completed successfully!');
       
     } catch (error) {
       console.error('Error creating share URL:', error);
-      alert('Failed to create shareable link. Please try again.');
+      console.error('Full error details:', error);
+      alert(`Failed to create shareable link: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
     } finally {
       setIsSaving(false);
     }
@@ -348,10 +381,13 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     exportWeeklyAgendaToPDF(agenda, organization, meetingDate);
   };
 
-  const handleExportTSV = () => {
+  const handleCopyToClipboard = () => {
     if (!agenda) return;
     const meetingDate = new Date(meeting.date);
-    exportWeeklyAgendaToTSV(agenda, organization, meetingDate);
+    const tsv = exportWeeklyAgendaToTSV(agenda, organization, meetingDate);
+    navigator.clipboard.writeText(tsv);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
     setIsExportMenuOpen(false);
   };
 
@@ -444,10 +480,10 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                 <div className="origin-top-right absolute right-0 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-20 top-full mt-2">
                   <div className="py-1">
                     <button
-                      onClick={handleExportTSV}
+                      onClick={handleCopyToClipboard}
                       className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
                     >
-                      Export TSV
+                      {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
                     </button>
                     <button
                       onClick={handleExportPDFFromMenu}
