@@ -135,6 +135,8 @@ export interface WeeklyAgenda {
   createdAt?: Date;
   updatedAt?: Date;
   ownerId?: string;
+  shareId?: string;
+  isShared?: boolean;
 }
 
 export interface AgendaTemplate {
