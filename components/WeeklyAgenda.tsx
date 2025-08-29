@@ -222,6 +222,10 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       return;
     }
     
+    // Temporarily show alert about feature coming soon
+    alert("Agenda sharing is coming soon! This feature is being developed and will be available in a future update.");
+    return;
+    
     try {
       // Create agenda share URL with format: agenda-THEME-month-day-v1
       const meetingDate = new Date(agenda.meetingDate);
@@ -230,7 +234,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       const themeSlug = agenda.theme ? agenda.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
       
       const shareId = `agenda-${themeSlug}-${monthName}-${day}-v1`;
-      const url = `${window.location.origin}/#/${organization.clubNumber}/share/${shareId}`;
+      const url = `${window.location.origin}/#/${organization.clubNumber}/agenda/${shareId}`;
       
       setShareUrl(url);
       setIsShareModalOpen(true);
