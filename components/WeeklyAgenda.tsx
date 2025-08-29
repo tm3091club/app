@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { useAuth } from '../Context/AuthContext';
-import { WeeklyAgenda, AgendaItem, MonthlySchedule, Meeting } from '../types';
+import { WeeklyAgenda, AgendaItem, MonthlySchedule, Meeting, MemberStatus } from '../types';
 import { DEFAULT_AGENDA_TEMPLATE, TWO_SPEAKER_TEMPLATE } from '../services/agendaTemplates';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,6 +9,8 @@ import { FileText, Plus, Trash2, ChevronUp, ChevronDown, Info, Share } from 'luc
 import '../styles/WeeklyAgenda.css';
 import { exportWeeklyAgendaToPDF, exportWeeklyAgendaToTSV } from '../services/weeklyAgendaExport';
 import { ShareModal } from './common/ShareModal';
+import { db } from '../services/firebase';
+import firebase from 'firebase/compat/app';
 
 interface WeeklyAgendaProps {
   scheduleId: string;
@@ -222,24 +224,73 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       return;
     }
     
-    // Temporarily show alert about feature coming soon
-    alert("Agenda sharing is coming soon! This feature is being developed and will be available in a future update.");
-    return;
+    setIsSaving(true);
     
     try {
-      // Create agenda share URL with format: agenda-THEME-month-day-v1
+      const agendaToShare = { ...agenda };
+      const clubNumber = organization.clubNumber;
+      
+      // Create share ID with format: agenda-THEME-month-day-vX
       const meetingDate = new Date(agenda.meetingDate);
       const monthName = meetingDate.toLocaleDateString('en-US', { month: 'long' }).toLowerCase();
       const day = meetingDate.getDate();
+      const year = meetingDate.getFullYear();
       const themeSlug = agenda.theme ? agenda.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
       
-      const shareId = `agenda-${themeSlug}-${monthName}-${day}-v1`;
-      const url = `${window.location.origin}/#/${organization.clubNumber}/agenda/${shareId}`;
+      const docIdPrefix = `${clubNumber}_agenda-${themeSlug}-${monthName}-${day}-${year}-v`;
       
+      // Check for existing versions
+      const querySnapshot = await db.collection('publicAgendas')
+        .where(firebase.firestore.FieldPath.documentId(), '>=', docIdPrefix)
+        .where(firebase.firestore.FieldPath.documentId(), '<', docIdPrefix + 'z')
+        .get();
+
+      let maxVersion = 0;
+      querySnapshot.forEach(doc => {
+        const docId = doc.id;
+        const versionMatch = docId.match(/-v(\d+)$/);
+        if (versionMatch) {
+          const version = parseInt(versionMatch[1], 10);
+          if (version > maxVersion) {
+            maxVersion = version;
+          }
+        }
+      });
+      
+      const newVersion = maxVersion + 1;
+      const humanReadableShareId = `agenda-${themeSlug}-${monthName}-${day}-${year}-v${newVersion}`;
+      const firestoreDocId = `${clubNumber}_${humanReadableShareId}`;
+      
+      // Mark agenda as shared
+      agendaToShare.shareId = humanReadableShareId;
+      agendaToShare.isShared = true;
+      agendaToShare.ownerId = user.uid;
+      
+      // Create public agenda data
+      const publicAgendaData = {
+        ...agendaToShare,
+        clubNumber: organization.clubNumber,
+        clubName: organization.name,
+      };
+      
+      // Save to publicAgendas collection
+      await db.collection('publicAgendas').doc(firestoreDocId).set(publicAgendaData);
+      
+      // Update the local agenda with sharing info
+      if (saveWeeklyAgenda) {
+        await saveWeeklyAgenda(agendaToShare);
+      }
+      
+      // Create share URL
+      const url = `${window.location.origin}/#/${clubNumber}/agenda/${humanReadableShareId}`;
       setShareUrl(url);
       setIsShareModalOpen(true);
+      
     } catch (error) {
       console.error('Error creating share URL:', error);
+      alert('Failed to create shareable link. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
