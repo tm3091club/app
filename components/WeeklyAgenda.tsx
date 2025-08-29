@@ -280,7 +280,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       });
       
       const newVersion = maxVersion + 1;
-      const humanReadableShareId = `agenda-${themeSlug}-${monthName}-${day}-${year}-v${newVersion}`;
+      const humanReadableShareId = `${themeSlug}-${monthName}-${day}-${year}-v${newVersion}`;
       const firestoreDocId = `${clubNumber}_${humanReadableShareId}`;
       
       console.log('Creating version', newVersion);
@@ -480,16 +480,16 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                 <div className="origin-top-right absolute right-0 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-20 top-full mt-2">
                   <div className="py-1">
                     <button
-                      onClick={handleCopyToClipboard}
-                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
-                    >
-                      {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
-                    </button>
-                    <button
                       onClick={handleExportPDFFromMenu}
                       className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
                     >
                       Export PDF
+                    </button>
+                    <button
+                      onClick={handleCopyToClipboard}
+                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
+                      {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
                     </button>
                   </div>
                 </div>
