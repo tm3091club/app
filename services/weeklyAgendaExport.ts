@@ -19,7 +19,7 @@ export const exportWeeklyAgendaToPDF = (
   // Theme line - compact
   if (agenda.theme) {
     doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
+    doc.setFont(undefined, 'bold');
     doc.setTextColor(185, 28, 28); // Red color for theme
     doc.text(`Theme: "${agenda.theme}"`, 105, 16, { align: 'center' });
     doc.setTextColor(0, 0, 0); // Reset to black

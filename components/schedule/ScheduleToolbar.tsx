@@ -73,11 +73,11 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           role="menu"
         >
           <div className="py-1" role="none">
-            <button onClick={() => { onCopyToClipboard(); setIsExportMenuOpen(false); }} className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
-              {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
-            </button>
             <button onClick={() => { onExportToPdf(); setIsExportMenuOpen(false); }} className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
               Export as PDF
+            </button>
+            <button onClick={() => { onCopyToClipboard(); setIsExportMenuOpen(false); }} className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
+              {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
             </button>
           </div>
         </div>
