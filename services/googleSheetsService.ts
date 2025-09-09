@@ -2,7 +2,7 @@ import { MonthlySchedule, Member, MemberAvailability, MemberStatus, Availability
 import { TOASTMASTERS_ROLES } from '../Constants';
 
 const getMemberName = (memberId: string | null, members: Member[]) => {
-    if (!memberId) return '';
+    if (!memberId) return 'Unassigned';
     return members.find(m => m.id === memberId)?.name || '[Deleted Member]';
 };
 

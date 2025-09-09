@@ -61,9 +61,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     <div className="relative w-full md:w-auto" ref={exportMenuRef}>
       <button
         onClick={() => setIsExportMenuOpen(prev => !prev)}
-        disabled={hasUnassignedRoles}
-        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto md:whitespace-nowrap"
-        title={hasUnassignedRoles ? "Please assign all major roles to enable export" : "Export Schedule"}
+        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition w-full md:w-auto md:whitespace-nowrap"
+        title="Export Schedule"
       >
         Export
       </button>
@@ -100,9 +99,11 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 onPrepareSchedule('next');
               } else if (value === 'prepare-previous') {
                 onPrepareSchedule('previous');
-              } else {
-                onSelectSchedule(value || null);
+              } else if (value) {
+                // Only change schedule if there's actually a value
+                onSelectSchedule(value);
               }
+              // Don't call onSelectSchedule(null) unless user explicitly selects empty option
             }}
             className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] sm:text-left sm:pl-3 sm:pr-10 appearance-none flex-1 sm:flex-initial sm:min-w-[200px]"
             style={{
@@ -227,9 +228,6 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                     </div>
                 </div>
             </div>
-            {hasUnassignedRoles && (
-                <p className="text-sm text-red-500 dark:text-red-400 mt-2 font-semibold">Please assign all major roles before exporting the schedule.</p>
-            )}
         </div>
       )}
     </div>

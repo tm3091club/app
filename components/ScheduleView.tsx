@@ -530,10 +530,6 @@ export const ScheduleView: React.FC = () => {
 
     const handleExportToPdf = useCallback(async () => {
         if (!activeSchedule) return;
-        if (hasUnassignedRoles) {
-            setError("Please assign all major roles in non-blackout weeks before exporting to PDF.");
-            return;
-        }
 
         setIsLoading(true);
         setLoadingMessage('Generating PDF...');
@@ -565,7 +561,8 @@ export const ScheduleView: React.FC = () => {
                 role,
                 ...activeSchedule.meetings.map(m => {
                     if (m.isBlackout) return 'BLACKOUT';
-                    return getMemberName(m.assignments[role]);
+                    const assignedMemberId = m.assignments[role];
+                    return assignedMemberId ? getMemberName(assignedMemberId) : 'Unassigned';
                 }),
             ]);
             
