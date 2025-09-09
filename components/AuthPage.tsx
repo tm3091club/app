@@ -16,6 +16,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
   const [clubName, setClubName] = useState('');
   const [district, setDistrict] = useState('1');
   const [clubNumber, setClubNumber] = useState('');
+  const [meetingDay, setMeetingDay] = useState(2); // Default to Tuesday
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +73,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
         if (isJoinFlow) {
           await signUpInvitedUser(email, password);
         } else {
-          await signUpAndCreateClub(email, password, { clubName, district, clubNumber });
+          await signUpAndCreateClub(email, password, { clubName, district, clubNumber, meetingDay });
         }
       } else if (view === 'reset') {
         await sendPasswordReset(email);
@@ -123,6 +124,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
     setClubName('');
     setDistrict('1');
     setClubNumber('');
+    setMeetingDay(2);
   };
 
     const getTitle = () => {
@@ -206,6 +208,21 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
                       className="mt-1 appearance-none block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
                   </div>
+                </div>
+                <div>
+                  <label htmlFor="meetingDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Meeting Day</label>
+                  <select id="meetingDay" name="meetingDay" required value={meetingDay} onChange={(e) => setMeetingDay(parseInt(e.target.value))}
+                    className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 text-gray-900 dark:text-white"
+                  >
+                    <option value={0}>Sunday</option>
+                    <option value={1}>Monday</option>
+                    <option value={2}>Tuesday</option>
+                    <option value={3}>Wednesday</option>
+                    <option value={4}>Thursday</option>
+                    <option value={5}>Friday</option>
+                    <option value={6}>Saturday</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Select the day of the week your club typically meets</p>
                 </div>
               </>
             )}
