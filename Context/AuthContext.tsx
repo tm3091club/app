@@ -14,7 +14,7 @@ const getDefaultWorkingDate = (): string => {
 interface AuthContextType {
     user: firebase.User | null;
     loading: boolean;
-    signUpAndCreateClub: (email: string, password: string, clubDetails: { clubName: string; district: string; clubNumber: string; }) => Promise<void>;
+    signUpAndCreateClub: (email: string, password: string, clubDetails: { clubName: string; district: string; clubNumber: string; meetingDay: number; }) => Promise<void>;
     signUpInvitedUser: (email: string, password: string) => Promise<firebase.auth.UserCredential>;
     logIn: (email: string, password: string) => Promise<firebase.auth.UserCredential>;
     logOut: () => Promise<void>;
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return () => unsubscribe();
     }, []);
 
-    const signUpAndCreateClub = async (email: string, password: string, clubDetails: { clubName: string; district: string; clubNumber: string; }) => {
+    const signUpAndCreateClub = async (email: string, password: string, clubDetails: { clubName: string; district: string; clubNumber: string; meetingDay: number; }) => {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const newUser = userCredential.user;
         if (!newUser) {
@@ -60,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             district: clubDetails.district,
             clubNumber: clubDetails.clubNumber,
             ownerId: newUser.uid,
+            meetingDay: clubDetails.meetingDay,
         };
         const initialData = {
             members: [],

@@ -74,6 +74,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     const dataSubscription = useRef<(() => void) | null>(null);
     const invitesSubscription = useRef<(() => void) | null>(null);
     const agendasSubscription = useRef<(() => void) | null>(null);
+    
+    // Use a ref to track selectedScheduleId to avoid stale closures
+    const selectedScheduleIdRef = useRef<string | null>(selectedScheduleId);
+    useEffect(() => {
+        selectedScheduleIdRef.current = selectedScheduleId;
+    }, [selectedScheduleId]);
 
     const getDataDocRef = useCallback(() => {
         if (!dataOwnerId) return null;
@@ -217,7 +223,28 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             }
 
             let initialWorkingDate = data.workingDate || null;
-            if (selectedScheduleId === null && loadedSchedules.length > 0) {
+            // Only auto-select a schedule if no schedule is currently selected AND this is the initial load
+            // If a schedule was previously selected, check if it still exists in the loaded schedules
+            // Use the ref to get the current value to avoid stale closures
+            const currentSelectedId = selectedScheduleIdRef.current;
+            
+            if (currentSelectedId !== null && loadedSchedules.length > 0) {
+                // Check if the currently selected schedule still exists
+                const currentScheduleExists = loadedSchedules.some(s => s.id === currentSelectedId);
+                if (!currentScheduleExists) {
+                    // Current schedule was deleted, select the most recent one
+                    const sortedSchedules = [...loadedSchedules].sort((a, b) =>
+                        (a.year !== b.year) ? b.year - a.year : b.month - a.month
+                    );
+                    const newSelectedId = sortedSchedules[0].id;
+                    setSelectedScheduleIdState(newSelectedId);
+                    if (sortedSchedules[0].meetings.length > 0) {
+                        initialWorkingDate = sortedSchedules[0].meetings[0].date.split('T')[0];
+                    }
+                }
+                // If current schedule exists, keep it selected (don't change)
+            } else if (currentSelectedId === null && loadedSchedules.length > 0) {
+                // Initial load with no schedule selected, select the most recent
                 const sortedSchedules = [...loadedSchedules].sort((a, b) =>
                     (a.year !== b.year) ? b.year - a.year : b.month - a.month
                 );
@@ -236,7 +263,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setError("Failed to load club data. You may not have the required permissions.");
             setLoading(false);
         });
-    }, [user, selectedScheduleId, pendingInvites.length, cleanupSubscriptions, logOut]);
+    }, [user, pendingInvites.length, cleanupSubscriptions, logOut]);
 
     useEffect(() => {
         cleanupSubscriptions();
