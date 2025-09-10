@@ -1032,34 +1032,17 @@ export const MemberManager: React.FC = () => {
     const unlinkedUsers = useMemo(() => {
         if (!organization?.members) return [];
         
-        // Real Firebase Auth users available for linking
-        const availableUsers = [
-            { uid: 'oFRCL1i4s3eROfoun1QeDV5t7Hu2', name: 'Jeanne Brks', email: 'jeannebrks@gmail.com' },
-            { uid: 'Ozj8Yny1ymOgzoldD89athAmIMo2', name: 'Rey Reynolds', email: 'rey.reynolds@usdigital.com' },
-            { uid: 'FfiU6IWC94hWYmHiXO1R3S579Sg2', name: 'P Locke', email: 'plocke48@gmail.com' },
-            { uid: 'Le6SMoGtGoO4U0Aa8loopeRll9r1', name: 'JL', email: 'jl072164@gmail.com' },
-            { uid: 'qC9IxCF6tqaM3OfYbsdlJ9Q9bCq2', name: 'Bob Hall Family', email: 'bobhallfamily55@gmail.com' },
-            { uid: 'OEsmAWjcAecOYkhN1J5xOtOsBMD3', name: 'Jon Coon', email: 'jon@joncoon.com' },
-            { uid: '2z9Tkl3Wg1MEwtNn2trAHSVtCSd2', name: 'Liz Hall', email: 'liz.hall.h@gmail.com' },
-            { uid: '0lCNPbMxGteHtnIZ8jgkOWRwzZD3', name: 'NG Hawkins', email: 'nghawkins@msn.com' },
-            { uid: 'oCIqBzkf06XSUeMKwLRtfyrwcoF2', name: 'Dr Marilyn', email: 'drmarilyn@sbcglobal.net' },
-            { uid: 'zqzEq4v3BjavjmhzDE7eWbKplJf2', name: 'Conor McDaid Oneill', email: 'conormcdaidoneill@gmail.com' },
-            { uid: 'B42rWK9AjcX1QXJyhYiZ0Ihvrqj1', name: 'Alan Schwartz', email: 'alanschwartz75@gmail.com' },
-            { uid: 'WdsRaTKevyVnUhulzadz8fjWa2a2', name: 'Edward Bortz', email: 'edwardbortz@gmail.com' },
-            { uid: 'VhCkGN3YZ5YqS2bAGmPNqUjBZ4q2', name: 'Shinnosuke Tokumura', email: 'shinnosuketokumura@gmail.com' },
-            { uid: '95wfMd3Is5faEBfQviDoT1KDue72', name: 'Daniela Goodrich', email: 'danielagoodrich@gmail.com' },
-            { uid: 'c0F3ywpJLiUAQ0X3NZuJLhvq1V72', name: 'Anne Coleman', email: 'anne.coleman@me.com' },
-            { uid: 'wgelzDGYUcQHb0QzuvfESGq73a12', name: 'M Gutman', email: 'mgutman19@gmail.com' },
-            { uid: 'hRxQIhyrNuNZJyzi5URByvAoycl1', name: 'Osib Steve', email: 'osibsteve@outlook.com' },
-            { uid: 'gleBeee0tIP99gZzVHQExLmM8fC3', name: 'Isaiah Fedur', email: 'isaiah.fedur@synkwise.com' }
-        ];
+        // PRIVACY FIX: Removed hardcoded list that exposed other clubs' member data
+        // TODO: This should fetch authenticated users who belong to THIS club only
+        // A proper implementation would:
+        // 1. Query users collection where clubId === current club
+        // 2. Filter out users already linked to members
+        // 3. Only show users who have verified they belong to this club
         
-        // Filter out users who are already linked to member profiles
-        const linkedUIDs = new Set(organization.members.map(m => m.uid).filter(uid => uid));
+        console.warn('Link Account feature disabled - requires proper user management implementation');
+        return [];
         
-        const unlinked = availableUsers.filter(user => !linkedUIDs.has(user.uid));
-        
-        return unlinked;
+        // The previous hardcoded list was a MAJOR PRIVACY ISSUE exposing other clubs' member emails
     }, [organization?.members]);
 
 

@@ -189,21 +189,42 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             const loadedSchedules = deepClone(data.schedules || []);
             setSchedules(loadedSchedules);
             setAvailability(deepClone(data.availability || {}));
-            setOrganization(deepClone(data.organization));
+            setOrganization(deepClone(data.organization || null));
             setMembers(deepClone(data.members || [])); // Load separate scheduling members
             setWeeklyAgendas(deepClone(data.weeklyAgendas || []));
             
             // Set currentUser - if me is null but user is club owner, create a currentUser object
             if (me) {
                 setCurrentUser(me);
-            } else if (user?.uid === ownerId && data.organization) {
+            } else if (user?.uid === ownerId) {
                 // User is the club owner, create a currentUser object
-                setCurrentUser({
+                const clubOwnerUser = {
                     uid: user.uid,
                     email: user.email!,
                     name: user.displayName || user.email!,
                     role: UserRole.Admin
-                });
+                };
+                setCurrentUser(clubOwnerUser);
+                
+                // If no organization exists, create one with the owner as the first member
+                if (!data.organization) {
+                    const initialOrganization = {
+                        name: '',
+                        district: '',
+                        clubNumber: '',
+                        ownerId: user.uid,
+                        members: [clubOwnerUser]
+                    };
+                    
+                    // Update the database with the initial organization
+                    clubDataDocRef.update({ 
+                        organization: initialOrganization,
+                        schedules: [],
+                        weeklyAgendas: []
+                    }).catch(error => {
+                        console.error('Failed to create initial organization:', error);
+                    });
+                }
             } else {
                 // Check if this is a known user who should have access
                 const knownUsers = [
@@ -457,10 +478,24 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
     const updateClubProfile = async (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; }) => {
         const docRef = getDataDocRef();
-        if (!docRef || !organization) return;
+        if (!docRef) return;
+        
+        // If no organization exists yet, create a new one with the current user as the first member
+        const currentOrg = organization || {
+            name: '',
+            district: '',
+            clubNumber: '',
+            ownerId: dataOwnerId || '',
+            members: currentUser ? [{
+                uid: currentUser.uid,
+                email: currentUser.email,
+                name: currentUser.name,
+                role: currentUser.role
+            }] : []
+        };
         
         const updatedOrg = { 
-            ...organization,
+            ...currentOrg,
             name: payload.name,
             district: payload.district,
             clubNumber: payload.clubNumber,

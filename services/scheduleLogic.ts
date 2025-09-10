@@ -134,7 +134,8 @@ export const generateNewMonthSchedule = (
     const assignments: RoleAssignment = {};
     TOASTMASTERS_ROLES.forEach(role => assignments[role] = null);
     
-    const meetingDateKey = date.toISOString().split('T')[0];
+    // Use local timezone formatting to avoid timezone issues
+    const meetingDateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const availableForMeeting = shuffleArray(activeMembers.filter(m => {
         const status = availability[m.id]?.[meetingDateKey];
         return status !== AvailabilityStatus.Unavailable && status !== AvailabilityStatus.Possible;

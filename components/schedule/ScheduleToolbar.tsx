@@ -122,7 +122,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             
             {/* Prepare Previous Option */}
             {(() => {
-              if (schedules.length === 0) return null;
+              if (!Array.isArray(schedules) || !schedules.length) return null;
               
               // Find the earliest schedule
               const earliestSchedule = schedules.reduce((earliest, schedule) => {
@@ -140,7 +140,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               }
               
               const prevMonthId = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
-              const prevMonthExists = schedules.some(s => s.id === prevMonthId);
+              const prevMonthExists = Array.isArray(schedules) && schedules.some(s => s.id === prevMonthId);
               
               if (!prevMonthExists && isAdmin) {
                 const prevMonthName = new Date(prevYear, prevMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -154,7 +154,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             })()}
             
             {/* Existing Schedules */}
-            {schedules
+            {Array.isArray(schedules) ? schedules
               .sort((a, b) => {
                 const dateA = new Date(a.year, a.month);
                 const dateB = new Date(b.year, b.month);
@@ -164,14 +164,14 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 <option key={s.id} value={s.id}>
                   {new Date(s.year, s.month).toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </option>
-              ))}
+              )) : null}
             
             {/* Prepare Next Option */}
             {(() => {
               if (!isAdmin) return null;
               
               const nextMonthInfo = getNextScheduleMonth(schedules, meetingDay);
-              const nextMonthExists = schedules.some(s => s.id === `${nextMonthInfo.year}-${String(nextMonthInfo.month + 1).padStart(2, '0')}`);
+              const nextMonthExists = Array.isArray(schedules) && schedules.some(s => s.id === `${nextMonthInfo.year}-${String(nextMonthInfo.month + 1).padStart(2, '0')}`);
               
               if (!nextMonthExists) {
                 return (
