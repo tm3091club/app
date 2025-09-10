@@ -39,75 +39,26 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   const schedule = monthlySchedules.find(s => s.id === scheduleId);
   
-  // Function to automatically determine which week to display based on meeting day and current time
+  // Function to automatically determine which week to display
   const getDefaultWeek = (): number => {
     if (!schedule || schedule.meetings.length === 0) return 0;
     
     const now = new Date();
     const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Get the club's meeting day from organization settings (0 = Sunday, 1 = Monday, etc.)
-    const clubMeetingDay = organization?.meetingDay ?? 3; // Default to Wednesday if not set
-    
+    // Simple logic: find the next upcoming meeting or current week
     for (let i = 0; i < schedule.meetings.length; i++) {
       const meetingDate = new Date(schedule.meetings[i].date);
       const meetingDateOnly = new Date(meetingDate.getFullYear(), meetingDate.getMonth(), meetingDate.getDate());
       
-      // Check if this is the current meeting date
-      if (currentDate.getTime() === meetingDateOnly.getTime()) {
-        const currentHour = now.getHours();
-        
-        // If it's the meeting day and after 12:00 PM (meeting finished), move to next week
-        if (currentHour >= 12 && i < schedule.meetings.length - 1) {
-          return i + 1; // Switch to next week
-        }
-        return i; // Stay on current week
-      }
-      
-      // Check if we're in the week leading up to this meeting
-      const oneWeekBefore = new Date(meetingDateOnly);
-      oneWeekBefore.setDate(oneWeekBefore.getDate() - 7);
-      
-      if (currentDate > oneWeekBefore && currentDate < meetingDateOnly) {
-        return i; // We're in the week leading up to this meeting
-      }
-      
-      // Check if we're after the meeting date but before next meeting
-      if (currentDate > meetingDateOnly) {
-        const nextMeetingDate = i < schedule.meetings.length - 1 
-          ? new Date(schedule.meetings[i + 1].date)
-          : null;
-        
-        if (!nextMeetingDate) {
-          // This is the last meeting, check if meeting has passed for this week
-          const daysSinceMeeting = Math.floor((currentDate.getTime() - meetingDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-          const currentHour = now.getHours();
-          
-          // If it's the same day as meeting and after 12 PM, or if it's past the meeting day
-          if ((daysSinceMeeting === 0 && currentHour >= 12) || daysSinceMeeting > 0) {
-            return Math.min(i + 1, schedule.meetings.length - 1);
-          }
-          return i;
-        }
-        
-        const nextMeetingDateOnly = new Date(nextMeetingDate.getFullYear(), nextMeetingDate.getMonth(), nextMeetingDate.getDate());
-        
-        if (currentDate < nextMeetingDateOnly) {
-          // We're between meetings, check if we should advance to next week
-          const daysSinceMeeting = Math.floor((currentDate.getTime() - meetingDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-          const currentHour = now.getHours();
-          
-          // If it's the same day as meeting and after 12 PM, or if it's past the meeting day
-          if ((daysSinceMeeting === 0 && currentHour >= 12) || daysSinceMeeting > 0) {
-            return i + 1;
-          }
-          return i;
-        }
+      // If meeting is today or in the future, show this week
+      if (meetingDateOnly >= currentDate) {
+        return i;
       }
     }
     
-    // Default to first week if no match found
-    return 0;
+    // If all meetings are in the past, show the last week
+    return Math.max(0, schedule.meetings.length - 1);
   };
   
   // Helper function to check if current user is Toastmaster for this week

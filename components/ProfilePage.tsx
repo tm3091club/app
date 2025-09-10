@@ -849,7 +849,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                         <input type="text" id="clubName" value={clubName} onChange={(e) => setClubName(e.target.value)}
                             className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                             required
-                            disabled={!isAdmin}
+                            disabled={!isClubAdmin}
                         />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -858,7 +858,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             <select id="district" value={district} onChange={(e) => setDistrict(e.target.value)}
                                 className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                                 required
-                                disabled={!isAdmin}
+                                disabled={!isClubAdmin}
                             >
                                 {districts.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
@@ -868,7 +868,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             <input type="text" id="clubNumber" value={clubNumber} onChange={(e) => setClubNumber(e.target.value)}
                                 className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
                                 required
-                                disabled={!isAdmin}
+                                disabled={!isClubAdmin}
                             />
                         </div>
                     </div>
@@ -883,7 +883,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             <label htmlFor="meetingDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Meeting Day</label>
                             <select id="meetingDay" value={meetingDay} onChange={(e) => setMeetingDay(parseInt(e.target.value))}
                                 className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
-                                disabled={!isAdmin}
+                                disabled={!isClubAdmin}
                             >
                                 <option value={0}>Sunday</option>
                                 <option value={1}>Monday</option>
@@ -899,7 +899,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             <label htmlFor="autoNotificationDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Auto Notification Day</label>
                             <select id="autoNotificationDay" value={autoNotificationDay} onChange={(e) => setAutoNotificationDay(parseInt(e.target.value))}
                                 className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
-                                disabled={!isAdmin}
+                                disabled={!isClubAdmin}
                             >
                                 {Array.from({length: 28}, (_, i) => (
                                     <option key={i + 1} value={i + 1}>{i + 1}</option>
@@ -908,7 +908,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Day of month to auto-send availability requests</p>
                         </div>
                     </div>
-                    {isAdmin && (
+                    {isClubAdmin && (
                         <div className="flex justify-stretch sm:justify-end">
                             <button type="submit" className="w-full sm:w-auto inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-semibold py-3 px-6 rounded-md transition duration-150 disabled:opacity-50" disabled={!hasClubProfileChanged}>
                                 Save Club Profile
@@ -917,7 +917,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                     )}
                 </form>
                 
-                {isAdmin && (
+                {isClubAdmin && (
                     <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                         <NotificationScheduler />
                     </div>

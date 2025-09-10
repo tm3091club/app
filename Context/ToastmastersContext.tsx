@@ -23,6 +23,7 @@ interface ToastmastersState {
   workingDate: string | null;
   selectedScheduleId: string | null;
   organization: Organization | null;
+  members: Member[]; // Scheduling members (separate from auth users)
   currentUser: AppUser | null;
   ownerId: string | null;
   pendingInvites: PendingInvite[];
@@ -62,6 +63,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     const [workingDate, setWorkingDateState] = useState<string | null>(null);
     const [selectedScheduleId, setSelectedScheduleIdState] = useState<string | null>(null);
     const [organization, setOrganization] = useState<Organization | null>(null);
+    const [members, setMembers] = useState<Member[]>([]);
     const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
     const [dataOwnerId, setDataOwnerId] = useState<string | null>(null);
     const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
@@ -188,6 +190,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setSchedules(loadedSchedules);
             setAvailability(deepClone(data.availability || {}));
             setOrganization(deepClone(data.organization));
+            setMembers(deepClone(data.members || [])); // Load separate scheduling members
             setWeeklyAgendas(deepClone(data.weeklyAgendas || []));
             
             // Set currentUser - if me is null but user is club owner, create a currentUser object
@@ -319,6 +322,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setWorkingDateState(null);
             setSelectedScheduleIdState(null);
             setOrganization(null);
+            setMembers([]);
             setCurrentUser(null);
             setDataOwnerId(null);
             setPendingInvites([]);
@@ -370,31 +374,23 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                             }
                         } else {
                             // Allow any authenticated user to access the app
-                            console.log('🔑 Allowing access for authenticated user:', user.email);
-                            
                             // Find the club owner or make this user the owner
                             const usersSnapshot = await db.collection('users').get();
                             let clubOwnerUid = null;
                             
-                            console.log('🔍 Checking', usersSnapshot.size, 'documents for club owner...');
-                            
                             for (const doc of usersSnapshot.docs) {
                                 const data = doc.data();
-                                console.log('📄 Document', doc.id, 'has organization:', !!data.organization);
                                 if (data.organization) {
                                     clubOwnerUid = doc.id;
-                                    console.log('✅ Found club owner:', clubOwnerUid);
                                     break;
                                 }
                             }
                             
                             if (clubOwnerUid) {
                                 ownerIdToUse = clubOwnerUid;
-                                console.log('🏢 Connecting user to existing club:', clubOwnerUid);
                             } else {
                                 // No club exists - make this user the owner
                                 ownerIdToUse = user.uid;
-                                console.log('🏗️ Making user the club owner (no existing club found):', user.email);
                             }
                         }
                     }
@@ -848,7 +844,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const value = {
-        schedules, availability, workingDate, selectedScheduleId, organization, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
+        schedules, availability, workingDate, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
         addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setWorkingDate, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,

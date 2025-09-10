@@ -11,7 +11,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Pledge',
       person: '',
       description: 'Lead the pledge',
@@ -19,7 +19,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Thought of the Day',
       person: '',
       description: 'Share an inspiring thought',
@@ -27,7 +27,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Introduction of the Toastmaster',
       person: '',
       description: 'President introduces Toastmaster',
@@ -43,7 +43,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Grammarian',
       person: '',
       description: '30-second description + WOD',
@@ -51,7 +51,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Timer',
       person: '',
       description: '30-second description',
@@ -59,7 +59,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Ah Counter',
       person: '',
       description: '30-second description of duties',
@@ -67,7 +67,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Ballot Vote Counter',
       person: '',
       description: '30-second description of duties',
@@ -83,7 +83,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Vote for Best Table Topics speaker',
       person: '',
       description: '',
@@ -91,7 +91,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'space',
     },
     {
-      time: '7:20',
+      time: '7:25',
       programEvent: 'Toastmaster Introduces Speakers',
       person: '',
       description: 'Speaking portion of the meeting',
@@ -99,7 +99,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Evaluator #1 Reads Objectives',
       person: '',
       description: '30-45 seconds (Reads Objectives)',
@@ -107,7 +107,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Speaker #1',
       person: '',
       description: 'Insert Title / 5-7 Mins',
@@ -115,7 +115,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Evaluator #2 Reads Objectives',
       person: '',
       description: '30-45 seconds (Reads Objectives)',
@@ -123,7 +123,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Speaker #2',
       person: '',
       description: 'Insert Title / 5-7 Mins',
@@ -131,7 +131,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Evaluator #3 Reads Objectives',
       person: '',
       description: '30-45 seconds (Reads Objectives)',
@@ -139,7 +139,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Speaker #3',
       person: '',
       description: 'Insert Title / 5-7 Mins',
@@ -147,7 +147,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:30',
+      time: '',
       programEvent: 'Vote for Best Speech',
       person: '',
       description: '',
@@ -155,7 +155,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'space',
     },
     {
-      time: '7:55',
+      time: '7:50',
       programEvent: 'General Evaluator is Introduced',
       person: '',
       description: 'Coordinates evaluation phase',
@@ -163,7 +163,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Evaluator #1',
       person: '',
       description: '2-3 mins',
@@ -171,7 +171,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Evaluator #2',
       person: '',
       description: '2-3 mins',
@@ -179,7 +179,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Evaluator #3',
       person: '',
       description: '2-3 mins',
@@ -187,7 +187,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '7:58',
       programEvent: 'Vote for Best Evaluation',
       person: '',
       description: '',
@@ -195,7 +195,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'space',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Timer Report',
       person: '',
       description: '30-second report',
@@ -203,7 +203,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Ah Counter Report',
       person: '',
       description: '30-second report',
@@ -211,7 +211,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Grammarian Report',
       person: '',
       description: '90-second report',
@@ -227,7 +227,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Awards – Vote Counter',
       person: '',
       description: '',
@@ -235,7 +235,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Best Table Topic',
       person: '',
       description: '',
@@ -243,7 +243,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Best Evaluator',
       person: '',
       description: '',
@@ -251,7 +251,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Best Speaker',
       person: '',
       description: '',
@@ -259,7 +259,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Inspiration Award',
       person: '',
       description: 'Awarded by current or past president',
@@ -283,7 +283,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'highlight',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Member Recognition',
       person: '',
       description: 'Outside speaking engagements',
@@ -291,7 +291,7 @@ export const DEFAULT_AGENDA_TEMPLATE: AgendaTemplate = {
       rowColor: 'normal',
     },
     {
-      time: '7:00',
+      time: '',
       programEvent: 'Guest Comments',
       person: '',
       description: '',
