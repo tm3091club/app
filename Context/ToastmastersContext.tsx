@@ -187,12 +187,26 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             }
 
             const loadedSchedules = deepClone(data.schedules || []);
-            setMembers(deepClone(data.members || []));
+            setMembers(deepClone(data.organization?.members || []));
             setSchedules(loadedSchedules);
             setAvailability(deepClone(data.availability || {}));
             setOrganization(deepClone(data.organization));
             setWeeklyAgendas(deepClone(data.weeklyAgendas || []));
-            setCurrentUser(me);
+            
+            // Set currentUser - if me is null but user is club owner, create a currentUser object
+            if (me) {
+                setCurrentUser(me);
+            } else if (user?.uid === ownerId && data.organization) {
+                // User is the club owner, create a currentUser object
+                setCurrentUser({
+                    uid: user.uid,
+                    email: user.email!,
+                    name: user.displayName || user.email!,
+                    role: UserRole.Admin
+                });
+            } else {
+                setCurrentUser(null);
+            }
 
             const hasInvitePermission = (user?.uid && user.uid === ownerId) || (me?.role === UserRole.Admin);
 
@@ -293,8 +307,14 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 let ownerIdToUse: string | null = null;
                 
                 if (userPointerDoc.exists) {
-                    // User has a pointer document - they are a club member
-                    ownerIdToUse = userPointerDoc.data()?.ownerId || user.uid;
+                    const userData = userPointerDoc.data();
+                    // Check if this user IS the club owner (has organization data)
+                    if (userData?.organization) {
+                        ownerIdToUse = user.uid;
+                    } else {
+                        // This is a member pointing to a club owner
+                        ownerIdToUse = userData?.ownerId || user.uid;
+                    }
                 } else {
                     // Check if user is a club owner (they have their own club)
                     const potentialClubDoc = await db.collection('users').doc(user.uid).get();
@@ -399,7 +419,13 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const docRef = getDataDocRef();
         if (!docRef || !organization || (currentUser?.role !== UserRole.Admin && currentUser?.uid !== dataOwnerId) || uid === dataOwnerId) return;
         
-        const updatedMembers = organization.members.map(m => m.uid === uid ? { ...m, role: newRole } : m);
+        // Find member by UID first, then by ID if UID is null
+        const updatedMembers = organization.members.map(m => {
+            if (m.uid === uid || (m.uid === null && m.id === uid)) {
+                return { ...m, role: newRole };
+            }
+            return m;
+        });
         await docRef.update({ 'organization.members': updatedMembers });
     };
 
@@ -529,7 +555,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (!docRef) return;
         const { memberId, uid } = payload;
 
-        const updatedMembers = deepClone(members);
+        if (!organization) return;
+        
+        const updatedMembers = deepClone(organization.members);
         
         if (uid) {
             const alreadyLinked = updatedMembers.find(m => m.uid === uid);
@@ -549,7 +577,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             delete updatedMembers[memberIndex].uid;
         }
         
-        await docRef.update({ members: updatedMembers });
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+        await docRef.update({ 'organization': updatedOrganization });
     };
 
 
