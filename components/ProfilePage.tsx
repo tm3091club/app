@@ -331,7 +331,7 @@ const TeamMemberListItem: React.FC<{
                                     ) : (
                                         <select
                                             value={member.role}
-                                            onChange={(e) => onRoleChange(member.uid, e.target.value as UserRole)}
+                                            onChange={(e) => onRoleChange(member.uid || member.id, e.target.value as UserRole)}
                                             disabled={cannotChangeRole}
                                             title={tooltipText}
                                             className="bg-gray-50 dark:bg-gray-700 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none text-gray-900 dark:text-gray-200 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -396,7 +396,7 @@ const TeamMemberListItem: React.FC<{
                             ) : (
                                 <select
                                     value={member.role}
-                                    onChange={(e) => onRoleChange(member.uid, e.target.value as UserRole)}
+                                    onChange={(e) => onRoleChange(member.uid || member.id, e.target.value as UserRole)}
                                     disabled={cannotChangeRole}
                                     title={tooltipText}
                                     className="bg-gray-50 dark:bg-gray-700 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none text-gray-900 dark:text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -488,6 +488,7 @@ export const ProfilePage = (): React.ReactElement | null => {
     const isAdmin = currentUser?.role === UserRole.Admin;
     const isClubAdmin = currentUser?.uid === ownerId;
     const clubOwner = organization?.members.find(m => m?.uid === ownerId);
+
     const isLastAdmin = organization?.members.filter(m => m?.role === UserRole.Admin).length === 1;
 
     useEffect(() => {
@@ -625,11 +626,11 @@ export const ProfilePage = (): React.ReactElement | null => {
         }
     };
     
-    const handleRoleChange = async (uid: string, newRole: UserRole) => {
+    const handleRoleChange = async (memberIdentifier: string, newRole: UserRole) => {
         setTeamFeedback(null);
         try {
-            await updateUserRole(uid, newRole);
-            setTeamFeedback({ type: 'success', message: `User role updated.` });
+            await updateUserRole(memberIdentifier, newRole);
+            setTeamFeedback({ type: 'success', message: `Member role updated.` });
         } catch (error: any) {
             setTeamFeedback({ type: 'error', message: error.message || 'Failed to update role.' });
         }
@@ -976,21 +977,38 @@ export const ProfilePage = (): React.ReactElement | null => {
                     <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members.length})</h3>
                     <div className="flow-root">
                         <ul role="list" className="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
-                            {organization.members.map((member) => (
-                                <TeamMemberListItem
-                                    key={member.uid}
-                                    member={member}
-                                    isClubAdmin={member.uid === ownerId}
-                                    isLastAdmin={isLastAdmin}
-                                    isAdminView={isAdmin}
-                                    isSelf={currentUser?.uid === member.uid}
-                                    onRoleChange={handleRoleChange}
-                                    onRemove={openDeleteModal}
-                                    onSaveName={handleSaveUserName}
-                                    onSendPasswordReset={handleSendPasswordReset}
-                                    isSendingPasswordReset={isSendingPasswordReset === member.uid}
-                                />
-                            ))}
+                            {[...organization.members]
+                                .sort((a, b) => {
+                                    // Club Admin first
+                                    if (a.uid === ownerId) return -1;
+                                    if (b.uid === ownerId) return 1;
+                                    
+                                    // Then other Admins
+                                    if (a.role === UserRole.Admin && b.role !== UserRole.Admin) return -1;
+                                    if (b.role === UserRole.Admin && a.role !== UserRole.Admin) return 1;
+                                    
+                                    // Then Members alphabetically
+                                    return a.name.localeCompare(b.name);
+                                })
+                                .map((member) => {
+                                    const hasUserAccount = !!member.uid; // Has a real UID (signed-up user)
+                                    
+                                    return (
+                                        <TeamMemberListItem
+                                            key={member.uid || member.id || `member-${member.name}`}
+                                            member={member}
+                                            isClubAdmin={member.uid === ownerId}
+                                            isLastAdmin={isLastAdmin}
+                                            isAdminView={isAdmin} // Show admin controls for all members if user is admin
+                                            isSelf={currentUser?.uid === member.uid}
+                                            onRoleChange={handleRoleChange} // Allow role changes for all members
+                                            onRemove={openDeleteModal} // Allow removal for all members
+                                            onSaveName={handleSaveUserName} // Allow name changes for all members
+                                            onSendPasswordReset={hasUserAccount ? handleSendPasswordReset : () => {}} // Only for users with accounts
+                                            isSendingPasswordReset={hasUserAccount && isSendingPasswordReset === member.uid}
+                                        />
+                                    );
+                                })}
                         </ul>
                     </div>
 

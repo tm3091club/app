@@ -213,7 +213,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
         theme: meeting.theme || '',
         items: template.items.map(item => {
           // Find matching item in previous agenda by programEvent to copy color
-          const matchingPreviousItem = previousAgenda?.items.find(
+          const matchingPreviousItem = previousAgenda?.items?.find(
             prevItem => prevItem.programEvent === item.programEvent
           );
           
@@ -481,6 +481,10 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   const meeting = schedule.meetings[selectedWeek];
 
+  if (!agenda) {
+    return <div className="p-4">Loading weekly agenda...</div>;
+  }
+
   return (
     <>
       <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} shareUrl={shareUrl} />
@@ -630,7 +634,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                 </tr>
               </thead>
               <tbody>
-                {agenda.items.map((item) => {
+                {agenda?.items?.map((item) => {
                   // Determine row color from manual selection only
                   let rowColorClass = '';
                   let isVotingRow = false;
@@ -781,14 +785,14 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                           <button
                             onClick={() => handleMoveItem(item.id, 'up')}
                             className="text-gray-600 hover:text-gray-800 p-0.5"
-                            disabled={agenda.items.findIndex(i => i.id === item.id) === 0}
+                            disabled={agenda?.items?.findIndex(i => i.id === item.id) === 0}
                           >
                             <ChevronUp className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => handleMoveItem(item.id, 'down')}
                             className="text-gray-600 hover:text-gray-800 p-0.5"
-                            disabled={agenda.items.findIndex(i => i.id === item.id) === agenda.items.length - 1}
+                            disabled={agenda?.items?.findIndex(i => i.id === item.id) === (agenda?.items?.length || 0) - 1}
                           >
                             <ChevronDown className="w-3 h-3" />
                           </button>

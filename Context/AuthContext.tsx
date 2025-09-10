@@ -63,11 +63,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             meetingDay: clubDetails.meetingDay,
         };
         const initialData = {
-            members: [],
-            schedules: [],
+            schedules: {},
             availability: {},
+            weeklyAgendas: {},
             workingDate: defaultDate,
             organization: newOrg,
+            email: newUser.email
         };
         await dataDocRef.set(initialData);
     };
