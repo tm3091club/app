@@ -19,7 +19,6 @@ interface WeeklyAgendaProps {
 const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   const { 
     schedules: monthlySchedules, 
-    members, 
     organization,
     weeklyAgendas,
     saveWeeklyAgenda,
@@ -121,7 +120,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     if (!toastmasterId) return false;
     
     // Find the member assigned as Toastmaster and check if they're linked to current user
-    const toastmasterMember = members.find(m => m.id === toastmasterId);
+    const toastmasterMember = organization?.members.find(m => m.id === toastmasterId);
     return toastmasterMember?.uid === user.uid;
   };
 
@@ -221,7 +220,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             ...item,
             id: uuidv4(),
             person: getPersonForRole(item.roleKey || '', meeting),
-            rowColor: matchingPreviousItem?.rowColor || 'normal', // Copy color from previous agenda or default to normal
+            rowColor: matchingPreviousItem?.rowColor || item.rowColor || 'normal', // Copy color from previous agenda, then template, then default to normal
           };
         }),
         ownerId: user?.uid,
@@ -261,7 +260,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   const getMemberName = (memberId: string | null): string => {
     if (!memberId) return '';
-    const member = members.find(m => m.id === memberId);
+    const member = organization?.members.find(m => m.id === memberId);
     return member?.name || '';
   };
 

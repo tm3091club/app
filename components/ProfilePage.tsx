@@ -10,6 +10,57 @@ import { db, FieldValue } from '../services/firebase';
 
 const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U']);
 
+const MemberInviteRow: React.FC<{
+    member: { id: string; name: string; email?: string };
+    onSendInvite: (email: string) => void;
+}> = ({ member, onSendInvite }) => {
+    const [email, setEmail] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+
+    const handleSendInvite = () => {
+        if (email.trim() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+            setIsAdding(true);
+            onSendInvite(email.trim());
+            setEmail('');
+            setIsAdding(false);
+        } else {
+            alert('Please enter a valid email address.');
+        }
+    };
+
+    return (
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 dark:text-white">{member.name}</h4>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100 mt-1">
+                        Needs email address
+                    </span>
+                </div>
+            </div>
+            <div className="mt-3 flex items-center space-x-2">
+                <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter email address"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+                <button
+                    onClick={handleSendInvite}
+                    disabled={!email.trim() || isAdding}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-100 dark:hover:bg-blue-700 transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
+                    </svg>
+                    {isAdding ? 'Sending...' : 'Send Invite'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const InviteModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -224,7 +275,6 @@ const CopyableEmail: React.FC<{ email: string }> = ({ email }) => {
                 onMouseEnter={() => setShowTooltip(true)}
                 onMouseLeave={() => setShowTooltip(false)}
                 className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors cursor-pointer py-1 rounded text-left"
-                title={email}
                 style={{display: "block"}}
             >
                 <svg 
@@ -382,6 +432,11 @@ const TeamMemberListItem: React.FC<{
                     </div>
                     <div className="w-full">
                         <CopyableEmail email={member.email} />
+                        {(member as any).joinedDate && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Joined: {new Date((member as any).joinedDate).toLocaleDateString()}
+                            </p>
+                        )}
                     </div>
                 </div>
                 
@@ -959,6 +1014,63 @@ export const ProfilePage = (): React.ReactElement | null => {
                 </form>
             </div>}
             
+            {isClubAdmin && organization?.members && organization.members.some(member => !member.email && !member.uid) && (
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6">Member Invitations</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Send invitations to members who need to create their Firebase Auth accounts and set their passwords.
+                    </p>
+                    
+                    {(() => {
+                        const membersNeedingEmails = organization.members.filter(member => !member.email && !member.uid);
+                        
+                        if (membersNeedingEmails.length === 0) {
+                            return (
+                                <div className="text-center py-8">
+                                    <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 48 48">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No members need email setup</h3>
+                                    <p className="text-gray-500 dark:text-gray-400">All members either have email addresses or are already linked to accounts.</p>
+                                </div>
+                            );
+                        }
+                        
+                        return (
+                            <div className="space-y-3">
+                                {membersNeedingEmails.map(member => (
+                                    <MemberInviteRow 
+                                        key={member.id} 
+                                        member={member} 
+                                        onSendInvite={async (email) => {
+                                            try {
+                                                // First update the member with the email and ensure Member role
+                                                const updatedMembers = organization.members.map(m => 
+                                                    m.id === member.id ? { ...m, email, role: m.role || 'Member' } : m
+                                                );
+                                                const updatedOrg = { ...organization, members: updatedMembers };
+                                                
+                                                // Update in database
+                                                const docRef = db.collection('users').doc(ownerId);
+                                                await docRef.update({ 'organization': updatedOrg });
+                                                
+                                                // Send the invite
+                                                await inviteUser({ email, name: member.name });
+                                            } catch (error) {
+                                                console.error('Error updating member email:', error);
+                                                alert('Failed to update member email. Please try again.');
+                                            }
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
+            
             {isAdmin && (
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -974,10 +1086,11 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </div>
                     )}
                     
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members.length})</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members.filter(m => m.uid).length})</h3>
                     <div className="flow-root">
                         <ul role="list" className="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
                             {[...organization.members]
+                                .filter(member => member.uid) // Only show members with Firebase Auth accounts
                                 .sort((a, b) => {
                                     // Club Admin first
                                     if (a.uid === ownerId) return -1;

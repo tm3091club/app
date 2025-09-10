@@ -87,23 +87,9 @@ export const generateNewMonthSchedule = (
   themes: string[],
   members: Member[],
   availability: { [memberId: string]: MemberAvailability },
-  allSchedules: MonthlySchedule[],
-  clubOwnerId?: string,
-  clubName?: string
+  allSchedules: MonthlySchedule[]
 ): MonthlySchedule => {
-  // Filter out inactive members and the club admin (owner)
-  const activeMembers = members.filter(m => {
-    // Filter out inactive members
-    if (m.status !== MemberStatus.Active) return false;
-    
-    // Filter out club admin by UID
-    if (clubOwnerId && m.uid === clubOwnerId) return false;
-    
-    // Filter out any member with club name (backup filter)
-    if (clubName && m.name.includes(clubName)) return false;
-    
-    return true;
-  });
+  const activeMembers = members.filter(m => m.status === MemberStatus.Active);
   
   // --- Previous Month's Data Analysis ---
   const prevMonthDate = new Date(year, month - 1, 1);
@@ -139,14 +125,13 @@ export const generateNewMonthSchedule = (
         const status = availability[m.id]?.[meetingDateKey];
         return status !== AvailabilityStatus.Unavailable && status !== AvailabilityStatus.Possible;
     }));
-    
 
     // Weekly tracking
     const assignedInMeeting = new Set<string>();
 
     const assignRole = (role: string, memberPool: Member[]): Member | null => {
         for (const member of memberPool) {
-            if (assignedInMeeting.has(member.id) ||
+            if (assignedInMeeting.has(member.id) || 
                 (SPEAKER_ROLES.includes(role) && monthlySpeakers.has(member.id)) ||
                 (memberRoleHistory.get(member.id)?.has(role))) {
                 continue;
@@ -158,7 +143,7 @@ export const generateNewMonthSchedule = (
 
             if (SPEAKER_ROLES.includes(role)) monthlySpeakers.add(member.id);
             if (EVALUATOR_ROLES.includes(role)) monthlyEvaluators.add(member.id);
-
+            
             return member;
         }
         return null;
@@ -175,7 +160,6 @@ export const generateNewMonthSchedule = (
         if (role === 'Toastmaster') qualifiedMembers = availableForMeeting.filter(m => m.isToastmaster);
         if (role === 'Table Topics Master') qualifiedMembers = availableForMeeting.filter(m => m.isTableTopicsMaster);
         if (role === 'General Evaluator') qualifiedMembers = availableForMeeting.filter(m => m.isGeneralEvaluator);
-        
         assignRole(role, shuffleArray(qualifiedMembers));
     });
     
@@ -183,32 +167,11 @@ export const generateNewMonthSchedule = (
         if (!assignments[role]) assignRole(role, availableForMeeting);
     });
 
-    // 3. Assign Speaker Roles with seniority prioritization
-    // Sort members by join date: oldest members first for Speaker 3, newest for Speaker 1
-    const sortBySeniority = (members: Member[], reverse = false) => {
-        return members.sort((a, b) => {
-            // Members without join dates are treated as neutral (no preference)
-            if (!a.joinedDate && !b.joinedDate) return 0;
-            if (!a.joinedDate) return 0; // Don't penalize members without join dates
-            if (!b.joinedDate) return 0; // Don't penalize members without join dates
-            
-            const dateA = new Date(a.joinedDate).getTime();
-            const dateB = new Date(b.joinedDate).getTime();
-            return reverse ? dateB - dateA : dateA - dateB;
-        });
-    };
-    
-    SPEAKER_ROLES.forEach((role, index) => {
+    // 3. Assign Speaker Roles with prioritization
+    SPEAKER_ROLES.forEach(role => {
         const prioritizedPool = availableForMeeting.filter(m => !prevMonthSpeakers.has(m.id));
-        
-        // For Speaker 3: oldest members first, for Speaker 1: newest members first
-        const isReversed = role === 'Speaker 1';
-        const sortedPool = sortBySeniority([...prioritizedPool], isReversed);
-        
-        if (!assignRole(role, sortedPool)) {
-            // Fallback with same seniority sorting
-            const sortedFallback = sortBySeniority([...availableForMeeting], isReversed);
-            assignRole(role, sortedFallback);
+        if (!assignRole(role, shuffleArray(prioritizedPool))) {
+            assignRole(role, availableForMeeting); // Fallback
         }
     });
 
@@ -227,37 +190,22 @@ export const generateNewMonthSchedule = (
     // 5. Assign Minor Roles
     MINOR_ROLES.forEach(role => assignRole(role, availableForMeeting));
 
-    // 6. Final fallback - assign any remaining unassigned roles to available members
+    // 6. Handle Double Roles if necessary
     const unassignedRoles = TOASTMASTERS_ROLES.filter(r => !assignments[r]);
     if (unassignedRoles.length > 0) {
-        // Try to assign unassigned roles to any available member (ignore role history for final assignments)
-        unassignedRoles.forEach(role => {
-            for (const member of shuffleArray([...availableForMeeting])) {
-                if (!assignedInMeeting.has(member.id)) {
-                    assignments[role] = member.id;
-                    assignedInMeeting.add(member.id);
-                    break;
-                }
-            }
-        });
-        
-        // If still unassigned, allow double roles for minor roles
-        const stillUnassigned = TOASTMASTERS_ROLES.filter(r => !assignments[r]);
-        if (stillUnassigned.length > 0) {
-            let eligibleForDouble = shuffleArray(availableForMeeting.filter(m => {
-                const assignedRole = Object.keys(assignments).find(role => assignments[role] === m.id);
-                return assignedRole && MINOR_ROLES.includes(assignedRole);
-            }));
+        let eligibleForDouble = shuffleArray(availableForMeeting.filter(m => {
+            const assignedRole = Object.keys(assignments).find(role => assignments[role] === m.id);
+            return assignedRole && MINOR_ROLES.includes(assignedRole);
+        }));
 
-            stillUnassigned.forEach(role => {
-                 if (MINOR_ROLES.includes(role) && eligibleForDouble.length > 0) {
-                     const member = eligibleForDouble.pop();
-                     if (member) {
-                         assignments[role] = member.id;
-                     }
+        unassignedRoles.forEach(role => {
+             if (MINOR_ROLES.includes(role) && eligibleForDouble.length > 0) {
+                 const member = eligibleForDouble.pop();
+                 if (member) {
+                     assignments[role] = member.id;
                  }
-            });
-        }
+             }
+        });
     }
 
     return {

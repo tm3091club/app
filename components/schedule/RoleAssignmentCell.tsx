@@ -15,7 +15,7 @@ export const RoleAssignmentCell: React.FC<{
   meetingDate: string;
   availability: { [memberId: string]: any };
 }> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled, meetingDate, availability }) => {
-    const { currentUser } = useToastmasters();
+    const { currentUser, ownerId, organization } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
         // Get the required qualification for this role
@@ -26,10 +26,17 @@ export const RoleAssignmentCell: React.FC<{
             'Inspiration Award': 'isPastPresident'
         }[role] as keyof Member;
 
-        // Get qualified members for this role
+        // Get qualified members for this role, excluding only the club admin (owner)
         const qualifiedMembers = requiredQualificationKey 
-            ? availableMembers.filter(m => m[requiredQualificationKey])
-            : availableMembers;
+            ? availableMembers.filter(m => 
+                m[requiredQualificationKey] && 
+                m.uid !== ownerId && 
+                (!organization || !m.name.includes(organization.name))
+              )
+            : availableMembers.filter(m => 
+                m.uid !== ownerId && 
+                (!organization || !m.name.includes(organization.name))
+              );
 
         // For members (non-admins), show only qualified members and currently assigned member
         if (currentUser?.role !== 'Admin') {
@@ -37,7 +44,7 @@ export const RoleAssignmentCell: React.FC<{
             if (!currentMember) return [];
 
             // Only show dropdown if role is unassigned OR if current user is assigned to this role
-            const isCurrentUserAssigned = assignedMemberId === currentMember.id;
+            const isCurrentUserAssigned = assignedMemberId === currentMember.id || assignedMemberId === currentMember.uid;
             const isRoleUnassigned = !assignedMemberId;
             
             if (!isRoleUnassigned && !isCurrentUserAssigned) {
@@ -62,11 +69,23 @@ export const RoleAssignmentCell: React.FC<{
         // then members with no role; among no-role members, place "available" at the bottom
         const dateKey = meetingDate.split('T')[0];
 
-        // Get all qualified members plus currently assigned member
-        let allMembers = [...qualifiedMembers];
-        const currentlyAssignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
-        if (currentlyAssignedMember && !qualifiedMembers.some(m => m.id === currentlyAssignedMember.id)) {
-            allMembers.unshift(currentlyAssignedMember);
+        // For roles requiring qualifications, only show qualified members (excluding club admin)
+        // For other roles, show all available members (excluding club admin)
+        let allMembers = requiredQualificationKey ? [...qualifiedMembers] : [...availableMembers.filter(m => 
+            m.uid !== ownerId && 
+            (!organization || !m.name.includes(organization.name))
+        )];
+        
+        // For qualified roles, still include currently assigned member even if unqualified (so they can see/remove the assignment)
+        // But don't include club admin even if they're currently assigned
+        if (requiredQualificationKey) {
+            const currentlyAssignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId || m.uid === assignedMemberId) : null;
+            if (currentlyAssignedMember && 
+                currentlyAssignedMember.uid !== ownerId && 
+                (!organization || !currentlyAssignedMember.name.includes(organization.name)) &&
+                !qualifiedMembers.some(m => m.id === currentlyAssignedMember.id)) {
+                allMembers.unshift(currentlyAssignedMember);
+            }
         }
 
         type MemberSortInfo = {
@@ -77,7 +96,10 @@ export const RoleAssignmentCell: React.FC<{
         };
 
         const sortInfos: MemberSortInfo[] = allMembers.map(member => {
-            const rolesInMeeting = Object.keys(allAssignmentsForMeeting).filter(r => allAssignmentsForMeeting[r] === member.id);
+            // Check both member.id and member.uid for compatibility
+            const rolesInMeeting = Object.keys(allAssignmentsForMeeting).filter(r => 
+                allAssignmentsForMeeting[r] === member.id || allAssignmentsForMeeting[r] === member.uid
+            );
             const roleIndexes = rolesInMeeting.map(r => TOASTMASTERS_ROLES.indexOf(r)).filter(i => i >= 0);
             const hasAnyRole = roleIndexes.length > 0;
 
@@ -129,7 +151,8 @@ export const RoleAssignmentCell: React.FC<{
     const readOnlyClasses = "bg-gray-100 dark:bg-gray-600 !border-gray-300 dark:!border-gray-500 text-gray-700 dark:text-gray-300";
 
     // If disabled and has no edit permissions, show read-only display
-    if (disabled && membersForThisRole.length === 0) {
+    // But always allow unassigning if someone is currently assigned
+    if (disabled && membersForThisRole.length === 0 && !assignedMemberId) {
         return (
             <div className="relative w-full">
                 <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3').replace('text-center', '')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}
@@ -138,7 +161,7 @@ export const RoleAssignmentCell: React.FC<{
                          textAlign: 'center',
                          WebkitTextAlign: 'center'
                      }}>
-                    {isUnassigned ? '-- Unassigned --' : (isCurrentUserAssigned ? `👤 ${assignedMember?.name} (You)` : assignedMember?.name || '-- Unknown --')}
+                    {isUnassigned ? '-- Unassigned --' : assignedMember?.name || '-- Unknown --'}
                 </div>
             </div>
         );
@@ -184,12 +207,12 @@ export const RoleAssignmentCell: React.FC<{
                 
                 // Get current roles for this member (excluding the current role being assigned)
                 const assignedRolesForMember = Object.keys(allAssignmentsForMeeting).filter(
-                    r => allAssignmentsForMeeting[r] === member.id && r !== role
+                    r => (allAssignmentsForMeeting[r] === member.id || allAssignmentsForMeeting[r] === member.uid) && r !== role
                 );
                 
                 // New format: "Name (Role)" instead of "Name (as Role)"
                 let displayText = member.name;
-                if (assignedRolesForMember.length > 0 && member.id !== assignedMemberId) {
+                if (assignedRolesForMember.length > 0 && member.id !== assignedMemberId && member.uid !== assignedMemberId) {
                     // Truncate long role lists for better mobile display
                     const rolesText = assignedRolesForMember.length > 2
                         ? `${assignedRolesForMember.slice(0, 2).join(', ')}...`
@@ -208,13 +231,9 @@ export const RoleAssignmentCell: React.FC<{
 
                 // Enhanced display text for current user when account is linked
                 let finalDisplayText = displayText;
-                if (isAccountLinked) {
-                    const hasRoles = assignedRolesForMember.length > 0;
-                    if (!hasRoles || member.id === assignedMemberId) {
-                        finalDisplayText = `👤 ${member.name} (You)`;
-                    } else {
-                        finalDisplayText = `👤 ${displayText} - You`;
-                    }
+                // Remove the "(You)" suffix - just show the name normally
+                if (isAccountLinked && member.id === assignedMemberId) {
+                    finalDisplayText = `👤 ${member.name}`;
                 }
 
                 return (
@@ -229,7 +248,8 @@ export const RoleAssignmentCell: React.FC<{
                         } ${isDisabled ? 'opacity-50' : ''}`}
                         style={{
                             ...(isAvailable && assignedRolesForMember.length === 0 && !isAccountLinked && {
-                                color: 'rgba(34, 197, 94, 0.7)' // More translucent green for available members
+                                color: 'rgb(22, 163, 74)', // Darker green for available members (green-600)
+                                fontWeight: '500' // Medium weight for better visibility
                             })
                         }}
                         title={finalDisplayText} // Show full text on hover for truncated items

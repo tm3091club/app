@@ -2,21 +2,21 @@
 
 export const TOASTMASTERS_ROLES = [
   'President',
-  'Toastmaster',
   'Pledge',
   'Thought of the Day',
-  'Timekeeper',
+  'Toastmaster',
   'Grammarian',
+  'Timekeeper',
   'Ah-Counter',
   'Ballot Counter',
   'Table Topics Master',
+  'Evaluator 1',
   'Speaker 1',
+  'Evaluator 2',
   'Speaker 2',
+  'Evaluator 3',
   'Speaker 3',
   'General Evaluator',
-  'Evaluator 1',
-  'Evaluator 2',
-  'Evaluator 3',
   'Inspiration Award',
 ];
 

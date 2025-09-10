@@ -43,6 +43,7 @@ export interface Member {
   isGeneralEvaluator?: boolean;
   isPastPresident?: boolean;
   uid?: string; // Link to the user account
+  joinedDate?: string; // ISO date string when member joined
 }
 
 export interface MemberAvailability {

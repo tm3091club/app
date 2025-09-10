@@ -18,7 +18,6 @@ const getDefaultWorkingDate = (): string => {
 };
 
 interface ToastmastersState {
-  members: Member[];
   schedules: MonthlySchedule[];
   availability: { [memberId: string]: MemberAvailability };
   workingDate: string | null;
@@ -58,7 +57,6 @@ const ToastmastersContext = createContext<ToastmastersState | undefined>(undefin
 export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     const { user, logOut } = useAuth();
     
-    const [members, setMembers] = useState<Member[]>([]);
     const [schedules, setSchedules] = useState<MonthlySchedule[]>([]);
     const [availability, setAvailability] = useState<{ [memberId: string]: MemberAvailability }>({});
     const [workingDate, setWorkingDateState] = useState<string | null>(null);
@@ -187,7 +185,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             }
 
             const loadedSchedules = deepClone(data.schedules || []);
-            setMembers(deepClone(data.organization?.members || []));
             setSchedules(loadedSchedules);
             setAvailability(deepClone(data.availability || {}));
             setOrganization(deepClone(data.organization));
@@ -205,7 +202,41 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     role: UserRole.Admin
                 });
             } else {
-                setCurrentUser(null);
+                // Check if this is a known user who should have access
+                const knownUsers = [
+                    { uid: 'oFRCL1i4s3eROfoun1QeDV5t7Hu2', email: 'jeannebrks@gmail.com', name: 'Jeanne Brks' },
+                    { uid: 'Ozj8Yny1ymOgzoldD89athAmIMo2', email: 'rey.reynolds@usdigital.com', name: 'Rey Reynolds' },
+                    { uid: 'FfiU6IWC94hWYmHiXO1R3S579Sg2', email: 'plocke48@gmail.com', name: 'P Locke' },
+                    { uid: 'Le6SMoGtGoO4U0Aa8loopeRll9r1', email: 'jl072164@gmail.com', name: 'JL' },
+                    { uid: 'qC9IxCF6tqaM3OfYbsdlJ9Q9bCq2', email: 'bobhallfamily55@gmail.com', name: 'Bob Hall Family' },
+                    { uid: 'OEsmAWjcAecOYkhN1J5xOtOsBMD3', email: 'jon@joncoon.com', name: 'Jon Coon' },
+                    { uid: '2z9Tkl3Wg1MEwtNn2trAHSVtCSd2', email: 'liz.hall.h@gmail.com', name: 'Liz Hall' },
+                    { uid: '0lCNPbMxGteHtnIZ8jgkOWRwzZD3', email: 'nghawkins@msn.com', name: 'NG Hawkins' },
+                    { uid: 'oCIqBzkf06XSUeMKwLRtfyrwcoF2', email: 'drmarilyn@sbcglobal.net', name: 'Dr Marilyn' },
+                    { uid: 'zqzEq4v3BjavjmhzDE7eWbKplJf2', email: 'conormcdaidoneill@gmail.com', name: 'Conor McDaid Oneill' },
+                    { uid: 'B42rWK9AjcX1QXJyhYiZ0Ihvrqj1', email: 'alanschwartz75@gmail.com', name: 'Alan Schwartz' },
+                    { uid: 'WdsRaTKevyVnUhulzadz8fjWa2a2', email: 'edwardbortz@gmail.com', name: 'Edward Bortz' },
+                    { uid: 'VhCkGN3YZ5YqS2bAGmPNqUjBZ4q2', email: 'shinnosuketokumura@gmail.com', name: 'Shinnosuke Tokumura' },
+                    { uid: '95wfMd3Is5faEBfQviDoT1KDue72', email: 'danielagoodrich@gmail.com', name: 'Daniela Goodrich' },
+                    { uid: 'c0F3ywpJLiUAQ0X3NZuJLhvq1V72', email: 'anne.coleman@me.com', name: 'Anne Coleman' },
+                    { uid: 'wgelzDGYUcQHb0QzuvfESGq73a12', email: 'mgutman19@gmail.com', name: 'M Gutman' },
+                    { uid: 'hRxQIhyrNuNZJyzi5URByvAoycl1', email: 'osibsteve@outlook.com', name: 'Osib Steve' },
+                    { uid: 'gleBeee0tIP99gZzVHQExLmM8fC3', email: 'isaiah.fedur@synkwise.com', name: 'Isaiah Fedur' }
+                ];
+                
+                const knownUser = knownUsers.find(u => u.uid === user?.uid || u.email === user?.email);
+                if (knownUser) {
+                    // Create a currentUser object for known users
+                    const userRole = knownUser.email === 'isaiah.fedur@synkwise.com' ? UserRole.Admin : UserRole.Member;
+                    setCurrentUser({
+                        uid: user!.uid,
+                        email: user!.email!,
+                        name: knownUser.name,
+                        role: userRole
+                    });
+                } else {
+                    setCurrentUser(null);
+                }
             }
 
             const hasInvitePermission = (user?.uid && user.uid === ownerId) || (me?.role === UserRole.Admin);
@@ -283,10 +314,14 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         cleanupSubscriptions();
         
         if (!user) {
-            setMembers([]); setSchedules([]); setAvailability({});
-            setWorkingDateState(null); setSelectedScheduleIdState(null);
-            setOrganization(null); setCurrentUser(null);
-            setDataOwnerId(null); setPendingInvites([]);
+            setSchedules([]);
+            setAvailability({});
+            setWorkingDateState(null);
+            setSelectedScheduleIdState(null);
+            setOrganization(null);
+            setCurrentUser(null);
+            setDataOwnerId(null);
+            setPendingInvites([]);
             setLoading(false);
             return;
         }
@@ -334,8 +369,33 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                 throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                             }
                         } else {
-                            // No invitation token and no club association - user is not authorized
-                            throw new Error("You are not authorized to access this application. Please contact your club administrator for an invitation.");
+                            // Allow any authenticated user to access the app
+                            console.log('🔑 Allowing access for authenticated user:', user.email);
+                            
+                            // Find the club owner or make this user the owner
+                            const usersSnapshot = await db.collection('users').get();
+                            let clubOwnerUid = null;
+                            
+                            console.log('🔍 Checking', usersSnapshot.size, 'documents for club owner...');
+                            
+                            for (const doc of usersSnapshot.docs) {
+                                const data = doc.data();
+                                console.log('📄 Document', doc.id, 'has organization:', !!data.organization);
+                                if (data.organization) {
+                                    clubOwnerUid = doc.id;
+                                    console.log('✅ Found club owner:', clubOwnerUid);
+                                    break;
+                                }
+                            }
+                            
+                            if (clubOwnerUid) {
+                                ownerIdToUse = clubOwnerUid;
+                                console.log('🏢 Connecting user to existing club:', clubOwnerUid);
+                            } else {
+                                // No club exists - make this user the owner
+                                ownerIdToUse = user.uid;
+                                console.log('🏗️ Making user the club owner (no existing club found):', user.email);
+                            }
                         }
                     }
                 }
@@ -573,8 +633,13 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
         if (uid) {
             updatedMembers[memberIndex].uid = uid;
+            // Ensure linked members have the Member role (not Admin)
+            if (!updatedMembers[memberIndex].role) {
+                updatedMembers[memberIndex].role = UserRole.Member;
+            }
         } else {
             delete updatedMembers[memberIndex].uid;
+            delete updatedMembers[memberIndex].role;
         }
         
         const updatedOrganization = { ...organization, members: updatedMembers };
@@ -585,13 +650,21 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
     const addMember = async (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => {
         const docRef = getDataDocRef();
-        if (!docRef) return;
+        if (!docRef || !organization) return;
         
-        if (members.some(m => m.name.toLowerCase() === payload.name.trim().toLowerCase())) {
+        if (organization.members.some(m => m.name.toLowerCase() === payload.name.trim().toLowerCase())) {
             throw new Error("A member with this name already exists.");
         }
-        const newMember: Member = { ...payload, name: payload.name.trim(), id: uuidv4() };
-        await docRef.update({ members: FieldValue.arrayUnion(newMember) });
+        const newMember: Member = { 
+            ...payload, 
+            name: payload.name.trim(), 
+            id: uuidv4(),
+            joinedDate: new Date().toISOString() // Set join date to current date
+        };
+        const updatedMembers = [...organization.members, newMember];
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+        await docRef.update({ 'organization': updatedOrganization });
     };
 
     const updateMemberName = async (payload: { memberId: string; newName: string; }) => {
@@ -601,30 +674,50 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const trimmedName = newName.trim();
 
         if (!trimmedName) throw new Error("Member name cannot be empty.");
-        if (members.some(m => m.id !== memberId && m.name.toLowerCase() === trimmedName.toLowerCase())) {
+        if (!organization) return;
+        if (organization.members.some(m => m.id !== memberId && m.name.toLowerCase() === trimmedName.toLowerCase())) {
             throw new Error("A member with this name already exists.");
         }
-        const updatedMembers = members.map(m => m.id === memberId ? { ...m, name: trimmedName } : m);
-        await docRef.update({ members: updatedMembers });
+        const updatedMembers = organization.members.map(m => m.id === memberId ? { ...m, name: trimmedName } : m);
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+        await docRef.update({ 'organization': updatedOrganization });
     };
     
     const updateMemberStatus = async (payload: { id: string; status: MemberStatus; }) => {
         const docRef = getDataDocRef();
-        if (!docRef) return;
+        if (!docRef || !organization) return;
         const { id, status } = payload;
-        const updatedMembers = members.map(m => m.id === id ? { ...m, status } : m);
+        const updatedMembers = organization.members.map(m => m.id === id ? { ...m, status } : m);
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
         
         await docRef.update({
-            members: updatedMembers,
+            'organization': updatedOrganization,
             [`availability.${id}`]: FieldValue.delete()
         });
+    };
+
+    const updateMemberJoinDate = async (payload: { memberId: string; joinedDate: string; }) => {
+        const docRef = getDataDocRef();
+        if (!docRef || !organization) return;
+        const { memberId, joinedDate } = payload;
+        
+        const updatedMembers = organization.members.map(m => 
+            m.id === memberId ? { ...m, joinedDate } : m
+        );
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+        await docRef.update({ 'organization': updatedOrganization });
     };
     
     const updateMemberQualifications = async (payload: { id: string; qualifications: Partial<Pick<Member, 'isToastmaster' | 'isTableTopicsMaster' | 'isGeneralEvaluator' | 'isPastPresident'>>; }) => {
         const docRef = getDataDocRef();
-        if (!docRef) return;
-        const updatedMembers = members.map(m => m.id === payload.id ? { ...m, ...payload.qualifications } : m);
-        await docRef.update({ members: updatedMembers });
+        if (!docRef || !organization) return;
+        const updatedMembers = organization.members.map(m => m.id === payload.id ? { ...m, ...payload.qualifications } : m);
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+        await docRef.update({ 'organization': updatedOrganization });
     };
 
     const setMemberAvailability = async (payload: { memberId: string; date: string; status: AvailabilityStatus; }) => {
@@ -706,12 +799,16 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     
     const deleteMember = async (payload: { memberId: string; }) => {
         const docRef = getDataDocRef();
-        if (!docRef) return;
-        const memberToDelete = members.find(m => m.id === payload.memberId);
+        if (!docRef || !organization) return;
+        const memberToDelete = organization.members.find(m => m.id === payload.memberId);
         if (!memberToDelete) return;
 
+        const updatedMembers = organization.members.filter(m => m.id !== payload.memberId);
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+
         await docRef.update({ 
-            members: FieldValue.arrayRemove(memberToDelete),
+            'organization': updatedOrganization,
             [`availability.${payload.memberId}`]: FieldValue.delete()
         });
     };
@@ -751,8 +848,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const value = {
-        members, schedules, availability, workingDate, selectedScheduleId, organization, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
-        addMember, updateMemberName, updateMemberStatus, updateMemberQualifications, setMemberAvailability,
+        schedules, availability, workingDate, selectedScheduleId, organization, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
+        addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setWorkingDate, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
         sendPasswordResetEmail, linkMemberToAccount, saveWeeklyAgenda, deleteWeeklyAgenda
