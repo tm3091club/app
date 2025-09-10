@@ -919,9 +919,9 @@ export const MemberManager: React.FC = () => {
     }, [activeMembers, sortConfig, isAdmin]);
     
     const myProfile = useMemo(() => {
-        if (isAdmin || !currentUser?.uid) return null;
+        if (!currentUser?.uid) return null;
         return activeMembers.find(m => m.uid === currentUser.uid);
-    }, [activeMembers, currentUser, isAdmin]);
+    }, [activeMembers, currentUser]);
 
     const otherClubMembers = useMemo(() => {
         if (isAdmin || !currentUser?.uid) return [];
@@ -1263,22 +1263,32 @@ export const MemberManager: React.FC = () => {
 
 
 
-            {isAdmin ? (
-                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
-                    <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Member List & Availability</h2>
-                    </div>
-                    <MembersTable memberList={sortedMembersForAdmin} isAdmin={true} {...commonTableProps} handleSortRequest={handleSortRequest} sortConfig={sortConfig} />
-                </div>
-            ) : (
-                <div className="space-y-8">
+            <div className="space-y-8">
+                {/* Show "My Availability" section for anyone with a member profile (including admins) */}
+                {myProfile && (
                     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Availability</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Availability</h2>
                         </div>
-                        {myProfile ? (
-                             <MembersTable memberList={[myProfile]} isMyProfileSection={true} isAdmin={false} {...commonTableProps} />
-                        ) : (
+                        <MembersTable memberList={[myProfile]} isMyProfileSection={true} isAdmin={false} {...commonTableProps} />
+                    </div>
+                )}
+                
+                {/* Show admin interface if user is admin */}
+                {isAdmin ? (
+                    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Members</h2>
+                        </div>
+                        <MembersTable memberList={sortedMembersForAdmin} isAdmin={true} {...commonTableProps} handleSortRequest={handleSortRequest} sortConfig={sortConfig} />
+                    </div>
+                ) : (
+                    /* For non-admins without member profile, show linking message */
+                    !myProfile && (
+                        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Account Not Linked</h2>
+                            </div>
                             <div className="p-6">
                                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-r-lg">
                                     <div className="flex">
@@ -1294,8 +1304,12 @@ export const MemberManager: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )
+                )}
+                
+                {/* For non-admins with member profile, show other members' read-only view */}
+                {!isAdmin && myProfile && (
                     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Other Members' Availability</h2>
@@ -1303,8 +1317,8 @@ export const MemberManager: React.FC = () => {
                         </div>
                         <MembersTable memberList={otherClubMembers} isAdmin={false} {...commonTableProps} />
                     </div>
-                </div>
-            )}
+                )}
+            </div>
             
             {isAdmin && archivedMembers.length > 0 && (
                  <div className="mt-12 bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
