@@ -48,7 +48,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     
     // Simple logic: find the next upcoming meeting or current week
     for (let i = 0; i < schedule.meetings.length; i++) {
-      const meetingDate = new Date(schedule.meetings[i].date);
+      const meetingDate = new Date(schedule.meetings[i].date + 'T00:00:00');
       const meetingDateOnly = new Date(meetingDate.getFullYear(), meetingDate.getMonth(), meetingDate.getDate());
       
       // If meeting is today or in the future, show this week
@@ -406,13 +406,13 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   const handleExportPDF = async () => {
     if (!agenda) return;
-    const meetingDate = new Date(meeting.date);
+    const meetingDate = new Date(meeting.date + 'T00:00:00');
     exportWeeklyAgendaToPDF(agenda, organization, meetingDate);
   };
 
   const handleCopyToClipboard = () => {
     if (!agenda) return;
-    const meetingDate = new Date(meeting.date);
+    const meetingDate = new Date(meeting.date + 'T00:00:00');
     const tsv = exportWeeklyAgendaToTSV(agenda, organization, meetingDate);
     navigator.clipboard.writeText(tsv);
     setCopySuccess(true);
@@ -451,7 +451,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
         >
           {schedule.meetings.map((meeting, index) => (
             <option key={index} value={index}>
-              Week {index + 1} - {format(new Date(meeting.date), 'MMMM d, yyyy')}
+              Week {index + 1} - {format(new Date(meeting.date + 'T00:00:00'), 'MMMM d, yyyy')}
             </option>
           ))}
         </select>
@@ -561,7 +561,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             <h1 className="text-2xl font-bold mb-2">{organization?.name || 'Toastmasters Club'}</h1>
             <p className="text-lg mb-2">Club #{organization?.clubNumber || 'XXXXX'}</p>
             <h2 className="text-xl font-semibold mb-2">Meeting Agenda</h2>
-            <p className="text-lg">{format(new Date(meeting.date), 'MMMM d, yyyy')}</p>
+            <p className="text-lg">{format(new Date(meeting.date + 'T00:00:00'), 'MMMM d, yyyy')}</p>
             {agenda.theme && (
               <p className="text-lg mt-2 font-medium agenda-theme">Theme: {agenda.theme}</p>
             )}
