@@ -106,7 +106,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const userPointerDocRef = db.collection('users').doc(joiningUser.uid);
     
         const newName = invitedUserName || joiningUser.displayName || joiningUser.email!;
-        const newUserToAdd: AppUser = { uid: joiningUser.uid, email: joiningUser.email!, name: newName, role: UserRole.Member };
+        const newUserToAdd: AppUser = { uid: joiningUser.uid, email: joiningUser.email!, name: newName, role: UserRole.Member, ownerId: ownerId };
     
         try {
             await db.runTransaction(async (transaction) => {
@@ -226,41 +226,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     });
                 }
             } else {
-                // Check if this is a known user who should have access
-                const knownUsers = [
-                    { uid: 'oFRCL1i4s3eROfoun1QeDV5t7Hu2', email: 'jeannebrks@gmail.com', name: 'Jeanne Brks' },
-                    { uid: 'Ozj8Yny1ymOgzoldD89athAmIMo2', email: 'rey.reynolds@usdigital.com', name: 'Rey Reynolds' },
-                    { uid: 'FfiU6IWC94hWYmHiXO1R3S579Sg2', email: 'plocke48@gmail.com', name: 'P Locke' },
-                    { uid: 'Le6SMoGtGoO4U0Aa8loopeRll9r1', email: 'jl072164@gmail.com', name: 'JL' },
-                    { uid: 'qC9IxCF6tqaM3OfYbsdlJ9Q9bCq2', email: 'bobhallfamily55@gmail.com', name: 'Bob Hall Family' },
-                    { uid: 'OEsmAWjcAecOYkhN1J5xOtOsBMD3', email: 'jon@joncoon.com', name: 'Jon Coon' },
-                    { uid: '2z9Tkl3Wg1MEwtNn2trAHSVtCSd2', email: 'liz.hall.h@gmail.com', name: 'Liz Hall' },
-                    { uid: '0lCNPbMxGteHtnIZ8jgkOWRwzZD3', email: 'nghawkins@msn.com', name: 'NG Hawkins' },
-                    { uid: 'oCIqBzkf06XSUeMKwLRtfyrwcoF2', email: 'drmarilyn@sbcglobal.net', name: 'Dr Marilyn' },
-                    { uid: 'zqzEq4v3BjavjmhzDE7eWbKplJf2', email: 'conormcdaidoneill@gmail.com', name: 'Conor McDaid Oneill' },
-                    { uid: 'B42rWK9AjcX1QXJyhYiZ0Ihvrqj1', email: 'alanschwartz75@gmail.com', name: 'Alan Schwartz' },
-                    { uid: 'WdsRaTKevyVnUhulzadz8fjWa2a2', email: 'edwardbortz@gmail.com', name: 'Edward Bortz' },
-                    { uid: 'VhCkGN3YZ5YqS2bAGmPNqUjBZ4q2', email: 'shinnosuketokumura@gmail.com', name: 'Shinnosuke Tokumura' },
-                    { uid: '95wfMd3Is5faEBfQviDoT1KDue72', email: 'danielagoodrich@gmail.com', name: 'Daniela Goodrich' },
-                    { uid: 'c0F3ywpJLiUAQ0X3NZuJLhvq1V72', email: 'anne.coleman@me.com', name: 'Anne Coleman' },
-                    { uid: 'wgelzDGYUcQHb0QzuvfESGq73a12', email: 'mgutman19@gmail.com', name: 'M Gutman' },
-                    { uid: 'hRxQIhyrNuNZJyzi5URByvAoycl1', email: 'osibsteve@outlook.com', name: 'Osib Steve' },
-                    { uid: 'gleBeee0tIP99gZzVHQExLmM8fC3', email: 'isaiah.fedur@synkwise.com', name: 'Isaiah Fedur' }
-                ];
-                
-                const knownUser = knownUsers.find(u => u.uid === user?.uid || u.email === user?.email);
-                if (knownUser) {
-                    // Create a currentUser object for known users
-                    const userRole = knownUser.email === 'isaiah.fedur@synkwise.com' ? UserRole.Admin : UserRole.Member;
-                    setCurrentUser({
-                        uid: user!.uid,
-                        email: user!.email!,
-                        name: knownUser.name,
-                        role: userRole
-                    });
-                } else {
-                    setCurrentUser(null);
-                }
+                // User authorization managed through database ownerId field
+                setCurrentUser(null);
             }
 
             const hasInvitePermission = (user?.uid && user.uid === ownerId) || (me?.role === UserRole.Admin);
@@ -394,24 +361,25 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                 throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                             }
                         } else {
-                            // Allow any authenticated user to access the app
-                            // Find the club owner or make this user the owner
+                            // Check if user exists as a member with ownerId in any club
                             const usersSnapshot = await db.collection('users').get();
-                            let clubOwnerUid = null;
                             
                             for (const doc of usersSnapshot.docs) {
                                 const data = doc.data();
-                                if (data.organization) {
-                                    clubOwnerUid = doc.id;
-                                    break;
+                                if (data.organization?.members) {
+                                    const member = data.organization.members.find((m: any) => 
+                                        m.uid === user.uid || m.email?.toLowerCase() === user.email?.toLowerCase()
+                                    );
+                                    
+                                    if (member?.ownerId) {
+                                        ownerIdToUse = member.ownerId;
+                                        break;
+                                    }
                                 }
                             }
                             
-                            if (clubOwnerUid) {
-                                ownerIdToUse = clubOwnerUid;
-                            } else {
-                                // No club exists - make this user the owner
-                                ownerIdToUse = user.uid;
+                            if (!ownerIdToUse) {
+                                throw new Error("You are not authorized to access this application. Please contact your club administrator for a proper invitation.");
                             }
                         }
                     }
@@ -690,7 +658,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             ...payload, 
             name: payload.name.trim(), 
             id: uuidv4(),
-            joinedDate: new Date().toISOString() // Set join date to current date
+            joinedDate: new Date().toISOString(), // Set join date to current date
+            ownerId: dataOwnerId // Automatically link new member to the club that created them
         };
         const updatedMembers = [...organization.members, newMember];
         const updatedOrganization = { ...organization, members: updatedMembers };
