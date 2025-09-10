@@ -32,3 +32,15 @@ firebase-debug.log
 
 # Version tracking
 .push-count
+
+# Temporary scripts that might contain secrets
+*debug*.js
+*fix*.js
+*temp*.js
+*test*.js
+debug*.html
+*debug*.html
+
+# Firebase secrets (these should be in environment variables)
+*firebase*config*.js
+*firebase*config*.ts
