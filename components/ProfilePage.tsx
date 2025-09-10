@@ -542,9 +542,9 @@ export const ProfilePage = (): React.ReactElement | null => {
     const isPasswordUser = useMemo(() => user?.providerData.some(p => p.providerId === 'password'), [user]);
     const isAdmin = currentUser?.role === UserRole.Admin;
     const isClubAdmin = currentUser?.uid === ownerId;
-    const clubOwner = organization?.members.find(m => m?.uid === ownerId);
+    const clubOwner = organization?.members?.find(m => m?.uid === ownerId);
 
-    const isLastAdmin = organization?.members.filter(m => m?.role === UserRole.Admin).length === 1;
+    const isLastAdmin = organization?.members?.filter(m => m?.role === UserRole.Admin).length === 1;
 
     useEffect(() => {
         if (organization) {
@@ -1014,7 +1014,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                 </form>
             </div>}
             
-            {isClubAdmin && organization?.members && organization.members.some(member => !member.email && !member.uid) && (
+            {isClubAdmin && organization?.members && organization.members?.some(member => !member.email && !member.uid) && (
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6">Member Invitations</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -1022,7 +1022,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                     </p>
                     
                     {(() => {
-                        const membersNeedingEmails = organization.members.filter(member => !member.email && !member.uid);
+                        const membersNeedingEmails = organization.members?.filter(member => !member.email && !member.uid) || [];
                         
                         if (membersNeedingEmails.length === 0) {
                             return (
@@ -1047,9 +1047,9 @@ export const ProfilePage = (): React.ReactElement | null => {
                                         onSendInvite={async (email) => {
                                             try {
                                                 // First update the member with the email and ensure Member role
-                                                const updatedMembers = organization.members.map(m => 
+                                                const updatedMembers = organization.members?.map(m => 
                                                     m.id === member.id ? { ...m, email, role: m.role || 'Member' } : m
-                                                );
+                                                ) || [];
                                                 const updatedOrg = { ...organization, members: updatedMembers };
                                                 
                                                 // Update in database
@@ -1086,10 +1086,10 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </div>
                     )}
                     
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members.filter(m => m.uid).length})</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members?.filter(m => m.uid).length || 0})</h3>
                     <div className="flow-root">
                         <ul role="list" className="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
-                            {[...organization.members]
+                            {[...(organization.members || [])]
                                 .filter(member => member.uid) // Only show members with Firebase Auth accounts
                                 .sort((a, b) => {
                                     // Club Admin first

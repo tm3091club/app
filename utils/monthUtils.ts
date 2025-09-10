@@ -62,7 +62,7 @@ export function getRelevantMonthsForAvailability(meetingDay: number = 2): { curr
  * Determines the next schedule month based on existing schedules and meeting day
  */
 export function getNextScheduleMonth(existingSchedules: MonthlySchedule[], meetingDay: number = 2): MonthInfo {
-  if (existingSchedules.length === 0) {
+  if (!Array.isArray(existingSchedules) || existingSchedules.length === 0) {
     return getCurrentMonthInfo(meetingDay);
   }
   

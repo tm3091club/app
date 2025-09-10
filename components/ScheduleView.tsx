@@ -63,6 +63,7 @@ export const ScheduleView: React.FC = () => {
     // The active schedule is now directly derived from the context's state.
     // No local copy is made, ensuring the view is always in sync with the database.
     const activeSchedule = useMemo(() => {
+        if (!Array.isArray(schedules)) return null;
         return schedules.find(s => s.id === selectedScheduleId) || null;
     }, [schedules, selectedScheduleId]);
 
@@ -126,10 +127,13 @@ export const ScheduleView: React.FC = () => {
             
             return true;
         }), [hydratedMembers, ownerId, organization]);
-    const allPastThemes = useMemo(() => schedules.flatMap(s => s.meetings.map(m => m.theme)), [schedules]);
+    const allPastThemes = useMemo(() => {
+        if (!Array.isArray(schedules)) return [];
+        return schedules.flatMap(s => s.meetings.map(m => m.theme));
+    }, [schedules]);
     
     const previousSchedule = useMemo(() => {
-        if (!activeSchedule) return null;
+        if (!activeSchedule || !Array.isArray(schedules)) return null;
         const current = new Date(activeSchedule.year, activeSchedule.month);
         current.setMonth(current.getMonth() - 1);
         const prevId = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
@@ -174,11 +178,20 @@ export const ScheduleView: React.FC = () => {
     // Handlers now perform actions that will be immediately reflected
     const handleNewSchedule = useCallback(async () => {
         console.log('🚀 handleNewSchedule called!');
+        console.log('📋 Organization:', organization);
         console.log('📋 Organization meetingDay:', organization?.meetingDay);
+        console.log('📋 Members count:', hydratedMembers?.length);
+        console.log('📋 Members:', hydratedMembers);
         
-        if (!organization?.meetingDay) {
+        if (!hydratedMembers || hydratedMembers.length === 0) {
+            console.log('❌ No members found for schedule generation');
+            setError("Please go to 'Manage Members' and add members before generating a schedule.");
+            return;
+        }
+        
+        if (!organization?.meetingDay && organization?.meetingDay !== 0) {
             console.log('❌ No meeting day set in organization');
-            setError("Please set a meeting day in the 'Manage Members' tab first.");
+            setError("Please set a meeting day in your Club Profile first.");
             return;
         }
         
@@ -188,7 +201,7 @@ export const ScheduleView: React.FC = () => {
         console.log('📅 Next month info:', nextMonthInfo);
         
         const id = `${year}-${String(month + 1).padStart(2, '0')}`;
-        if (schedules.some(s => s.id === id)) {
+        if (Array.isArray(schedules) && schedules.some(s => s.id === id)) {
             setError('A schedule for this month already exists.');
             return;
         }
@@ -238,7 +251,7 @@ export const ScheduleView: React.FC = () => {
             }
 
             // Generate the schedule with themes
-            const newSchedule = generateNewMonthSchedule(year, month, meetingDates, themes, hydratedMembers, availability, schedules, ownerId || undefined, organization?.name);
+            const newSchedule = generateNewMonthSchedule(year, month, meetingDates, themes, hydratedMembers, availability, Array.isArray(schedules) ? schedules : [], ownerId || undefined, organization?.name);
             await addSchedule({ schedule: newSchedule });
             
             // Auto-select the newly created schedule
@@ -251,8 +264,13 @@ export const ScheduleView: React.FC = () => {
     }, [addSchedule, availability, hydratedMembers, schedules, organization, allPastThemes, setSelectedScheduleId]);
 
     const handlePrepareSchedule = useCallback(async (type: 'next' | 'previous') => {
-        if (!organization?.meetingDay) {
-            setError("Please set a meeting day in the 'Manage Members' tab first.");
+        if (!hydratedMembers || hydratedMembers.length === 0) {
+            setError("Please go to 'Manage Members' and add members before generating a schedule.");
+            return;
+        }
+        
+        if (!organization?.meetingDay && organization?.meetingDay !== 0) {
+            setError("Please set a meeting day in your Club Profile first.");
             return;
         }
         
@@ -269,22 +287,29 @@ export const ScheduleView: React.FC = () => {
                 month = nextMonthInfo.month;
             } else {
                 // Find the earliest schedule and go one month before
-                const earliestSchedule = schedules.reduce((earliest, schedule) => {
+                const earliestSchedule = (Array.isArray(schedules) && schedules.length) ? schedules.reduce((earliest, schedule) => {
                     const earliestDate = new Date(earliest.year, earliest.month);
                     const scheduleDate = new Date(schedule.year, schedule.month);
                     return scheduleDate < earliestDate ? schedule : earliest;
-                });
+                }) : null;
                 
-                year = earliestSchedule.year;
-                month = earliestSchedule.month - 1;
-                if (month < 0) {
-                    month = 11;
-                    year--;
+                if (earliestSchedule) {
+                    year = earliestSchedule.year;
+                    month = earliestSchedule.month - 1;
+                    if (month < 0) {
+                        month = 11;
+                        year--;
+                    }
+                } else {
+                    // No schedules exist, use current month
+                    const now = new Date();
+                    year = now.getFullYear();
+                    month = now.getMonth();
                 }
             }
             
             const id = `${year}-${String(month + 1).padStart(2, '0')}`;
-            if (schedules.some(s => s.id === id)) {
+            if (Array.isArray(schedules) && schedules.some(s => s.id === id)) {
                 setError('A schedule for this month already exists.');
                 return;
             }
@@ -319,7 +344,7 @@ export const ScheduleView: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [schedules, organization, addSchedule, setSelectedScheduleId]);
+    }, [schedules, organization, addSchedule, setSelectedScheduleId, hydratedMembers]);
 
     const handleConfirmDelete = useCallback(async () => {
         if (!selectedScheduleId || !organization?.clubNumber) return;
@@ -330,7 +355,7 @@ export const ScheduleView: React.FC = () => {
         setIsDeleteModalOpen(false); 
 
         try {
-            const scheduleToDelete = schedules.find(s => s.id === selectedScheduleId);
+            const scheduleToDelete = Array.isArray(schedules) ? schedules.find(s => s.id === selectedScheduleId) : null;
             if (scheduleToDelete?.isShared && scheduleToDelete.shareId) {
                 const docId = `${organization.clubNumber}_${scheduleToDelete.shareId}`;
                 await db.collection("publicSchedules").doc(docId).delete();
@@ -401,7 +426,7 @@ export const ScheduleView: React.FC = () => {
                 themes,
                 hydratedMembers,
                 availability,
-                schedules,
+                Array.isArray(schedules) ? schedules : [],
                 ownerId || undefined,
                 organization?.name
             );
@@ -1001,7 +1026,7 @@ export const ScheduleView: React.FC = () => {
                          <div className="mt-6 flex flex-col justify-center items-center gap-4 px-4">
                             {(() => {
                                 const nextMonthInfo = getNextScheduleMonth(schedules, organization.meetingDay);
-                                const nextMonthExists = schedules.some(s => s.id === `${nextMonthInfo.year}-${String(nextMonthInfo.month + 1).padStart(2, '0')}`);
+                                const nextMonthExists = Array.isArray(schedules) && schedules.some(s => s.id === `${nextMonthInfo.year}-${String(nextMonthInfo.month + 1).padStart(2, '0')}`);
                                 
                                 return (
                                     <>
@@ -1022,7 +1047,7 @@ export const ScheduleView: React.FC = () => {
                             })()}
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Select a schedule or set a meeting day in "Manage Members".</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Please set a meeting day in your Club Profile and add members in "Manage Members" before creating schedules.</p>
                     )}
                 </div>
             )}

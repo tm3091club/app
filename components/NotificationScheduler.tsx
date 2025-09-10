@@ -31,11 +31,11 @@ const NotificationScheduler: React.FC = () => {
       const nextMeetingStr = nextMeetingDate.toISOString().split('T')[0];
 
       // Find schedule for next meeting
-      const activeSchedule = schedules.find(schedule => {
+      const activeSchedule = Array.isArray(schedules) ? schedules.find(schedule => {
         return schedule.meetings.some(meeting => 
           meeting.date.split('T')[0] === nextMeetingStr
         );
-      });
+      }) : null;
 
       if (!activeSchedule) {
         const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][meetingDay];

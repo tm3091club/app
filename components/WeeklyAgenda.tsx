@@ -142,7 +142,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     const agendaId = `${scheduleId}-week${selectedWeek + 1}`;
     
     // Check if agenda exists
-    const existingAgenda = weeklyAgendas?.find(a => a.id === agendaId);
+    const existingAgenda = Array.isArray(weeklyAgendas) ? weeklyAgendas.find(a => a.id === agendaId) : null;
     
     if (existingAgenda) {
       setAgenda(existingAgenda);
@@ -153,7 +153,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       
       // Find previous agenda to copy color scheme
       const previousAgenda = selectedWeek > 0 
-        ? weeklyAgendas?.find(a => a.id === `${scheduleId}-week${selectedWeek}`)
+        ? (Array.isArray(weeklyAgendas) ? weeklyAgendas.find(a => a.id === `${scheduleId}-week${selectedWeek}`) : null)
         : null;
 
       const newAgenda: WeeklyAgenda = {
