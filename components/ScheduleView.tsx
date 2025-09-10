@@ -34,7 +34,8 @@ export const ScheduleView: React.FC = () => {
         selectedScheduleId, 
         setSelectedScheduleId, 
         organization,
-        currentUser
+        currentUser,
+        ownerId
     } = useToastmasters();
     
     // Component State
@@ -56,15 +57,8 @@ export const ScheduleView: React.FC = () => {
 
     // --- Data Hydration ---
     const hydratedMembers = useMemo(() => {
-        if (!organization?.members) return members;
-        const userMap = new Map(organization.members.filter(u => u?.uid).map(u => [u.uid, u.name]));
-        return members.map(member => {
-            if (member?.uid && userMap.has(member.uid)) {
-                return { ...member, name: userMap.get(member.uid)! };
-            }
-            return member;
-        });
-    }, [members, organization?.members]);
+        return organization?.members || [];
+    }, [organization?.members]);
 
     // The active schedule is now directly derived from the context's state.
     // No local copy is made, ensuring the view is always in sync with the database.
@@ -119,7 +113,19 @@ export const ScheduleView: React.FC = () => {
         return isAdmin;
     }, [isAdmin]);
 
-    const activeMembers = useMemo(() => hydratedMembers.filter(m => m.status === MemberStatus.Active), [hydratedMembers]);
+    const activeMembers = useMemo(() => 
+        hydratedMembers.filter(m => {
+            // Filter out inactive members
+            if (m.status !== MemberStatus.Active) return false;
+            
+            // Filter out club admin by UID
+            if (m.uid === ownerId) return false;
+            
+            // Filter out any member with club name (backup filter)
+            if (organization && m.name.includes(organization.name)) return false;
+            
+            return true;
+        }), [hydratedMembers, ownerId, organization]);
     const allPastThemes = useMemo(() => schedules.flatMap(s => s.meetings.map(m => m.theme)), [schedules]);
     
     const previousSchedule = useMemo(() => {
@@ -154,7 +160,15 @@ export const ScheduleView: React.FC = () => {
 
     const getMemberName = useCallback((memberId: string | null) => {
         if (!memberId) return '';
-        return hydratedMembers.find(m => m.id === memberId)?.name || '[Deleted]';
+        // First try to find by member.id (for new assignments)
+        const memberById = hydratedMembers.find(m => m.id === memberId);
+        if (memberById) return memberById.name;
+        
+        // Then try to find by member.uid (for existing assignments that used UIDs)
+        const memberByUid = hydratedMembers.find(m => m.uid === memberId);
+        if (memberByUid) return memberByUid.name;
+        
+        return '[Deleted]';
     }, [hydratedMembers]);
 
     // Handlers now perform actions that will be immediately reflected
@@ -224,7 +238,7 @@ export const ScheduleView: React.FC = () => {
             }
 
             // Generate the schedule with themes
-            const newSchedule = generateNewMonthSchedule(year, month, meetingDates, themes, hydratedMembers, availability, schedules);
+            const newSchedule = generateNewMonthSchedule(year, month, meetingDates, themes, hydratedMembers, availability, schedules, ownerId || undefined, organization?.name);
             await addSchedule({ schedule: newSchedule });
             
             // Auto-select the newly created schedule
@@ -387,7 +401,9 @@ export const ScheduleView: React.FC = () => {
                 themes,
                 hydratedMembers,
                 availability,
-                schedules
+                schedules,
+                ownerId || undefined,
+                organization?.name
             );
             
             const finalSchedule = { ...activeSchedule, meetings: regeneratedSchedule.meetings };
@@ -791,8 +807,8 @@ export const ScheduleView: React.FC = () => {
 
         // Send notifications for role changes
         if (previousMemberId !== newMemberId && currentUser?.role === UserRole.Admin) {
-            const previousMember = previousMemberId ? members.find(m => m.id === previousMemberId) : null;
-            const newMember = newMemberId ? members.find(m => m.id === newMemberId) : null;
+            const previousMember = previousMemberId ? organization?.members.find(m => m.id === previousMemberId) : null;
+            const newMember = newMemberId ? organization?.members.find(m => m.id === newMemberId) : null;
 
             await notificationService.notifyRoleChanged(
                 previousMember?.uid || null,
@@ -805,7 +821,7 @@ export const ScheduleView: React.FC = () => {
             // If role becomes unassigned, notify qualified available/possible members
             if (!newMemberId && previousMemberId) {
                 const dateKey = meeting.date.split('T')[0];
-                const qualifiedMembers = members.filter(member => {
+                const qualifiedMembers = (organization?.members || []).filter(member => {
                     // Check availability
                     const memberAvailability = availability[member.id];
                     const availStatus = memberAvailability?.[dateKey];
@@ -925,6 +941,7 @@ export const ScheduleView: React.FC = () => {
                     </div>
                 </div>
             )}
+
              {error && (
                 <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4 my-4">
                     <div className="flex">

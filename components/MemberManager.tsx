@@ -172,7 +172,7 @@ const MemberRow: React.FC<{
     onLink: () => void;
     onUnlink: () => void;
 }> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
-    const { availability, updateMemberStatus, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
+    const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
     const isAdmin = currentUser?.role === UserRole.Admin;
     const canEditRow = isAdmin;
     const canEditAvailability = isAdmin || isSelf;
@@ -242,7 +242,16 @@ const MemberRow: React.FC<{
                         {editError && <p className="text-red-500 text-xs mt-1">{editError}</p>}
                     </div>
                 ) : (
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2 w-full">
+                        {linkedUser && isAdmin && (
+                            <WithTooltip show={true} text="Unlink Account">
+                                <button onClick={onUnlink} className="flex-shrink-0 p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-full hover:bg-red-100 dark:hover:bg-gray-700" aria-label={`Unlink account for ${linkedUser.name}`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </WithTooltip>
+                        )}
                         <div className="flex-grow">
                             <div className="flex items-center gap-2 group">
                                 <span className="font-medium">{displayName}</span>
@@ -265,16 +274,26 @@ const MemberRow: React.FC<{
                                 )
                             )}
                         </div>
-                        {linkedUser && isAdmin && (
-                            <WithTooltip show={true} text="Unlink Account">
-                                <button onClick={onUnlink} className="flex-shrink-0 ml-4 p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-full hover:bg-red-100 dark:hover:bg-gray-700" aria-label={`Unlink account for ${linkedUser.name}`}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
-                            </WithTooltip>
-                        )}
                     </div>
+                )}
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                {canEditRow ? (
+                    <input
+                        type="date"
+                        value={member.joinedDate ? member.joinedDate.split('T')[0] : ''}
+                        onChange={(e) => {
+                            if (e.target.value) {
+                                updateMemberJoinDate({ 
+                                    memberId: member.id, 
+                                    joinedDate: new Date(e.target.value).toISOString()
+                                });
+                            }
+                        }}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    />
+                ) : (
+                    member.joinedDate ? new Date(member.joinedDate).toLocaleDateString() : 'Unknown'
                 )}
             </td>
              <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
@@ -369,7 +388,7 @@ const MobileMemberCard: React.FC<{
     onLink: () => void;
     onUnlink: () => void;
 }> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
-    const { availability, updateMemberStatus, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
+    const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
     const isAdmin = currentUser?.role === UserRole.Admin;
     const canEditRow = isAdmin;
     const canEditAvailability = isAdmin || isSelf;
@@ -501,6 +520,28 @@ const MobileMemberCard: React.FC<{
                                 <div className="flex-grow">
                                     <p className="font-medium text-gray-800 dark:text-gray-200">{linkedUser.name}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">{linkedUser.email}</p>
+                                    <div className="mt-1">
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Joined Date</label>
+                                        {canEditRow ? (
+                                            <input
+                                                type="date"
+                                                value={member.joinedDate ? member.joinedDate.split('T')[0] : ''}
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        updateMemberJoinDate({ 
+                                                            memberId: member.id, 
+                                                            joinedDate: new Date(e.target.value).toISOString()
+                                                        });
+                                                    }
+                                                }}
+                                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                            />
+                                        ) : (
+                                            <p className="text-xs text-gray-600 dark:text-gray-300">
+                                                {member.joinedDate ? new Date(member.joinedDate).toLocaleDateString() : 'Unknown'}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                                 <WithTooltip show={true} text="Unlink Account">
                                     <button onClick={onUnlink} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-full hover:bg-red-100 dark:hover:bg-gray-700" aria-label={`Unlink account for ${linkedUser.name}`}>
@@ -514,6 +555,28 @@ const MobileMemberCard: React.FC<{
                     ) : (
                         <>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">No Linked Account</p>
+                            <div className="mb-3">
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Joined Date</label>
+                                {canEditRow ? (
+                                    <input
+                                        type="date"
+                                        value={member.joinedDate ? member.joinedDate.split('T')[0] : ''}
+                                        onChange={(e) => {
+                                            if (e.target.value) {
+                                                updateMemberJoinDate({ 
+                                                    memberId: member.id, 
+                                                    joinedDate: new Date(e.target.value).toISOString()
+                                                });
+                                            }
+                                        }}
+                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                ) : (
+                                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                                        {member.joinedDate ? new Date(member.joinedDate).toLocaleDateString() : 'Unknown'}
+                                    </p>
+                                )}
+                            </div>
                             <button onClick={onLink} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
                                 Link Account...
                             </button>
@@ -660,6 +723,7 @@ const MembersTable: React.FC<{
                                     <span>Name</span>
                                 )}
                             </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Qualifications</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Availability ({monthName})</th>
@@ -726,7 +790,7 @@ const MembersTable: React.FC<{
 
 
 export const MemberManager: React.FC = () => {
-    const { members, schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount } = useToastmasters();
+    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount } = useToastmasters();
     const [fullName, setFullName] = useState('');
     const [status, setStatus] = useState<MemberStatus>(MemberStatus.Active);
     const [qualifications, setQualifications] = useState({
