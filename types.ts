@@ -9,6 +9,7 @@ export interface AppUser {
   email: string;
   name: string;
   role: UserRole;
+  ownerId?: string; // Links member to the club owner who manages them
 }
 
 export interface Organization {
@@ -44,6 +45,7 @@ export interface Member {
   isPastPresident?: boolean;
   uid?: string; // Link to the user account
   joinedDate?: string; // ISO date string when member joined
+  ownerId?: string; // Links member to the club owner who manages them
 }
 
 export interface MemberAvailability {
