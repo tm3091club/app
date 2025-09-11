@@ -121,7 +121,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 
                 // Simply add the uid to the existing member
                 const updatedMembers = existingMembers.map((m: any) => 
-                    m.id === memberId ? { ...m, uid: joiningUser.uid } : m
+                    m.id === memberId ? { 
+                        ...m, 
+                        uid: joiningUser.uid,
+                        email: joiningUser.email || '',
+                        role: m.role || UserRole.Member 
+                    } : m
                 );
                 console.log('Updated members:', updatedMembers);
                 
@@ -689,7 +694,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         }
         
         const updatedMembers = organization.members.map(m => 
-            m.id === memberId ? { ...m, uid: user.uid } : m
+            m.id === memberId ? { 
+                ...m, 
+                uid: user.uid,
+                email: user.email || '',
+                role: m.role || UserRole.Member 
+            } : m
         );
         
         console.log('Linking current user to member:', { memberId, uid: user.uid, updatedMembers });
