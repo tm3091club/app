@@ -550,6 +550,7 @@ export const ProfilePage = (): React.ReactElement | null => {
     const [clubNumber, setClubNumber] = useState('');
     const [meetingDay, setMeetingDay] = useState<number>(2); // Default to Tuesday
     const [autoNotificationDay, setAutoNotificationDay] = useState<number>(15); // Default to 15th of month
+    const [timezone, setTimezone] = useState<string>('America/New_York'); // Default to Eastern Time
     const [profileFeedback, setProfileFeedback] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
     // State for email change form
@@ -589,6 +590,7 @@ export const ProfilePage = (): React.ReactElement | null => {
             setClubNumber(organization.clubNumber);
             setMeetingDay(organization.meetingDay ?? 2); // Default to Tuesday
             setAutoNotificationDay(organization.autoNotificationDay ?? 15); // Default to 15th
+            setTimezone(organization.timezone ?? 'America/New_York'); // Default to Eastern Time
         }
     }, [organization]);
 
@@ -611,7 +613,8 @@ export const ProfilePage = (): React.ReactElement | null => {
                 district: district, 
                 clubNumber: clubNumber.trim(),
                 meetingDay: meetingDay,
-                autoNotificationDay: autoNotificationDay
+                autoNotificationDay: autoNotificationDay,
+                timezone: timezone
             });
             setProfileFeedback({ type: 'success', message: 'Club profile updated successfully!' });
         } catch (error: any) {
@@ -873,7 +876,8 @@ export const ProfilePage = (): React.ReactElement | null => {
       district !== organization.district ||
       clubNumber.trim() !== organization.clubNumber ||
       meetingDay !== (organization.meetingDay ?? 2) ||
-      autoNotificationDay !== (organization.autoNotificationDay ?? 15)
+      autoNotificationDay !== (organization.autoNotificationDay ?? 15) ||
+      timezone !== (organization.timezone ?? 'America/New_York')
       : false;
 
     // Calculate available officer roles (roles not currently assigned)
@@ -947,11 +951,31 @@ export const ProfilePage = (): React.ReactElement | null => {
                     </div>
                     <div>
                         <label htmlFor="clubAdminEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Club Admin Email</label>
-                        <input type="email" id="clubAdminEmail" value={clubOwner?.email || ''} disabled
+                        <input type="email" id="clubAdminEmail" value={organization?.adminInfo?.email || ''} disabled
                             className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
                         />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
+                            <select id="timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)}
+                                className="mt-1 block w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-left appearance-none pr-10 disabled:bg-gray-100 dark:disabled:bg-gray-700/50"
+                                disabled={!isClubAdmin}
+                            >
+                                <option value="America/New_York">Eastern Time (ET)</option>
+                                <option value="America/Chicago">Central Time (CT)</option>
+                                <option value="America/Denver">Mountain Time (MT)</option>
+                                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                <option value="America/Anchorage">Alaska Time (AKT)</option>
+                                <option value="Pacific/Honolulu">Hawaii Time (HST)</option>
+                                <option value="America/Phoenix">Arizona Time (MST)</option>
+                                <option value="Europe/London">London (GMT/BST)</option>
+                                <option value="Europe/Paris">Central European Time (CET)</option>
+                                <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
+                                <option value="Australia/Sydney">Australian Eastern Time (AET)</option>
+                            </select>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Your club's timezone for accurate meeting date calculations</p>
+                        </div>
                         <div>
                             <label htmlFor="meetingDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Meeting Day</label>
                             <select id="meetingDay" value={meetingDay} onChange={(e) => setMeetingDay(parseInt(e.target.value))}
@@ -968,6 +992,8 @@ export const ProfilePage = (): React.ReactElement | null => {
                             </select>
                             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Day of the week your club meets</p>
                         </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
                         <div>
                             <label htmlFor="autoNotificationDay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Auto Notification Day</label>
                             <select id="autoNotificationDay" value={autoNotificationDay} onChange={(e) => setAutoNotificationDay(parseInt(e.target.value))}
@@ -1136,21 +1162,12 @@ export const ProfilePage = (): React.ReactElement | null => {
                                         member={member} 
                                         onSendInvite={async (email) => {
                                             try {
-                                                // First update the member with the email and ensure Member role
-                                                const updatedMembers = organization.members?.map(m => 
-                                                    m.id === member.id ? { ...m, email, role: m.role || 'Member' } : m
-                                                ) || [];
-                                                const updatedOrg = { ...organization, members: updatedMembers };
-                                                
-                                                // Update in database
-                                                const docRef = db.collection('users').doc(ownerId);
-                                                await docRef.update({ 'organization': updatedOrg });
-                                                
-                                                // Send the invite
-                                                await inviteUser({ email, name: member.name });
+                                                // Send the invite with memberId to link to existing member
+                                                // The member already exists in the members array, we just need to send the invite
+                                                await inviteUser({ email, name: member.name, memberId: member.id });
                                             } catch (error) {
-                                                console.error('Error updating member email:', error);
-                                                alert('Failed to update member email. Please try again.');
+                                                console.error('Error sending invite:', error);
+                                                alert('Failed to send invite. Please try again.');
                                             }
                                         }}
                                     />

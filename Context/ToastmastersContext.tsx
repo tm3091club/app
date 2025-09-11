@@ -33,10 +33,10 @@ interface ToastmastersState {
   setSelectedScheduleId: (scheduleId: string | null) => void;
   deleteMember: (payload: { memberId: string }) => Promise<void>;
   updateUserName: (payload: { uid: string; newName: string; }) => Promise<void>;
-  updateClubProfile: (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; }) => Promise<void>;
+  updateClubProfile: (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; timezone?: string; }) => Promise<void>;
   updateUserRole: (uid: string, newRole: UserRole) => Promise<void>;
   removeUser: (uid: string) => Promise<void>;
-  inviteUser: (payload: { email: string, name: string }) => Promise<void>;
+  inviteUser: (payload: { email: string, name: string, memberId?: string }) => Promise<void>;
   revokeInvite: (inviteId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   linkMemberToAccount: (payload: { memberId: string, uid: string | null }) => Promise<void>;
@@ -91,7 +91,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("This invitation is invalid, expired, or for a different email address. Please request a new link.");
         }
     
-        const { ownerId, invitedUserName } = inviteDoc.data()!;
+        const { ownerId, invitedUserName, memberId } = inviteDoc.data()!;
+        console.log('Invitation data:', { ownerId, invitedUserName, memberId });
         const clubDataDocRef = db.collection('users').doc(ownerId);
         const userPointerDocRef = db.collection('users').doc(joiningUser.uid);
     
@@ -121,11 +122,33 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     joinedAt: FieldValue.serverTimestamp()
                 });
                 
-                // Add user to club's member list
-                transaction.update(clubDataDocRef, {
-                    'organization.members': FieldValue.arrayUnion(newUserToAdd),
-                    'lastJoinToken': token // Temporary field for security rule validation
-                });
+                // Check if this invitation is for an existing member
+                console.log('Processing invitation with memberId:', memberId);
+                if (memberId) {
+                    // Link the existing member to the new user account
+                    const existingSchedulingMembers = clubDoc.data()?.members || [];
+                    const existingOrgMembers = clubDoc.data()?.organization?.members || [];
+                    
+                    // Update the existing member in the scheduling members array to link their UID
+                    const updatedSchedulingMembers = existingSchedulingMembers.map((m: any) => 
+                        m.id === memberId ? { ...m, uid: joiningUser.uid } : m
+                    );
+                    
+                    // Add the new user to organization.members (they don't exist there yet)
+                    const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
+                    
+                    transaction.update(clubDataDocRef, {
+                        'members': updatedSchedulingMembers,
+                        'organization.members': updatedOrgMembers,
+                        'lastJoinToken': token
+                    });
+                } else {
+                    // No existing member found, create new user in organization.members
+                    transaction.update(clubDataDocRef, {
+                        'organization.members': FieldValue.arrayUnion(newUserToAdd),
+                        'lastJoinToken': token
+                    });
+                }
                 
                 // Mark invitation as completed
                 transaction.update(inviteRef, { 
@@ -446,7 +469,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         await docRef.update({ 'organization.members': updatedMembers });
     };
 
-    const updateClubProfile = async (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; }) => {
+    const updateClubProfile = async (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; timezone?: string; }) => {
         const docRef = getDataDocRef();
         if (!docRef) return;
         
@@ -470,7 +493,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             district: payload.district,
             clubNumber: payload.clubNumber,
             ...(payload.meetingDay !== undefined && { meetingDay: payload.meetingDay }),
-            ...(payload.autoNotificationDay !== undefined && { autoNotificationDay: payload.autoNotificationDay })
+            ...(payload.autoNotificationDay !== undefined && { autoNotificationDay: payload.autoNotificationDay }),
+            ...(payload.timezone !== undefined && { timezone: payload.timezone })
         };
 
         await docRef.update({ organization: updatedOrg });
@@ -514,8 +538,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         await db.collection('users').doc(uid).delete();
     };
 
-    const inviteUser = async (payload: { email: string; name: string }) => {
-        const { email, name } = payload;
+    const inviteUser = async (payload: { email: string; name: string; memberId?: string }) => {
+        const { email, name, memberId } = payload;
+        console.log('inviteUser called with:', { email, name, memberId });
         if (!dataOwnerId || !currentUser || !organization) {
           throw new Error("Cannot send invite: missing user or organization data.");
         }
@@ -557,6 +582,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
           inviterEmail: currentUser.email,
           email: emailLower,
           invitedUserName: name || emailLower,
+          memberId: memberId, // Link to existing member if provided
           status: 'pending',
           createdAt: FieldValue.serverTimestamp(),
         });
