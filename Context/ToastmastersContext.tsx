@@ -83,7 +83,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         invitesSubscription.current = null;
     }, []);
 
-    const completeUserJoin = useCallback(async (token: string, joiningUser: firebase.User): Promise<string> => {
+    const linkMemberAccount = useCallback(async (token: string, joiningUser: firebase.User): Promise<string> => {
         const inviteRef = db.collection('invitations').doc(token);
         const inviteDoc = await inviteRef.get();
     
@@ -91,12 +91,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("This invitation is invalid, expired, or for a different email address. Please request a new link.");
         }
     
-        const { ownerId, invitedUserName, memberId } = inviteDoc.data()!;
+        const { ownerId, memberId } = inviteDoc.data()!;
         const clubDataDocRef = db.collection('users').doc(ownerId);
-        const userPointerDocRef = db.collection('users').doc(joiningUser.uid);
-    
-        const newName = invitedUserName || joiningUser.displayName || joiningUser.email!;
-        const newUserToAdd: AppUser = { uid: joiningUser.uid, email: joiningUser.email!, name: newName, role: UserRole.Member, ownerId: ownerId };
     
         try {
             await db.runTransaction(async (transaction) => {
@@ -105,66 +101,27 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     throw new Error("The club you are trying to join no longer exists.");
                 }
         
-                // Check if user is already a member
-                const existingMembers = clubDoc.data()?.organization?.members || [];
-                const isAlreadyMember = existingMembers.some((m: AppUser) => m.uid === joiningUser.uid);
-                
-                if (isAlreadyMember) {
-                    throw new Error("You are already a member of this club.");
-                }
-        
-                // Check if this invitation is for an existing member
-                const existingSchedulingMembers = clubDoc.data()?.members || [];
-                const existingOrgMembers = clubDoc.data()?.organization?.members || [];
-                
-                let memberToLink = null;
-                
-                if (memberId) {
-                    // Try to find member by memberId first
-                    memberToLink = existingSchedulingMembers.find((m: any) => m.id === memberId);
-                }
+                // Find the existing member to link
+                const existingMembers = clubDoc.data()?.members || [];
+                const memberToLink = existingMembers.find((m: any) => m.id === memberId);
                 
                 if (!memberToLink) {
-                    // Fallback: try to find member by name and email (for old invitations without memberId)
-                    memberToLink = existingSchedulingMembers.find((m: any) => 
-                        m.name.toLowerCase() === newName.toLowerCase() && 
-                        !m.uid // Only match unlinked members
-                    );
+                    throw new Error("Member not found. Please contact your club administrator.");
                 }
                 
-                if (memberToLink) {
-                    // Link the existing member to the new user account
-                    const updatedSchedulingMembers = existingSchedulingMembers.map((m: any) => 
-                        m.id === memberToLink.id ? { ...m, uid: joiningUser.uid } : m
-                    );
-                    
-                    // Add the new user to organization.members (they don't exist there yet)
-                    const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
-                    
-                    // OPTION B: NO user pointer document for members
-                    // Keep users collection clean - only club owners get user documents
-                    // Authentication will find members via organization.members search
-                    
-                    transaction.update(clubDataDocRef, {
-                        'members': updatedSchedulingMembers,
-                        'organization.members': updatedOrgMembers,
-                        'lastJoinToken': token
-                    });
-                } else {
-                    // No existing member found, create new user in organization.members
-                    // Also create user pointer document for new users
-                    transaction.set(userPointerDocRef, { 
-                        ownerId: ownerId, 
-                        email: joiningUser.email, 
-                        name: newName,
-                        joinedAt: FieldValue.serverTimestamp()
-                    });
-                    
-                    transaction.update(clubDataDocRef, {
-                        'organization.members': FieldValue.arrayUnion(newUserToAdd),
-                        'lastJoinToken': token
-                    });
+                if (memberToLink.uid) {
+                    throw new Error("This member is already linked to an account.");
                 }
+                
+                // Simply add the uid to the existing member
+                const updatedMembers = existingMembers.map((m: any) => 
+                    m.id === memberId ? { ...m, uid: joiningUser.uid } : m
+                );
+                
+                transaction.update(clubDataDocRef, {
+                    'members': updatedMembers,
+                    'lastJoinToken': token
+                });
                 
                 // Mark invitation as completed
                 transaction.update(inviteRef, { 
@@ -179,8 +136,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             
             return ownerId;
         } catch (error: any) {
-            console.error("Error completing user join:", error);
-            throw new Error(`Failed to join club: ${error.message}`);
+            console.error("Error linking member account:", error);
+            throw new Error(`Failed to link account: ${error.message}`);
         }
     }, []);
 
@@ -415,22 +372,22 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         
                         if (token) {
                             try {
-                                ownerIdToUse = await completeUserJoin(token, user);
+                                ownerIdToUse = await linkMemberAccount(token, user);
                                 sessionStorage.removeItem('inviteToken');
                             } catch (joinError: any) {
-                                console.error(`User join failed:`, joinError);
-                                // If join fails, user is not authorized
+                                console.error(`Member linking failed:`, joinError);
+                                // If linking fails, user is not authorized
                                 throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                             }
                         } else {
-                            // Check if user exists as a member in any club
+                            // Check if user exists as a linked member in any club
                             const usersSnapshot = await db.collection('users').get();
                             
                             for (const doc of usersSnapshot.docs) {
                                 const data = doc.data();
-                                if (data.organization?.members) {
-                                    const member = data.organization.members.find((m: any) => 
-                                        m.uid === user.uid || m.email?.toLowerCase() === user.email?.toLowerCase()
+                                if (data.members) {
+                                    const member = data.members.find((m: any) => 
+                                        m.uid === user.uid
                                     );
                                     
                                     if (member) {
@@ -466,7 +423,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         return () => {
             cleanupSubscriptions();
         };
-    }, [user, cleanupSubscriptions, completeUserJoin, setupListeners]);
+    }, [user, cleanupSubscriptions, linkMemberAccount, setupListeners]);
 
 
     const setSelectedScheduleId = useCallback((scheduleId: string | null) => {
