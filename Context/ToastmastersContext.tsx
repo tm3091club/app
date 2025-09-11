@@ -40,6 +40,7 @@ interface ToastmastersState {
   revokeInvite: (inviteId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   linkMemberToAccount: (payload: { memberId: string, uid: string | null }) => Promise<void>;
+  linkCurrentUserToMember: (memberId: string) => Promise<void>;
   saveWeeklyAgenda: (agenda: WeeklyAgenda) => Promise<void>;
   deleteWeeklyAgenda: (agendaId: string) => Promise<void>;
 }
@@ -656,6 +657,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             delete updatedMembers[memberIndex].role;
         }
         
+        // Update the database
+        await docRef.update({ 'organization.members': updatedMembers });
+        
         const updatedOrganization = { ...organization, members: updatedMembers };
         setOrganization(updatedOrganization);
         
@@ -663,10 +667,34 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const updatedSchedulingMembers = members.map(m => m.id === memberId ? { ...m, uid } : m);
         setMembers(updatedSchedulingMembers);
         
-        await docRef.update({ 
-            'organization': updatedOrganization,
-            'members': updatedSchedulingMembers
-        });
+        console.log('Successfully linked member to account:', { memberId, uid });
+    };
+
+    // New function to directly link the current user to a member
+    const linkCurrentUserToMember = async (memberId: string) => {
+        if (!user || !dataOwnerId || !organization) {
+            throw new Error("Cannot link account: missing user or organization data.");
+        }
+        
+        const docRef = getDataDocRef();
+        if (!docRef) return;
+        
+        const memberToLink = organization.members.find(m => m.id === memberId);
+        if (!memberToLink) {
+            throw new Error("Member not found.");
+        }
+        
+        if (memberToLink.uid) {
+            throw new Error("This member is already linked to an account.");
+        }
+        
+        const updatedMembers = organization.members.map(m => 
+            m.id === memberId ? { ...m, uid: user.uid } : m
+        );
+        
+        console.log('Linking current user to member:', { memberId, uid: user.uid, updatedMembers });
+        await docRef.update({ 'organization.members': updatedMembers });
+        console.log('Successfully linked current user to member');
     };
 
 
@@ -909,7 +937,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
-        sendPasswordResetEmail, linkMemberToAccount, saveWeeklyAgenda, deleteWeeklyAgenda
+        sendPasswordResetEmail, linkMemberToAccount, linkCurrentUserToMember, saveWeeklyAgenda, deleteWeeklyAgenda
     };
 
     return (
