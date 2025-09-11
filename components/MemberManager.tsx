@@ -10,19 +10,18 @@ const LinkAccountModal: React.FC<{
     onClose: () => void;
     onLink: (email: string) => Promise<void>;
     memberName: string;
-    currentUserEmail?: string;
-}> = ({ isOpen, onClose, onLink, memberName, currentUserEmail }) => {
+}> = ({ isOpen, onClose, onLink, memberName }) => {
     const [email, setEmail] = useState('');
     const [isLinking, setIsLinking] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
-            setEmail(currentUserEmail || '');
+            setEmail('');
             setError(null);
             setIsLinking(false);
         }
-    }, [isOpen, currentUserEmail]);
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1141,18 +1140,11 @@ export const MemberManager: React.FC = () => {
         if (!memberToLink) return;
         setLinkError(null);
         try {
-            // Check if the email matches the current user's email
-            if (currentUser?.email === email) {
-                // Direct linking for current user
-                await linkCurrentUserToMember(memberToLink.id);
-                setIsLinkModalOpen(false);
-                setMemberToLink(null);
-            } else {
-                // Use the invitation system for other users
-                await inviteUser({ email, name: memberToLink.name, memberId: memberToLink.id });
-                setIsLinkModalOpen(false);
-                setMemberToLink(null);
-            }
+            // Always use the invitation system for now
+            // This ensures the proper flow and email sending
+            await inviteUser({ email, name: memberToLink.name, memberId: memberToLink.id });
+            setIsLinkModalOpen(false);
+            setMemberToLink(null);
         } catch (error: any) {
             setLinkError(error.message);
         }
@@ -1267,7 +1259,6 @@ export const MemberManager: React.FC = () => {
                 onClose={() => setIsLinkModalOpen(false)}
                 onLink={handleLinkAccount}
                 memberName={memberToLink?.name || ''}
-                currentUserEmail={currentUser?.email}
             />
             {linkError && <p className="text-red-500">{linkError}</p>}
             
