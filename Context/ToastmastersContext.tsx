@@ -102,7 +102,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 }
         
                 // Find the existing member to link
-                const existingMembers = clubDoc.data()?.members || [];
+                const existingMembers = clubDoc.data()?.organization?.members || [];
                 const memberToLink = existingMembers.find((m: any) => m.id === memberId);
                 
                 if (!memberToLink) {
@@ -119,7 +119,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 );
                 
                 transaction.update(clubDataDocRef, {
-                    'members': updatedMembers,
+                    'organization.members': updatedMembers,
                     'lastJoinToken': token
                 });
                 
