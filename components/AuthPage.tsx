@@ -248,7 +248,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
             {view !== 'reset' && (
                  <div>
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Password
+                        {isJoinFlow ? 'Create a Password' : 'Password'}
                     </label>
                     <div className="mt-1">
                         <input
@@ -268,7 +268,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
             {view === 'signup' && (
                 <div>
                     <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Confirm Password
+                        {isJoinFlow ? 'Confirm that Password' : 'Confirm Password'}
                     </label>
                     <div className="mt-1">
                         <input
