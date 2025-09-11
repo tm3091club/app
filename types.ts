@@ -31,6 +31,7 @@ export interface Organization {
     ownerId: string;
     meetingDay?: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday
     autoNotificationDay?: number; // Day of month to send availability notifications (1-28)
+    timezone?: string; // IANA timezone identifier (e.g., 'America/New_York', 'America/Los_Angeles')
 }
 
 export enum MemberStatus {
