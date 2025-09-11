@@ -391,16 +391,20 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         }
                     } else {
                         console.log('No invitation token found, searching for existing member...');
+                        console.log('Looking for user UID:', user.uid);
                         // Search for this user's uid in all club members arrays
                         const usersSnapshot = await db.collection('users').get();
                         
                         for (const doc of usersSnapshot.docs) {
                             const data = doc.data();
+                            console.log('Checking club:', doc.id, 'members:', data.organization?.members);
                             if (data.organization?.members) {
                                 const member = data.organization.members.find((m: any) => m.uid === user.uid);
+                                console.log('Found member with matching UID:', member);
                                 
                                 if (member) {
                                     ownerIdToUse = doc.id;
+                                    console.log('Found matching club:', doc.id);
                                     break;
                                 }
                             }
