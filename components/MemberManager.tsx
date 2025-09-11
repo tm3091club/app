@@ -868,7 +868,7 @@ const MembersTable: React.FC<{
                                 onSaveEdit={onSaveEdit}
                                 editError={editingMemberId === member.id ? editError : null}
                                 isSelf={!isAdmin && isMyProfileSection}
-                                linkedUser={member?.uid ? organization?.members.find(u => u.uid === member.uid) : null}
+                                linkedUser={member?.uid ? { uid: member.uid, email: member.email || '', name: member.name, role: UserRole.Member } : null}
                                 onLink={() => onLink(member)}
                                 onUnlink={() => onUnlink(member.id)}
                                 onResendInvite={onResendInvite}
@@ -901,7 +901,7 @@ const MembersTable: React.FC<{
                         onSaveEdit={onSaveEdit}
                         editError={editingMemberId === member.id ? editError : null}
                         isSelf={!isAdmin && isMyProfileSection}
-                        linkedUser={member?.uid ? organization?.members.find(u => u.uid === member.uid) : null}
+                        linkedUser={member?.uid ? { uid: member.uid, email: member.email || '', name: member.name, role: UserRole.Member } : null}
                         onLink={() => onLink(member)}
                         onUnlink={() => onUnlink(member.id)}
                         onResendInvite={onResendInvite}
