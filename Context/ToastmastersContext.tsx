@@ -84,14 +84,17 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const linkMemberAccount = useCallback(async (token: string, joiningUser: firebase.User): Promise<string> => {
+        console.log('linkMemberAccount called with token:', token, 'user:', joiningUser.email);
         const inviteRef = db.collection('invitations').doc(token);
         const inviteDoc = await inviteRef.get();
     
         if (!inviteDoc.exists || inviteDoc.data()?.status !== 'pending' || inviteDoc.data()?.email.toLowerCase() !== joiningUser.email?.toLowerCase()) {
+            console.error('Invalid invitation:', { exists: inviteDoc.exists, status: inviteDoc.data()?.status, email: inviteDoc.data()?.email, userEmail: joiningUser.email });
             throw new Error("This invitation is invalid, expired, or for a different email address. Please request a new link.");
         }
     
         const { ownerId, memberId } = inviteDoc.data()!;
+        console.log('Invitation data:', { ownerId, memberId });
         const clubDataDocRef = db.collection('users').doc(ownerId);
     
         try {
@@ -103,7 +106,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         
                 // Find the existing member to link
                 const existingMembers = clubDoc.data()?.organization?.members || [];
+                console.log('Existing members:', existingMembers);
                 const memberToLink = existingMembers.find((m: any) => m.id === memberId);
+                console.log('Member to link:', memberToLink);
                 
                 if (!memberToLink) {
                     throw new Error("Member not found. Please contact your club administrator.");
@@ -117,6 +122,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 const updatedMembers = existingMembers.map((m: any) => 
                     m.id === memberId ? { ...m, uid: joiningUser.uid } : m
                 );
+                console.log('Updated members:', updatedMembers);
                 
                 transaction.update(clubDataDocRef, {
                     'organization.members': updatedMembers,
@@ -360,7 +366,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     
                     if (token) {
                         try {
+                            console.log('Processing invitation token:', token);
                             ownerIdToUse = await linkMemberAccount(token, user);
+                            console.log('Successfully linked member, ownerId:', ownerIdToUse);
                             sessionStorage.removeItem('inviteToken');
                         } catch (joinError: any) {
                             console.error(`Member linking failed:`, joinError);
@@ -372,8 +380,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         
                         for (const doc of usersSnapshot.docs) {
                             const data = doc.data();
-                            if (data.members) {
-                                const member = data.members.find((m: any) => m.uid === user.uid);
+                            if (data.organization?.members) {
+                                const member = data.organization.members.find((m: any) => m.uid === user.uid);
                                 
                                 if (member) {
                                     ownerIdToUse = doc.id;
