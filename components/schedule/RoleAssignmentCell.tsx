@@ -38,20 +38,23 @@ export const RoleAssignmentCell: React.FC<{
                 (!organization || !m.name.includes(organization.name))
               );
 
-        // For members (non-admins), show qualified members but restrict editing permissions
+        // For members (non-admins), only show themselves and currently assigned member
         if (currentUser?.role !== 'Admin') {
             const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
             if (!currentMember) return [];
 
-            // Check if current user can edit this role assignment
-            const isCurrentUserAssignedToRole = assignedMemberId === currentMember.id || assignedMemberId === currentMember.uid;
-            const isRoleUnassigned = !assignedMemberId;
-            const canEdit = isRoleUnassigned || isCurrentUserAssignedToRole;
-            
-            // Always show qualified members for viewing, but restrict editing based on permissions
-            let membersToShow = [...qualifiedMembers];
+            let membersToShow = [];
 
-            // If someone else is currently assigned, also show them
+            // Always include the current user if they're qualified for this role
+            const isCurrentUserQualified = requiredQualificationKey 
+                ? currentMember[requiredQualificationKey] 
+                : true; // If no qualification required, everyone is qualified
+
+            if (isCurrentUserQualified) {
+                membersToShow.push(currentMember);
+            }
+
+            // If someone else is currently assigned, also show them (for viewing/unassigning purposes)
             if (assignedMemberId && assignedMemberId !== currentMember.id) {
                 const assignedMember = availableMembers.find(m => m.id === assignedMemberId);
                 if (assignedMember && !membersToShow.some(m => m.id === assignedMember.id)) {
