@@ -987,6 +987,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         sendPasswordResetEmail, linkMemberToAccount, linkCurrentUserToMember, linkMemberByEmail, saveWeeklyAgenda, deleteWeeklyAgenda
     };
 
+    // Expose linkMemberByEmail to window for debugging
+    if (typeof window !== 'undefined') {
+        (window as any).linkMemberByEmail = linkMemberByEmail;
+    }
+
     return (
         <ToastmastersContext.Provider value={value}>
             {loading ? (
