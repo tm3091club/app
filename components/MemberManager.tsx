@@ -815,7 +815,7 @@ export const MemberManager: React.FC = () => {
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [linkError, setLinkError] = useState<string | null>(null);
     
-    // NEW: State for availability month selection - COMPLETELY INDEPENDENT of workingDate
+    // NEW: State for availability month selection
     const [availabilityMonth, setAvailabilityMonth] = useState<{ year: number; month: number } | null>(null);
     
     const isAdmin = currentUser?.role === UserRole.Admin;
@@ -823,7 +823,7 @@ export const MemberManager: React.FC = () => {
 
 
     // NEW: Auto-set availability month to current month for better UX
-    // This is completely independent of workingDate and schedule planning
+    // This is completely independent of schedule planning
     useEffect(() => {
         if (organization?.meetingDay !== undefined && !availabilityMonth) {
             const relevantMonths = getRelevantMonthsForAvailability(organization.meetingDay);
@@ -867,7 +867,7 @@ export const MemberManager: React.FC = () => {
 
 
 
-    // NEW: Handle availability month change - COMPLETELY INDEPENDENT of workingDate
+    // NEW: Handle availability month change
     const handleAvailabilityMonthChange = (part: 'year' | 'month', value: number) => {
         if (!availabilityMonth) return;
         
@@ -1169,7 +1169,7 @@ export const MemberManager: React.FC = () => {
                 </div>
             )}
 
-            {/* NEW: Availability Month Selector - COMPLETELY INDEPENDENT of workingDate */}
+            {/* NEW: Availability Month Selector */}
             <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 mb-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>

@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { useAuth } from '../Context/AuthContext';
-import { AppUser, UserRole, PendingInvite, Organization } from '../types';
+import { AppUser, UserRole, PendingInvite, Organization, OfficerRole } from '../types';
 import { ConfirmationModal } from './common/ConfirmationModal';
 import NotificationScheduler from './NotificationScheduler';
 import { EmailTestComponent } from './EmailTestComponent';
@@ -33,9 +32,6 @@ const MemberInviteRow: React.FC<{
             <div className="flex items-start justify-between">
                 <div className="flex-1">
                     <h4 className="font-medium text-gray-900 dark:text-white">{member.name}</h4>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100 mt-1">
-                        Needs email address
-                    </span>
                 </div>
             </div>
             <div className="mt-3 flex items-center space-x-2">
@@ -241,7 +237,6 @@ const EditableUser: React.FC<{
 
 const CopyableEmail: React.FC<{ email: string }> = ({ email }) => {
     const [copied, setCopied] = useState(false);
-    const [showTooltip, setShowTooltip] = useState(false);
 
     const handleCopy = async () => {
         try {
@@ -269,40 +264,25 @@ const CopyableEmail: React.FC<{ email: string }> = ({ email }) => {
     };
 
     return (
-        <div className="relative group w-full">
+        <div className="w-full">
             <button
                 onClick={handleCopy}
-                onMouseEnter={() => setShowTooltip(true)}
-                onMouseLeave={() => setShowTooltip(false)}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors cursor-pointer py-1 rounded text-left"
-                style={{display: "block"}}
+                className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors cursor-pointer py-1 rounded text-left flex items-center gap-1"
             >
                 <svg 
                     xmlns="http://www.w3.org/2000/svg" 
-                    className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 inline" 
+                    className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0" 
                     fill="none" 
                     viewBox="0 0 24 24" 
                     stroke="currentColor"
-                    style={{verticalAlign: "middle"}}
                 >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>{email}
+                </svg>
+                <span className="truncate">{email}</span>
+                {copied && (
+                    <span className="text-green-600 dark:text-green-400 text-xs ml-1">✓</span>
+                )}
             </button>
-
-            {/* Tooltip/Feedback */}
-            {(showTooltip || copied) && (
-                <div className="absolute z-10 px-3 py-2 text-xs sm:text-sm text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg bottom-full left-0 mb-1 whitespace-nowrap transform -translate-x-2">
-                    {copied ? (
-                        <span className="flex items-center gap-1">
-                            <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Copied!
-                        </span>
-                    ) : email}
-                    <div className="absolute top-full left-4 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-900 dark:border-t-gray-700"></div>
-                </div>
-            )}
         </div>
     );
 };
@@ -314,11 +294,13 @@ const TeamMemberListItem: React.FC<{
     isAdminView: boolean;
     isSelf: boolean;
     onRoleChange: (uid: string, newRole: UserRole) => void;
+    onOfficerRoleChange: (uid: string, newOfficerRole: OfficerRole | null) => void;
     onRemove: (user: AppUser) => void;
     onSaveName: (payload: { uid: string, newName: string }) => Promise<any>;
     onSendPasswordReset: (member: AppUser) => void;
     isSendingPasswordReset: boolean;
-}> = ({ member, isClubAdmin, isLastAdmin, isAdminView, isSelf, onRoleChange, onRemove, onSaveName, onSendPasswordReset, isSendingPasswordReset }) => {
+    availableOfficerRoles: OfficerRole[];
+}> = ({ member, isClubAdmin, isLastAdmin, isAdminView, isSelf, onRoleChange, onOfficerRoleChange, onRemove, onSaveName, onSendPasswordReset, isSendingPasswordReset, availableOfficerRoles }) => {
     
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState(member.name);
@@ -432,6 +414,46 @@ const TeamMemberListItem: React.FC<{
                     </div>
                     <div className="w-full">
                         <CopyableEmail email={member.email} />
+                        {/* Officer Role Badge */}
+                        <div className="mt-1">
+                            {member.officerRole ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                                    {member.officerRole}
+                                    {/* X button for mobile to remove officer role */}
+                                    <button
+                                        onClick={() => onOfficerRoleChange(member.uid || member.id, null)}
+                                        className="ml-1 text-purple-600 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-100"
+                                        title="Remove officer role"
+                                    >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </span>
+                            ) : (
+                                /* Mobile: Show + button to add officer role (admins only) */
+                                <div className="sm:hidden">
+                                    {member.role === UserRole.Admin && (
+                                        <button
+                                            onClick={() => {
+                                                // For mobile, we'll show a simple prompt to select the first available role
+                                                if (availableOfficerRoles.length > 0) {
+                                                    onOfficerRoleChange(member.uid || member.id, availableOfficerRoles[0]);
+                                                }
+                                            }}
+                                            disabled={availableOfficerRoles.length === 0}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Add officer role"
+                                        >
+                                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                            </svg>
+                                            Add Role
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         {(member as any).joinedDate && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 Joined: {new Date((member as any).joinedDate).toLocaleDateString()}
@@ -454,10 +476,23 @@ const TeamMemberListItem: React.FC<{
                                     onChange={(e) => onRoleChange(member.uid || member.id, e.target.value as UserRole)}
                                     disabled={cannotChangeRole}
                                     title={tooltipText}
-                                    className="bg-gray-50 dark:bg-gray-700 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none text-gray-900 dark:text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="bg-gray-50 dark:bg-gray-700 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none text-gray-900 dark:text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 text-center disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <option value={UserRole.Admin}>Admin</option>
                                     <option value={UserRole.Member}>Member</option>
+                                </select>
+                            )}
+                            {/* Officer Role Dropdown - Only for Admins and only if there are available roles to assign */}
+                            {!isClubAdmin && member.role === UserRole.Admin && availableOfficerRoles.length > 0 && !member.officerRole && (
+                                <select
+                                    value={member.officerRole || ''}
+                                    onChange={(e) => onOfficerRoleChange(member.uid || member.id, e.target.value ? e.target.value as OfficerRole : null)}
+                                    className="bg-gray-50 dark:bg-gray-700 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none text-gray-900 dark:text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-[160px] p-2"
+                                >
+                                    <option value="">No Officer Role</option>
+                                    {availableOfficerRoles.map(role => (
+                                        <option key={role} value={role}>{role}</option>
+                                    ))}
                                 </select>
                             )}
                             <button
@@ -538,6 +573,7 @@ export const ProfilePage = (): React.ReactElement | null => {
     const [userToRevoke, setUserToRevoke] = useState<PendingInvite | null>(null);
     const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
     const [isSendingPasswordReset, setIsSendingPasswordReset] = useState<string | null>(null);
+    const [isMemberInvitesCollapsed, setIsMemberInvitesCollapsed] = useState(true);
     
     const isPasswordUser = useMemo(() => user?.providerData.some(p => p.providerId === 'password'), [user]);
     const isAdmin = currentUser?.role === UserRole.Admin;
@@ -691,6 +727,30 @@ export const ProfilePage = (): React.ReactElement | null => {
         }
     };
 
+    const handleOfficerRoleChange = async (memberIdentifier: string, newOfficerRole: OfficerRole | null) => {
+        setTeamFeedback(null);
+        try {
+            // Update the member's officer role in the organization
+            if (!organization) return;
+            
+            const updatedMembers = organization.members.map(member => 
+                member.uid === memberIdentifier || member.id === memberIdentifier
+                    ? { ...member, officerRole: newOfficerRole }
+                    : member
+            );
+            
+            const updatedOrg = { ...organization, members: updatedMembers };
+            
+            // Update in database
+            const docRef = db.collection('users').doc(ownerId);
+            await docRef.update({ 'organization.members': updatedMembers });
+            
+            setTeamFeedback({ type: 'success', message: `Officer role updated.` });
+        } catch (error: any) {
+            setTeamFeedback({ type: 'error', message: error.message || 'Failed to update officer role.' });
+        }
+    };
+
     const openDeleteModal = (user: AppUser) => {
         setUserToManage(user);
         setIsDeleteModalOpen(true);
@@ -815,6 +875,19 @@ export const ProfilePage = (): React.ReactElement | null => {
       meetingDay !== (organization.meetingDay ?? 2) ||
       autoNotificationDay !== (organization.autoNotificationDay ?? 15)
       : false;
+
+    // Calculate available officer roles (roles not currently assigned)
+    const availableOfficerRoles = useMemo(() => {
+        if (!organization?.members) return Object.values(OfficerRole);
+        
+        const assignedRoles = new Set(
+            organization.members
+                .filter(member => member.officerRole)
+                .map(member => member.officerRole)
+        );
+        
+        return Object.values(OfficerRole).filter(role => !assignedRoles.has(role));
+    }, [organization?.members]);
 
     if (!currentUser || !organization) {
         return null; // or a loading state
@@ -1016,9 +1089,26 @@ export const ProfilePage = (): React.ReactElement | null => {
             
             {isClubAdmin && organization?.members && organization.members?.some(member => !member.email && !member.uid) && (
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6">Member Invitations</h2>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Member Invitations</h2>
+                        {/* Mobile collapse button */}
+                        <button
+                            onClick={() => setIsMemberInvitesCollapsed(!isMemberInvitesCollapsed)}
+                            className="sm:hidden flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                        >
+                            <span>{isMemberInvitesCollapsed ? 'Show' : 'Hide'} ({organization.members?.filter(member => !member.email && !member.uid).length || 0})</span>
+                            <svg 
+                                className={`w-4 h-4 transition-transform ${isMemberInvitesCollapsed ? 'rotate-0' : 'rotate-180'}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Send invitations to members who need to create their Firebase Auth accounts and set their passwords.
+                        Invite a member to create their account to update their availability.
                     </p>
                     
                     {(() => {
@@ -1039,7 +1129,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                         }
                         
                         return (
-                            <div className="space-y-3">
+                            <div className={`space-y-3 ${isMemberInvitesCollapsed ? 'sm:block hidden' : 'block'}`}>
                                 {membersNeedingEmails.map(member => (
                                     <MemberInviteRow 
                                         key={member.id} 
@@ -1115,10 +1205,12 @@ export const ProfilePage = (): React.ReactElement | null => {
                                             isAdminView={isAdmin} // Show admin controls for all members if user is admin
                                             isSelf={currentUser?.uid === member.uid}
                                             onRoleChange={handleRoleChange} // Allow role changes for all members
+                                            onOfficerRoleChange={handleOfficerRoleChange} // New officer role handler
                                             onRemove={openDeleteModal} // Allow removal for all members
                                             onSaveName={handleSaveUserName} // Allow name changes for all members
                                             onSendPasswordReset={hasUserAccount ? handleSendPasswordReset : () => {}} // Only for users with accounts
                                             isSendingPasswordReset={hasUserAccount && isSendingPasswordReset === member.uid}
+                                            availableOfficerRoles={availableOfficerRoles}
                                         />
                                     );
                                 })}

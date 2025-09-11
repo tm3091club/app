@@ -91,23 +91,9 @@ export const ScheduleView: React.FC = () => {
     }, [isAdmin, activeSchedule, currentUser, hydratedMembers]);
 
     const canEditTheme = useCallback((meetingIndex: number) => {
-        if (isAdmin) return true; // Admins can edit everything
-        
-        if (!activeSchedule || !currentUser?.uid) return false;
-        
-        const meeting = activeSchedule.meetings[meetingIndex];
-        if (!meeting) return false;
-        
-        // Find the member profile for the current user
-        const currentMember = hydratedMembers.find(m => m.uid === currentUser.uid);
-        if (!currentMember) return false;
-        
-        // Check if the current user is assigned to any role in this meeting
-        const isAssignedToAnyRole = Object.values(meeting.assignments).some(assignment => assignment === currentMember.id);
-        
-        // Members can only edit themes if they're assigned to a role in this meeting
-        return isAssignedToAnyRole;
-    }, [isAdmin, activeSchedule, currentUser, hydratedMembers]);
+        // Only admins can edit themes
+        return isAdmin;
+    }, [isAdmin]);
 
     const canToggleBlackout = useCallback((meetingIndex: number) => {
         // Only admins can toggle blackout

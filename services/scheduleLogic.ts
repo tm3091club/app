@@ -1,4 +1,4 @@
-import { Member, MonthlySchedule, Meeting, RoleAssignment, MemberStatus, AvailabilityStatus, MemberAvailability } from '../types';
+import { Member, MonthlySchedule, Meeting, RoleAssignment, MemberStatus, AvailabilityStatus, MemberAvailability, OfficerRole } from '../types';
 import { TOASTMASTERS_ROLES } from '../Constants';
 
 /**
@@ -31,7 +31,7 @@ export const deepClone = <T>(obj: T): T => {
 
 
 // Role categories
-const HIGH_ROLES = ['Toastmaster', 'Table Topics Master', 'General Evaluator'];
+const HIGH_ROLES = ['President', 'Toastmaster', 'Table Topics Master', 'General Evaluator'];
 const SPEAKER_ROLES = ['Speaker 1', 'Speaker 2', 'Speaker 3'];
 const EVALUATOR_ROLES = ['Evaluator 1', 'Evaluator 2', 'Evaluator 3'];
 const INSPIRATION_ROLE = 'Inspiration Award';
@@ -61,17 +61,19 @@ export function getMeetingDatesForMonth(startDate: Date): Date[] {
   const dates: Date[] = [];
   const year = startDate.getUTCFullYear();
   const month = startDate.getUTCMonth();
+  const targetDayOfWeek = startDate.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
 
-  // Start from the selected date, ensuring we're in UTC.
-  const date = new Date(Date.UTC(year, month, startDate.getUTCDate()));
+  // Find the first occurrence of the target day of week in the target month
+  const firstDayOfMonth = new Date(Date.UTC(year, month, 1));
+  const firstDayOfWeek = firstDayOfMonth.getUTCDay();
+  
+  // Calculate days to add to get to the first occurrence of target day
+  let daysToAdd = (targetDayOfWeek - firstDayOfWeek + 7) % 7;
+  
+  // Start from the first occurrence of the target day in the month
+  const date = new Date(Date.UTC(year, month, 1 + daysToAdd));
 
-  // Add the first date if it's in the correct month.
-  if (date.getUTCMonth() === month) {
-    dates.push(new Date(date));
-  }
-
-  // Find subsequent dates in the same month by adding 7 days.
-  date.setUTCDate(date.getUTCDate() + 7);
+  // Add dates for the entire month
   while (date.getUTCMonth() === month) {
     dates.push(new Date(date));
     date.setUTCDate(date.getUTCDate() + 7);
@@ -91,6 +93,7 @@ export const generateNewMonthSchedule = (
   clubOwnerId?: string,
   clubName?: string
 ): MonthlySchedule => {
+  
   // Filter out inactive members and the club admin (owner)
   const activeMembers = members.filter(m => {
     // Filter out inactive members
@@ -165,13 +168,52 @@ export const generateNewMonthSchedule = (
         return null;
     };
 
+    // Special function for President role with President/VPE priority
+    const assignPresidentWithOfficerPriority = (): Member | null => {
+        
+        // First, try to assign to the actual President if available
+        const president = availableForMeeting.find(m => 
+            m.officerRole === OfficerRole.President
+        );
+        
+        if (president) {
+            assignments['President'] = president.id;
+            // Don't add to assignedInMeeting - allow President to have multiple roles
+            // Don't track role history - President can have same role every week
+            return president;
+        }
+
+        // If President is not available, try VPE if available
+        const vpe = availableForMeeting.find(m => 
+            m.officerRole === OfficerRole.VicePresidentEducation
+        );
+        
+        if (vpe) {
+            assignments['President'] = vpe.id;
+            // Don't add to assignedInMeeting - allow VPE to have multiple roles when acting as President
+            // Don't track role history - VPE can act as President multiple times
+            return vpe;
+        }
+        // If neither President nor VPE are available, leave the role unassigned
+        // (as requested - manual assignment only)
+        return null;
+    };
+
     // --- Assignment Order ---
 
     // 1. Assign Inspiration Role to Past Presidents
     assignRole(INSPIRATION_ROLE, shuffleArray(availableForMeeting.filter(m => m.isPastPresident)));
 
-    // 2. Assign High Roles to qualified members
+    // 2. Assign President role with officer priority first
+    assignPresidentWithOfficerPriority();
+
+    // 3. Assign other High Roles to qualified members
     HIGH_ROLES.forEach(role => {
+        if (role === 'President') {
+            // President role already handled above with officer priority
+            return;
+        }
+        
         let qualifiedMembers: Member[] = [];
         if (role === 'Toastmaster') qualifiedMembers = availableForMeeting.filter(m => m.isToastmaster);
         if (role === 'Table Topics Master') qualifiedMembers = availableForMeeting.filter(m => m.isTableTopicsMaster);
@@ -181,10 +223,18 @@ export const generateNewMonthSchedule = (
     });
     
     [INSPIRATION_ROLE, ...HIGH_ROLES].forEach(role => {
-        if (!assignments[role]) assignRole(role, availableForMeeting);
+        if (!assignments[role]) {
+            if (role === 'President') {
+                // President role already handled with officer priority - don't fallback
+                // Leave unassigned if neither President nor VPE are available
+                return;
+            } else {
+                assignRole(role, availableForMeeting);
+            }
+        }
     });
 
-    // 3. Assign Speaker Roles with seniority prioritization
+    // 4. Assign Speaker Roles with seniority prioritization
     // Sort members by join date: oldest members first for Speaker 3, newest for Speaker 1
     const sortBySeniority = (members: Member[], reverse = false) => {
         return members.sort((a, b) => {
@@ -213,7 +263,7 @@ export const generateNewMonthSchedule = (
         }
     });
 
-    // 4. Assign Evaluator Roles with prioritization
+    // 5. Assign Evaluator Roles with prioritization
     EVALUATOR_ROLES.forEach(role => {
         const highPriorityPool = availableForMeeting.filter(m => !monthlyEvaluators.has(m.id) && !prevMonthEvaluators.has(m.id));
         const mediumPriorityPool = availableForMeeting.filter(m => !monthlyEvaluators.has(m.id));
@@ -225,10 +275,10 @@ export const generateNewMonthSchedule = (
         }
     });
 
-    // 5. Assign Minor Roles
+    // 6. Assign Minor Roles
     MINOR_ROLES.forEach(role => assignRole(role, availableForMeeting));
 
-    // 6. Final fallback - assign any remaining unassigned roles to available members
+    // 7. Final fallback - assign any remaining unassigned roles to available members
     const unassignedRoles = TOASTMASTERS_ROLES.filter(r => !assignments[r]);
     if (unassignedRoles.length > 0) {
         // Try to assign unassigned roles to any available member (ignore role history for final assignments)
