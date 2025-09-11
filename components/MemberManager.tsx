@@ -10,18 +10,19 @@ const LinkAccountModal: React.FC<{
     onClose: () => void;
     onLink: (email: string) => Promise<void>;
     memberName: string;
-}> = ({ isOpen, onClose, onLink, memberName }) => {
+    currentUserEmail?: string;
+}> = ({ isOpen, onClose, onLink, memberName, currentUserEmail }) => {
     const [email, setEmail] = useState('');
     const [isLinking, setIsLinking] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
-            setEmail('');
+            setEmail(currentUserEmail || '');
             setError(null);
             setIsLinking(false);
         }
-    }, [isOpen]);
+    }, [isOpen, currentUserEmail]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -920,7 +921,7 @@ const MembersTable: React.FC<{
 
 
 export const MemberManager: React.FC = () => {
-    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, inviteUser, pendingInvites, revokeInvite } = useToastmasters();
+    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, linkCurrentUserToMember, inviteUser, pendingInvites, revokeInvite } = useToastmasters();
     const [fullName, setFullName] = useState('');
     const [status, setStatus] = useState<MemberStatus>(MemberStatus.Active);
     const [qualifications, setQualifications] = useState({
@@ -1140,10 +1141,18 @@ export const MemberManager: React.FC = () => {
         if (!memberToLink) return;
         setLinkError(null);
         try {
-            // Use the invitation system to send an invitation linked to this member
-            await inviteUser({ email, name: memberToLink.name, memberId: memberToLink.id });
-            setIsLinkModalOpen(false);
-            setMemberToLink(null);
+            // Check if the email matches the current user's email
+            if (currentUser?.email === email) {
+                // Direct linking for current user
+                await linkCurrentUserToMember(memberToLink.id);
+                setIsLinkModalOpen(false);
+                setMemberToLink(null);
+            } else {
+                // Use the invitation system for other users
+                await inviteUser({ email, name: memberToLink.name, memberId: memberToLink.id });
+                setIsLinkModalOpen(false);
+                setMemberToLink(null);
+            }
         } catch (error: any) {
             setLinkError(error.message);
         }
@@ -1258,6 +1267,7 @@ export const MemberManager: React.FC = () => {
                 onClose={() => setIsLinkModalOpen(false)}
                 onLink={handleLinkAccount}
                 memberName={memberToLink?.name || ''}
+                currentUserEmail={currentUser?.email}
             />
             {linkError && <p className="text-red-500">{linkError}</p>}
             
