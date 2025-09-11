@@ -36,7 +36,7 @@ interface ToastmastersState {
   updateClubProfile: (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; timezone?: string; }) => Promise<void>;
   updateUserRole: (uid: string, newRole: UserRole) => Promise<void>;
   removeUser: (uid: string) => Promise<void>;
-  inviteUser: (payload: { email: string, name: string, memberId?: string }) => Promise<void>;
+  inviteUser: (payload: { email: string, name: string, memberId?: string }) => Promise<{ inviteId: string, joinUrl: string } | void>;
   revokeInvite: (inviteId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   linkMemberToAccount: (payload: { memberId: string, uid: string | null }) => Promise<void>;
@@ -574,22 +574,33 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
       
         const joinUrl = `https://tmapp.club/#/${organization.clubNumber}/join?token=${newInviteRef.id}`;
         
-        await db.collection("mail").add({
-          to: [emailLower],
-          from: 'tmprofessionallyspeaking@gmail.com', // Use your verified Gmail address
-          replyTo: 'tmprofessionallyspeaking@gmail.com',
-          message: {
-            subject: `You're invited to join ${organization.name}!`,
-            html: `
-              <div style="font-family:sans-serif">
-                <h2>Hello ${name || "Future Toastmaster"},</h2>
-                <p>You've been invited by <strong>${organization.name}</strong> to join the Toastmasters Monthly Scheduler app.</p>
-                <p>To accept the invitation, please click the unique link below and create an account using this email address (<strong>${emailLower}</strong>).</p>
-                <a href="${joinUrl}" style="display:inline-block;padding:12px 20px;background:#004165;color:#fff;border-radius:6px;text-decoration:none">Sign Up & Join Now</a>
-                <p style="margin-top:24px;font-size:12px;color:#555;">If you have any questions, please contact your club admin at tmprofessionallyspeaking@gmail.com.</p>
-              </div>`
-          }
-        });
+        console.log('Created invitation with URL:', joinUrl);
+        
+        try {
+            await db.collection("mail").add({
+              to: [emailLower],
+              from: 'tmprofessionallyspeaking@gmail.com', // Use your verified Gmail address
+              replyTo: 'tmprofessionallyspeaking@gmail.com',
+              message: {
+                subject: `You're invited to join ${organization.name}!`,
+                html: `
+                  <div style="font-family:sans-serif">
+                    <h2>Hello ${name || "Future Toastmaster"},</h2>
+                    <p>You've been invited by <strong>${organization.name}</strong> to join the Toastmasters Monthly Scheduler app.</p>
+                    <p>To accept the invitation, please click the unique link below and create an account using this email address (<strong>${emailLower}</strong>).</p>
+                    <a href="${joinUrl}" style="display:inline-block;padding:12px 20px;background:#004165;color:#fff;border-radius:6px;text-decoration:none">Sign Up & Join Now</a>
+                    <p style="margin-top:24px;font-size:12px;color:#555;">If you have any questions, please contact your club admin at tmprofessionallyspeaking@gmail.com.</p>
+                  </div>`
+              }
+            });
+            console.log('Email queued successfully');
+        } catch (emailError) {
+            console.error('Failed to queue email:', emailError);
+            // Continue anyway - we'll provide the URL manually
+        }
+        
+        // Return the invitation URL for manual sharing if email fails
+        return { inviteId: newInviteRef.id, joinUrl };
     };
 
     const revokeInvite = async (inviteId: string) => {
