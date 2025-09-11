@@ -141,8 +141,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     // Add the new user to organization.members (they don't exist there yet)
                     const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
                     
-                    // DO NOT create any user document for linked members!
-                    // The authentication system will find them via organization.members search
+                    // OPTION B: NO user pointer document for members
+                    // Keep users collection clean - only club owners get user documents
+                    // Authentication will find members via organization.members search
                     
                     transaction.update(clubDataDocRef, {
                         'members': updatedSchedulingMembers,
@@ -422,7 +423,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                 throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                             }
                         } else {
-                            // Check if user exists as a member with ownerId in any club
+                            // Check if user exists as a member in any club
                             const usersSnapshot = await db.collection('users').get();
                             
                             for (const doc of usersSnapshot.docs) {
@@ -432,8 +433,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                         m.uid === user.uid || m.email?.toLowerCase() === user.email?.toLowerCase()
                                     );
                                     
-                                    if (member?.ownerId) {
-                                        ownerIdToUse = member.ownerId;
+                                    if (member) {
+                                        // If member is found in this club, the club owner is the document ID
+                                        ownerIdToUse = doc.id;
                                         break;
                                     }
                                 }
