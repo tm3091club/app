@@ -348,63 +348,42 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const initializeUserSession = async () => {
             try {
                 console.log('Initializing user session for:', user.email);
-                const userPointerDocRef = db.collection('users').doc(user.uid);
-                const userPointerDoc = await userPointerDocRef.get();
                 let ownerIdToUse: string | null = null;
                 
-                if (userPointerDoc.exists) {
-                    const userData = userPointerDoc.data();
-                    // Check if this user IS the club owner (has organization data)
-                    if (userData?.organization) {
-                        ownerIdToUse = user.uid;
-                    } else {
-                        // This is a member pointing to a club owner
-                        ownerIdToUse = userData?.ownerId || user.uid;
-                    }
+                // Check if user is a club owner (has their own club document)
+                const potentialClubDoc = await db.collection('users').doc(user.uid).get();
+                if (potentialClubDoc.exists && potentialClubDoc.data()?.organization) {
+                    ownerIdToUse = user.uid;
                 } else {
-                    // Check if user is a club owner (they have their own club)
-                    const potentialClubDoc = await db.collection('users').doc(user.uid).get();
-                    if (potentialClubDoc.exists && potentialClubDoc.data()?.organization) {
-                        ownerIdToUse = user.uid;
+                    // Check for pending invitation token
+                    const token = sessionStorage.getItem('inviteToken');
+                    
+                    if (token) {
+                        try {
+                            ownerIdToUse = await linkMemberAccount(token, user);
+                            sessionStorage.removeItem('inviteToken');
+                        } catch (joinError: any) {
+                            console.error(`Member linking failed:`, joinError);
+                            throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
+                        }
                     } else {
-                        // Check for pending invitation token
-                        const token = sessionStorage.getItem('inviteToken');
-                        console.log('DEBUG: Looking for inviteToken in sessionStorage:', token);
+                        // Search for this user's uid in all club members arrays
+                        const usersSnapshot = await db.collection('users').get();
                         
-                        if (token) {
-                            console.log('DEBUG: Found inviteToken, attempting to link member account...');
-                            try {
-                                ownerIdToUse = await linkMemberAccount(token, user);
-                                console.log('DEBUG: Member linking successful, ownerId:', ownerIdToUse);
-                                sessionStorage.removeItem('inviteToken');
-                            } catch (joinError: any) {
-                                console.error(`DEBUG: Member linking failed:`, joinError);
-                                // If linking fails, user is not authorized
-                                throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
-                            }
-                        } else {
-                            console.log('DEBUG: No inviteToken found, searching for existing member...');
-                            // Check if user exists as a linked member in any club
-                            const usersSnapshot = await db.collection('users').get();
-                            
-                            for (const doc of usersSnapshot.docs) {
-                                const data = doc.data();
-                                if (data.members) {
-                                    const member = data.members.find((m: any) => 
-                                        m.uid === user.uid
-                                    );
-                                    
-                                    if (member) {
-                                        // If member is found in this club, the club owner is the document ID
-                                        ownerIdToUse = doc.id;
-                                        break;
-                                    }
+                        for (const doc of usersSnapshot.docs) {
+                            const data = doc.data();
+                            if (data.members) {
+                                const member = data.members.find((m: any) => m.uid === user.uid);
+                                
+                                if (member) {
+                                    ownerIdToUse = doc.id;
+                                    break;
                                 }
                             }
-                            
-                            if (!ownerIdToUse) {
-                                throw new Error("You are not authorized to access this application. Please contact your club administrator for a proper invitation.");
-                            }
+                        }
+                        
+                        if (!ownerIdToUse) {
+                            throw new Error("You are not authorized to access this application. Please contact your club administrator for a proper invitation.");
                         }
                     }
                 }
