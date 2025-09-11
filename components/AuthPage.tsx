@@ -26,7 +26,9 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
   useEffect(() => {
     if (isJoinFlow && inviteToken) {
       // Store the inviteToken in sessionStorage immediately when component loads
+      console.log('Storing invitation token in sessionStorage:', inviteToken);
       sessionStorage.setItem('inviteToken', inviteToken);
+      console.log('Token stored, verifying:', sessionStorage.getItem('inviteToken'));
       
       setIsLoadingInvite(true);
       const inviteRef = db.collection('invitations').doc(inviteToken);
@@ -71,7 +73,9 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
           return;
         }
         if (isJoinFlow) {
+          console.log('Creating account for invited user, token should be in sessionStorage:', sessionStorage.getItem('inviteToken'));
           await signUpInvitedUser(email, password);
+          console.log('Account created, token still in sessionStorage:', sessionStorage.getItem('inviteToken'));
         } else {
           await signUpAndCreateClub(email, password, { clubName, district, clubNumber, meetingDay });
         }

@@ -370,6 +370,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 } else {
                     // Check for pending invitation token
                     const token = sessionStorage.getItem('inviteToken');
+                    console.log('Checking for invitation token:', token);
                     
                     if (token) {
                         try {
@@ -382,6 +383,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                             throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                         }
                     } else {
+                        console.log('No invitation token found, searching for existing member...');
                         // Search for this user's uid in all club members arrays
                         const usersSnapshot = await db.collection('users').get();
                         
