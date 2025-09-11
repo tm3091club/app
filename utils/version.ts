@@ -37,7 +37,7 @@ const generateVersion = (): string => {
 };
 
 // Current version - this will be updated automatically
-const CURRENT_VERSION = "9.11.25-19";
+const CURRENT_VERSION = "9.11.25-20";
 
 export const getAppVersion = (): string => {
   return CURRENT_VERSION;
