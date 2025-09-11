@@ -124,6 +124,13 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 );
                 console.log('Updated members:', updatedMembers);
                 
+                // Verify the member was actually updated
+                const linkedMember = updatedMembers.find((m: any) => m.id === memberId);
+                if (!linkedMember || !linkedMember.uid) {
+                    throw new Error("Failed to add UID to member record");
+                }
+                console.log('Successfully prepared member with UID:', linkedMember.uid);
+                
                 transaction.update(clubDataDocRef, {
                     'organization.members': updatedMembers,
                     'lastJoinToken': token
