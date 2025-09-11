@@ -730,9 +730,9 @@ const MembersTable: React.FC<{
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                        {memberList.length > 0 ? memberList.map(member => (
+                        {memberList.length > 0 ? memberList.map((member, index) => (
                             <MemberRow 
-                                key={member.id}
+                                key={member.id || `member-${index}`}
                                 member={member} 
                                 meetingDates={meetingDates}
                                 monthName={monthName}
@@ -760,9 +760,9 @@ const MembersTable: React.FC<{
             </div>
             {/* Mobile Cards */}
             <div className="md:hidden space-y-3 p-3 bg-gray-50 dark:bg-gray-900">
-                 {memberList.length > 0 ? memberList.map(member => (
+                 {memberList.length > 0 ? memberList.map((member, index) => (
                     <MobileMemberCard
-                        key={member.id}
+                        key={member.id || `mobile-member-${index}`}
                         member={member}
                         meetingDates={meetingDates}
                         monthName={monthName}
@@ -1319,9 +1319,9 @@ export const MemberManager: React.FC = () => {
                                 </tr>
                             </thead>
                              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                                {archivedMembers.map(member => (
+                                {archivedMembers.map((member, index) => (
                                     <ArchivedMemberRow 
-                                        key={member.id} 
+                                        key={member.id || `archived-member-${index}`} 
                                         member={member} 
                                         onDelete={handleOpenDeleteModal}
                                     />
@@ -1331,9 +1331,9 @@ export const MemberManager: React.FC = () => {
                     </div>
                     {/* Mobile Cards for Archived */}
                     <div className="md:hidden space-y-3 p-3 bg-gray-50 dark:bg-gray-900">
-                        {archivedMembers.map(member => (
+                        {archivedMembers.map((member, index) => (
                             <ArchivedMobileMemberCard 
-                                key={member.id} 
+                                key={member.id || `archived-mobile-member-${index}`} 
                                 member={member} 
                                 onDelete={handleOpenDeleteModal}
                             />

@@ -198,8 +198,7 @@ export const ScheduleView: React.FC = () => {
         
         try {
             // Get meeting dates for the month
-            const meetingDates = getMonthMeetingDates(year, month, organization.meetingDay)
-                .map(date => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())));
+            const meetingDates = getMonthMeetingDates(year, month, organization.meetingDay, organization.timezone);
 
             // Generate themes first
             const numThemes = meetingDates.length;
@@ -301,8 +300,7 @@ export const ScheduleView: React.FC = () => {
             }
             
             // Get meeting dates for the month
-            const meetingDates = getMonthMeetingDates(year, month, organization.meetingDay)
-                .map(date => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())));
+            const meetingDates = getMonthMeetingDates(year, month, organization.meetingDay, organization.timezone);
 
             // Create blank schedule (no role assignments, no themes)
             const blankSchedule: MonthlySchedule = {

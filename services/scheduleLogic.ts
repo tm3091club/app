@@ -59,24 +59,24 @@ function shuffleArray<T,>(array: T[]): T[] {
  */
 export function getMeetingDatesForMonth(startDate: Date): Date[] {
   const dates: Date[] = [];
-  const year = startDate.getUTCFullYear();
-  const month = startDate.getUTCMonth();
-  const targetDayOfWeek = startDate.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
+  const year = startDate.getFullYear();
+  const month = startDate.getMonth();
+  const targetDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
   // Find the first occurrence of the target day of week in the target month
-  const firstDayOfMonth = new Date(Date.UTC(year, month, 1));
-  const firstDayOfWeek = firstDayOfMonth.getUTCDay();
-  
+  const firstDayOfMonth = new Date(year, month, 1);
+  const firstDayOfWeek = firstDayOfMonth.getDay();
+
   // Calculate days to add to get to the first occurrence of target day
   let daysToAdd = (targetDayOfWeek - firstDayOfWeek + 7) % 7;
-  
+
   // Start from the first occurrence of the target day in the month
-  const date = new Date(Date.UTC(year, month, 1 + daysToAdd));
+  const date = new Date(year, month, 1 + daysToAdd);
 
   // Add dates for the entire month
-  while (date.getUTCMonth() === month) {
+  while (date.getMonth() === month) {
     dates.push(new Date(date));
-    date.setUTCDate(date.getUTCDate() + 7);
+    date.setDate(date.getDate() + 7);
   }
 
   return dates;

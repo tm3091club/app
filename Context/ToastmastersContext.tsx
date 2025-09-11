@@ -141,6 +141,13 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     // Add the new user to organization.members (they don't exist there yet)
                     const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
                     
+                    // Create user pointer document for authentication system
+                    transaction.set(userPointerDocRef, { 
+                        ownerId: ownerId, 
+                        email: joiningUser.email, 
+                        name: newName,
+                        joinedAt: FieldValue.serverTimestamp()
+                    });
                     
                     transaction.update(clubDataDocRef, {
                         'members': updatedSchedulingMembers,

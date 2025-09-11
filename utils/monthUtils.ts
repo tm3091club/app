@@ -94,21 +94,35 @@ export function getNextScheduleMonth(existingSchedules: MonthlySchedule[], meeti
 /**
  * Gets all meeting dates for a given month and meeting day
  */
-export function getMeetingDatesForMonth(year: number, month: number, meetingDay: number): Date[] {
+export function getMeetingDatesForMonth(year: number, month: number, meetingDay: number, timezone?: string): Date[] {
   const dates: Date[] = [];
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
   
-  // Find the first meeting day of the month
-  let currentDate = new Date(firstDay);
-  while (currentDate.getDay() !== meetingDay) {
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
+  // Use the specified timezone or fall back to local timezone
+  const targetTimezone = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
   
-  // Add all meeting days for the month
-  while (currentDate <= lastDay) {
-    dates.push(new Date(currentDate));
-    currentDate.setDate(currentDate.getDate() + 7); // Next week
+  // Create the first day of the month in the target timezone
+  const firstDayOfMonth = new Date(year, month, 1);
+  
+  // Find the first occurrence of the meeting day in the month
+  let currentDate = new Date(firstDayOfMonth);
+  
+  // Get the day of week for the first day of the month
+  const firstDayOfWeek = currentDate.getDay();
+  
+  // Calculate how many days to add to get to the first meeting day
+  let daysToAdd = (meetingDay - firstDayOfWeek + 7) % 7;
+  
+  // Set to the first meeting day of the month
+  currentDate.setDate(currentDate.getDate() + daysToAdd);
+  
+  // Add all meeting dates for the month
+  while (currentDate.getMonth() === month) {
+    // Create a new date object to avoid mutation
+    const meetingDate = new Date(currentDate);
+    dates.push(meetingDate);
+    
+    // Move to next week
+    currentDate.setDate(currentDate.getDate() + 7);
   }
   
   return dates;
