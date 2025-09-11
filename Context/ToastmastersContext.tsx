@@ -41,6 +41,7 @@ interface ToastmastersState {
   sendPasswordResetEmail: (email: string) => Promise<void>;
   linkMemberToAccount: (payload: { memberId: string, uid: string | null }) => Promise<void>;
   linkCurrentUserToMember: (memberId: string) => Promise<void>;
+  linkMemberByEmail: (email: string, uid: string) => Promise<void>;
   saveWeeklyAgenda: (agenda: WeeklyAgenda) => Promise<void>;
   deleteWeeklyAgenda: (agendaId: string) => Promise<void>;
 }
@@ -711,6 +712,38 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         console.log('Successfully linked current user to member');
     };
 
+    // Manual function to link a member by email to a specific UID
+    const linkMemberByEmail = async (email: string, uid: string) => {
+        if (!dataOwnerId || !organization) {
+            throw new Error("Cannot link account: missing organization data.");
+        }
+        
+        const docRef = getDataDocRef();
+        if (!docRef) return;
+        
+        const memberToLink = organization.members.find(m => 
+            (m.email && m.email.toLowerCase() === email.toLowerCase()) || 
+            m.name.toLowerCase().includes(email.toLowerCase())
+        );
+        
+        if (!memberToLink) {
+            throw new Error(`Member with email ${email} not found.`);
+        }
+        
+        const updatedMembers = organization.members.map(m => 
+            m.id === memberToLink.id ? { 
+                ...m, 
+                uid: uid,
+                email: email,
+                role: m.role || UserRole.Member 
+            } : m
+        );
+        
+        console.log('Manually linking member by email:', { email, uid, memberToLink, updatedMembers });
+        await docRef.update({ 'organization.members': updatedMembers });
+        console.log('Successfully linked member by email');
+    };
+
 
     const addMember = async (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => {
         const docRef = getDataDocRef();
@@ -951,7 +984,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
-        sendPasswordResetEmail, linkMemberToAccount, linkCurrentUserToMember, saveWeeklyAgenda, deleteWeeklyAgenda
+        sendPasswordResetEmail, linkMemberToAccount, linkCurrentUserToMember, linkMemberByEmail, saveWeeklyAgenda, deleteWeeklyAgenda
     };
 
     return (
