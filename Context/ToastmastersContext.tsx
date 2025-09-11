@@ -361,6 +361,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const initializeUserSession = async () => {
             try {
                 console.log('Initializing user session for:', user.email);
+                console.log('Current sessionStorage contents:', Object.keys(sessionStorage).map(key => ({ key, value: sessionStorage.getItem(key) })));
                 let ownerIdToUse: string | null = null;
                 
                 // Check if user is a club owner (has their own club document)
