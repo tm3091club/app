@@ -1039,7 +1039,6 @@ export const MemberManager: React.FC = () => {
         // 2. Filter out users already linked to members
         // 3. Only show users who have verified they belong to this club
         
-        console.warn('Link Account feature disabled - requires proper user management implementation');
         return [];
         
         // The previous hardcoded list was a MAJOR PRIVACY ISSUE exposing other clubs' member emails
