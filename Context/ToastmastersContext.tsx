@@ -117,11 +117,17 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 const existingSchedulingMembers = clubDoc.data()?.members || [];
                 const existingOrgMembers = clubDoc.data()?.organization?.members || [];
                 
+                console.log('DEBUG: Looking for member to link...');
+                console.log('DEBUG: memberId from invitation:', memberId);
+                console.log('DEBUG: existingSchedulingMembers:', existingSchedulingMembers);
+                console.log('DEBUG: newName:', newName);
+                
                 let memberToLink = null;
                 
                 if (memberId) {
                     // Try to find member by memberId first
                     memberToLink = existingSchedulingMembers.find((m: any) => m.id === memberId);
+                    console.log('DEBUG: Found member by memberId:', memberToLink);
                 }
                 
                 if (!memberToLink) {
@@ -130,16 +136,25 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         m.name.toLowerCase() === newName.toLowerCase() && 
                         !m.uid // Only match unlinked members
                     );
+                    console.log('DEBUG: Found member by name fallback:', memberToLink);
                 }
                 
                 if (memberToLink) {
+                    console.log('DEBUG: Linking existing member to new user account');
+                    console.log('DEBUG: memberToLink:', memberToLink);
+                    console.log('DEBUG: joiningUser.uid:', joiningUser.uid);
+                    
                     // Link the existing member to the new user account
                     const updatedSchedulingMembers = existingSchedulingMembers.map((m: any) => 
                         m.id === memberToLink.id ? { ...m, uid: joiningUser.uid } : m
                     );
                     
+                    console.log('DEBUG: updatedSchedulingMembers:', updatedSchedulingMembers);
+                    
                     // Add the new user to organization.members (they don't exist there yet)
                     const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
+                    
+                    console.log('DEBUG: Creating user pointer document for authentication');
                     
                     // Create user pointer document for authentication system
                     transaction.set(userPointerDocRef, { 
@@ -154,7 +169,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         'organization.members': updatedOrgMembers,
                         'lastJoinToken': token
                     });
+                    
+                    console.log('DEBUG: Successfully linked existing member');
                 } else {
+                    console.log('DEBUG: No existing member found, creating new user');
+                    console.log('DEBUG: This should NOT happen if invitation was sent correctly');
+                    
                     // No existing member found, create new user in organization.members
                     // Also create user pointer document for new users
                     transaction.set(userPointerDocRef, { 
