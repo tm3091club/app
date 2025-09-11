@@ -141,8 +141,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     // Add the new user to organization.members (they don't exist there yet)
                     const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
                     
-                    // DO NOT create user pointer document for linked members
-                    // The authentication system will find them through organization.members
+                    // DO NOT create any user document for linked members!
+                    // The authentication system will find them via organization.members search
                     
                     transaction.update(clubDataDocRef, {
                         'members': updatedSchedulingMembers,
