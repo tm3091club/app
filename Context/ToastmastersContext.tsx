@@ -117,17 +117,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 const existingSchedulingMembers = clubDoc.data()?.members || [];
                 const existingOrgMembers = clubDoc.data()?.organization?.members || [];
                 
-                console.log('DEBUG: Looking for member to link...');
-                console.log('DEBUG: memberId from invitation:', memberId);
-                console.log('DEBUG: existingSchedulingMembers:', existingSchedulingMembers);
-                console.log('DEBUG: newName:', newName);
-                
                 let memberToLink = null;
                 
                 if (memberId) {
                     // Try to find member by memberId first
                     memberToLink = existingSchedulingMembers.find((m: any) => m.id === memberId);
-                    console.log('DEBUG: Found member by memberId:', memberToLink);
                 }
                 
                 if (!memberToLink) {
@@ -136,45 +130,26 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         m.name.toLowerCase() === newName.toLowerCase() && 
                         !m.uid // Only match unlinked members
                     );
-                    console.log('DEBUG: Found member by name fallback:', memberToLink);
                 }
                 
                 if (memberToLink) {
-                    console.log('DEBUG: Linking existing member to new user account');
-                    console.log('DEBUG: memberToLink:', memberToLink);
-                    console.log('DEBUG: joiningUser.uid:', joiningUser.uid);
-                    
                     // Link the existing member to the new user account
                     const updatedSchedulingMembers = existingSchedulingMembers.map((m: any) => 
                         m.id === memberToLink.id ? { ...m, uid: joiningUser.uid } : m
                     );
                     
-                    console.log('DEBUG: updatedSchedulingMembers:', updatedSchedulingMembers);
-                    
                     // Add the new user to organization.members (they don't exist there yet)
                     const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
                     
-                    console.log('DEBUG: Creating user pointer document for authentication');
-                    
-                    // Create user pointer document for authentication system
-                    transaction.set(userPointerDocRef, { 
-                        ownerId: ownerId, 
-                        email: joiningUser.email, 
-                        name: newName,
-                        joinedAt: FieldValue.serverTimestamp()
-                    });
+                    // DO NOT create user pointer document for linked members
+                    // The authentication system will find them through organization.members
                     
                     transaction.update(clubDataDocRef, {
                         'members': updatedSchedulingMembers,
                         'organization.members': updatedOrgMembers,
                         'lastJoinToken': token
                     });
-                    
-                    console.log('DEBUG: Successfully linked existing member');
                 } else {
-                    console.log('DEBUG: No existing member found, creating new user');
-                    console.log('DEBUG: This should NOT happen if invitation was sent correctly');
-                    
                     // No existing member found, create new user in organization.members
                     // Also create user pointer document for new users
                     transaction.set(userPointerDocRef, { 
@@ -436,21 +411,17 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     } else {
                         // Check for pending invitation token
                         const token = sessionStorage.getItem('inviteToken');
-                        console.log('DEBUG: Checking for inviteToken in sessionStorage:', token);
                         
                         if (token) {
-                            console.log('DEBUG: Found inviteToken, calling completeUserJoin...');
                             try {
                                 ownerIdToUse = await completeUserJoin(token, user);
-                                console.log('DEBUG: completeUserJoin successful, ownerIdToUse:', ownerIdToUse);
                                 sessionStorage.removeItem('inviteToken');
                             } catch (joinError: any) {
-                                console.error(`DEBUG: User join failed:`, joinError);
+                                console.error(`User join failed:`, joinError);
                                 // If join fails, user is not authorized
                                 throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                             }
                         } else {
-                            console.log('DEBUG: No inviteToken found in sessionStorage');
                             // Check if user exists as a member with ownerId in any club
                             const usersSnapshot = await db.collection('users').get();
                             

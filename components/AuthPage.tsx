@@ -27,7 +27,6 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
     if (isJoinFlow && inviteToken) {
       // Store the inviteToken in sessionStorage immediately when component loads
       sessionStorage.setItem('inviteToken', inviteToken);
-      console.log('DEBUG: Stored inviteToken in sessionStorage:', inviteToken);
       
       setIsLoadingInvite(true);
       const inviteRef = db.collection('invitations').doc(inviteToken);
