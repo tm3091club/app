@@ -1140,12 +1140,21 @@ export const MemberManager: React.FC = () => {
         if (!memberToLink) return;
         setLinkError(null);
         try {
+            console.log('Sending invitation for member:', { email, memberName: memberToLink.name, memberId: memberToLink.id });
             // Always use the invitation system for now
             // This ensures the proper flow and email sending
-            await inviteUser({ email, name: memberToLink.name, memberId: memberToLink.id });
+            const result = await inviteUser({ email, name: memberToLink.name, memberId: memberToLink.id });
+            console.log('Invitation sent successfully');
+            
+            // If we get a joinUrl back, it means we should show it to the user
+            if (result && result.joinUrl) {
+                alert(`Invitation created! Since email might not be configured, please share this link with the member:\n\n${result.joinUrl}`);
+            }
+            
             setIsLinkModalOpen(false);
             setMemberToLink(null);
         } catch (error: any) {
+            console.error('Failed to send invitation:', error);
             setLinkError(error.message);
         }
     };
