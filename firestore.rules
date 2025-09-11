@@ -25,8 +25,9 @@ service cloud.firestore {
       // LIST: Allow authenticated users to list users (needed for club discovery)
       allow list: if isAuthenticated();
 
-      // CREATE: Any authenticated user can create their own document
-      allow create: if isAuthenticated() && getUserId() == userId;
+      // CREATE: DISABLED - No user documents should be created for members
+      // Only allow club owners to create their club document explicitly
+      allow create: if false;
       
       // DELETE: Only the club owner can delete the main club document.
       allow delete: if isClubOwner(userId);
