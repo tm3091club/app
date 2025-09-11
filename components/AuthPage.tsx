@@ -25,6 +25,10 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
 
   useEffect(() => {
     if (isJoinFlow && inviteToken) {
+      // Store the inviteToken in sessionStorage immediately when component loads
+      sessionStorage.setItem('inviteToken', inviteToken);
+      console.log('DEBUG: Stored inviteToken in sessionStorage:', inviteToken);
+      
       setIsLoadingInvite(true);
       const inviteRef = db.collection('invitations').doc(inviteToken);
       inviteRef.get().then(doc => {
@@ -54,10 +58,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
     setMessage(null);
     setIsLoading(true);
 
-    // This token needs to persist across auth actions (e.g., failed signup -> login)
-    if (inviteToken) {
-      sessionStorage.setItem('inviteToken', inviteToken);
-    }
+    // Token is already stored in sessionStorage when component loads
 
     try {
       if (view === 'login') {
