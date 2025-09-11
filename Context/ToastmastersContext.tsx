@@ -113,14 +113,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     throw new Error("You are already a member of this club.");
                 }
         
-                // Create user pointer document
-                transaction.set(userPointerDocRef, { 
-                    ownerId: ownerId, 
-                    email: joiningUser.email, 
-                    name: newName,
-                    joinedAt: FieldValue.serverTimestamp()
-                });
-                
                 // Check if this invitation is for an existing member
                 const existingSchedulingMembers = clubDoc.data()?.members || [];
                 const existingOrgMembers = clubDoc.data()?.organization?.members || [];
@@ -157,6 +149,14 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     });
                 } else {
                     // No existing member found, create new user in organization.members
+                    // Also create user pointer document for new users
+                    transaction.set(userPointerDocRef, { 
+                        ownerId: ownerId, 
+                        email: joiningUser.email, 
+                        name: newName,
+                        joinedAt: FieldValue.serverTimestamp()
+                    });
+                    
                     transaction.update(clubDataDocRef, {
                         'organization.members': FieldValue.arrayUnion(newUserToAdd),
                         'lastJoinToken': token
