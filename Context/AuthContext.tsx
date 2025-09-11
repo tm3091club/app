@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("User creation failed.");
         }
 
-        const dataDocRef = db.collection('organization').doc(newUser.uid);
+        const dataDocRef = db.collection('users').doc(newUser.uid);
         const newName = newUser.displayName || newUser.email!;
         const newAppUser: AppUser = { uid: newUser.uid, email: newUser.email!, name: newName, role: UserRole.Admin };
         const newOrg: Organization = {
