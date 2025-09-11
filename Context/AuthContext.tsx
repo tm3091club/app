@@ -3,13 +3,6 @@ import firebase from 'firebase/compat/app';
 import { auth, db } from '../services/firebase';
 import { Organization, AppUser, UserRole } from '../types';
 
-const getDefaultWorkingDate = (): string => {
-    const today = new Date();
-    // Default to the first Wednesday of next month.
-    const d = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 1));
-    d.setUTCDate(d.getUTCDate() + (3 - d.getUTCDay() + 7) % 7);
-    return d.toISOString().split('T')[0];
-};
 
 interface AuthContextType {
     user: firebase.User | null;
@@ -50,8 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("User creation failed.");
         }
 
-        const dataDocRef = db.collection('users').doc(newUser.uid);
-        const defaultDate = getDefaultWorkingDate();
+        const dataDocRef = db.collection('organization').doc(newUser.uid);
         const newName = newUser.displayName || newUser.email!;
         const newAppUser: AppUser = { uid: newUser.uid, email: newUser.email!, name: newName, role: UserRole.Admin };
         const newOrg: Organization = {
@@ -66,7 +58,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             schedules: {},
             availability: {},
             weeklyAgendas: {},
-            workingDate: defaultDate,
             organization: newOrg,
             email: newUser.email
         };

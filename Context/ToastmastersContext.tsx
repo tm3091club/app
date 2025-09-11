@@ -9,18 +9,10 @@ import { db, FieldValue } from '../services/firebase';
 import firebase from 'firebase/compat/app';
 
 
-const getDefaultWorkingDate = (): string => {
-    const today = new Date();
-    // Default to the first Wednesday of next month.
-    const d = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 1));
-    d.setUTCDate(d.getUTCDate() + (3 - d.getUTCDay() + 7) % 7);
-    return d.toISOString().split('T')[0];
-};
 
 interface ToastmastersState {
   schedules: MonthlySchedule[];
   availability: { [memberId: string]: MemberAvailability };
-  workingDate: string | null;
   selectedScheduleId: string | null;
   organization: Organization | null;
   members: Member[]; // Scheduling members (separate from auth users)
@@ -38,7 +30,6 @@ interface ToastmastersState {
   addSchedule: (payload: { schedule: MonthlySchedule; }) => Promise<void>;
   updateSchedule: (payload: { schedule: MonthlySchedule; }) => Promise<void>;
   deleteSchedule: (payload: { scheduleId: string; }) => Promise<void>;
-  setWorkingDate: (date: string | null) => Promise<void>;
   setSelectedScheduleId: (scheduleId: string | null) => void;
   deleteMember: (payload: { memberId: string }) => Promise<void>;
   updateUserName: (payload: { uid: string; newName: string; }) => Promise<void>;
@@ -60,7 +51,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     
     const [schedules, setSchedules] = useState<MonthlySchedule[]>([]);
     const [availability, setAvailability] = useState<{ [memberId: string]: MemberAvailability }>({});
-    const [workingDate, setWorkingDateState] = useState<string | null>(null);
     const [selectedScheduleId, setSelectedScheduleIdState] = useState<string | null>(null);
     const [organization, setOrganization] = useState<Organization | null>(null);
     const [members, setMembers] = useState<Member[]>([]);
@@ -190,7 +180,50 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setSchedules(loadedSchedules);
             setAvailability(deepClone(data.availability || {}));
             setOrganization(deepClone(data.organization || null));
-            setMembers(deepClone(data.members || [])); // Load separate scheduling members
+            
+            // Sync officer roles from organization members to scheduling members
+            let schedulingMembers = deepClone(data.members || []);
+            if (data.organization?.members) {
+                // MIGRATION: If scheduling members array is empty, populate it from organization members
+                if (schedulingMembers.length === 0 && data.organization.members.length > 0) {
+                    schedulingMembers = data.organization.members.map((orgMember: any) => {
+                        const member: any = {
+                            id: orgMember.id || orgMember.uid || uuidv4(),
+                            name: orgMember.name || '',
+                            status: orgMember.status || 'Active',
+                            isToastmaster: orgMember.isToastmaster || false,
+                            isTableTopicsMaster: orgMember.isTableTopicsMaster || false,
+                            isGeneralEvaluator: orgMember.isGeneralEvaluator || false,
+                            isPastPresident: orgMember.isPastPresident || false
+                        };
+                        
+                        // Only add fields that are not undefined
+                        if (orgMember.uid !== undefined) member.uid = orgMember.uid;
+                        if (orgMember.joinedDate !== undefined) member.joinedDate = orgMember.joinedDate;
+                        if (orgMember.ownerId !== undefined) member.ownerId = orgMember.ownerId;
+                        if (orgMember.officerRole !== undefined) member.officerRole = orgMember.officerRole;
+                        
+                        return member;
+                    });
+                    
+                    // Save the migrated data to the database
+                    const docRef = db.collection('users').doc(ownerId);
+                    docRef.update({ 'members': schedulingMembers }).catch((error) => {
+                        console.error('Migration failed:', error);
+                    });
+                } else {
+                    // Normal sync: Update scheduling members with officer roles from organization members
+                    schedulingMembers.forEach(member => {
+                        if (member.uid) {
+                            const orgMember = data.organization.members.find((om: any) => om.uid === member.uid);
+                            if (orgMember && orgMember.officerRole) {
+                                member.officerRole = orgMember.officerRole;
+                            }
+                        }
+                    });
+                }
+            }
+            setMembers(schedulingMembers);
             setWeeklyAgendas(deepClone(data.weeklyAgendas || []));
             
             // Set currentUser - if me is null but user is club owner, create a currentUser object
@@ -258,7 +291,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 }
             }
 
-            let initialWorkingDate = data.workingDate || null;
             // Only auto-select a schedule if no schedule is currently selected AND this is the initial load
             // If a schedule was previously selected, check if it still exists in the loaded schedules
             // Use the ref to get the current value to avoid stale closures
@@ -274,9 +306,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     );
                     const newSelectedId = sortedSchedules[0].id;
                     setSelectedScheduleIdState(newSelectedId);
-                    if (sortedSchedules[0].meetings.length > 0) {
-                        initialWorkingDate = sortedSchedules[0].meetings[0].date.split('T')[0];
-                    }
                 }
                 // If current schedule exists, keep it selected (don't change)
             } else if (currentSelectedId === null && loadedSchedules.length > 0) {
@@ -286,12 +315,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 );
                 const newSelectedId = sortedSchedules[0].id;
                 setSelectedScheduleIdState(newSelectedId);
-                if (sortedSchedules[0].meetings.length > 0) {
-                    initialWorkingDate = sortedSchedules[0].meetings[0].date.split('T')[0];
-                }
             }
-
-            setWorkingDateState(current => current || initialWorkingDate || getDefaultWorkingDate());
             setError(null);
             setLoading(false);
         }, (err) => {
@@ -307,7 +331,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (!user) {
             setSchedules([]);
             setAvailability({});
-            setWorkingDateState(null);
             setSelectedScheduleIdState(null);
             setOrganization(null);
             setMembers([]);
@@ -405,27 +428,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         };
     }, [user, cleanupSubscriptions, completeUserJoin, setupListeners]);
 
-    // Effect to update working date when selected schedule changes
-    // REMOVED: This was causing conflicts between schedule viewing and availability management
-    // The workingDate should only be changed manually by the user, not automatically
-    // when viewing different schedules
-    // useEffect(() => {
-    //     if (selectedScheduleId && schedules.length > 0) {
-    //         const schedule = schedules.find(s => s.id === selectedScheduleId);
-    //         if (schedule && schedule.meetings.length > 0) {
-    //         const newWorkingDate = schedule.meetings[0].date.split('T')[0];
-    //         setWorkingDate(newWorkingDate);
-    //     }
-    //     }
-    // }, [selectedScheduleId, schedules]);
-
-    const setWorkingDate = async (date: string | null) => {
-        setWorkingDateState(date);
-        const docRef = getDataDocRef();
-        if (docRef) {
-            await docRef.set({ workingDate: date }, { merge: true });
-        }
-    };
 
     const setSelectedScheduleId = useCallback((scheduleId: string | null) => {
         setSelectedScheduleIdState(scheduleId);
@@ -485,7 +487,20 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             }
             return m;
         });
-        await docRef.update({ 'organization.members': updatedMembers });
+        
+        // Also update the separate members array for scheduling
+        const updatedSchedulingMembers = members.map(m => {
+            if (m.uid === uid || (m.uid === null && m.id === uid)) {
+                return { ...m, role: newRole };
+            }
+            return m;
+        });
+        setMembers(updatedSchedulingMembers);
+        
+        await docRef.update({ 
+            'organization.members': updatedMembers,
+            'members': updatedSchedulingMembers
+        });
     };
 
     const removeUser = async (uid: string) => {
@@ -643,7 +658,15 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         
         const updatedOrganization = { ...organization, members: updatedMembers };
         setOrganization(updatedOrganization);
-        await docRef.update({ 'organization': updatedOrganization });
+        
+        // Also update the separate members array for scheduling
+        const updatedSchedulingMembers = members.map(m => m.id === memberId ? { ...m, uid } : m);
+        setMembers(updatedSchedulingMembers);
+        
+        await docRef.update({ 
+            'organization': updatedOrganization,
+            'members': updatedSchedulingMembers
+        });
     };
 
 
@@ -664,7 +687,15 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const updatedMembers = [...organization.members, newMember];
         const updatedOrganization = { ...organization, members: updatedMembers };
         setOrganization(updatedOrganization);
-        await docRef.update({ 'organization': updatedOrganization });
+        
+        // Also add to the separate members array for scheduling
+        const updatedSchedulingMembers = [...members, newMember];
+        setMembers(updatedSchedulingMembers);
+        
+        await docRef.update({ 
+            'organization': updatedOrganization,
+            'members': updatedSchedulingMembers
+        });
     };
 
     const updateMemberName = async (payload: { memberId: string; newName: string; }) => {
@@ -681,7 +712,15 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const updatedMembers = organization.members.map(m => m.id === memberId ? { ...m, name: trimmedName } : m);
         const updatedOrganization = { ...organization, members: updatedMembers };
         setOrganization(updatedOrganization);
-        await docRef.update({ 'organization': updatedOrganization });
+        
+        // Also update the separate members array for scheduling
+        const updatedSchedulingMembers = members.map(m => m.id === memberId ? { ...m, name: trimmedName } : m);
+        setMembers(updatedSchedulingMembers);
+        
+        await docRef.update({ 
+            'organization': updatedOrganization,
+            'members': updatedSchedulingMembers
+        });
     };
     
     const updateMemberStatus = async (payload: { id: string; status: MemberStatus; }) => {
@@ -692,8 +731,13 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const updatedOrganization = { ...organization, members: updatedMembers };
         setOrganization(updatedOrganization);
         
+        // Also update the separate members array for scheduling
+        const updatedSchedulingMembers = members.map(m => m.id === id ? { ...m, status } : m);
+        setMembers(updatedSchedulingMembers);
+        
         await docRef.update({
             'organization': updatedOrganization,
+            'members': updatedSchedulingMembers,
             [`availability.${id}`]: FieldValue.delete()
         });
     };
@@ -717,7 +761,15 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const updatedMembers = organization.members.map(m => m.id === payload.id ? { ...m, ...payload.qualifications } : m);
         const updatedOrganization = { ...organization, members: updatedMembers };
         setOrganization(updatedOrganization);
-        await docRef.update({ 'organization': updatedOrganization });
+        
+        // Also update the separate members array for scheduling
+        const updatedSchedulingMembers = members.map(m => m.id === payload.id ? { ...m, ...payload.qualifications } : m);
+        setMembers(updatedSchedulingMembers);
+        
+        await docRef.update({ 
+            'organization': updatedOrganization,
+            'members': updatedSchedulingMembers
+        });
     };
 
     const setMemberAvailability = async (payload: { memberId: string; date: string; status: AvailabilityStatus; }) => {
@@ -806,9 +858,14 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const updatedMembers = organization.members.filter(m => m.id !== payload.memberId);
         const updatedOrganization = { ...organization, members: updatedMembers };
         setOrganization(updatedOrganization);
+        
+        // Also remove from the separate members array for scheduling
+        const updatedSchedulingMembers = members.filter(m => m.id !== payload.memberId);
+        setMembers(updatedSchedulingMembers);
 
         await docRef.update({ 
             'organization': updatedOrganization,
+            'members': updatedSchedulingMembers,
             [`availability.${payload.memberId}`]: FieldValue.delete()
         });
     };
@@ -848,9 +905,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const value = {
-        schedules, availability, workingDate, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
+        schedules, availability, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
         addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
-        addSchedule, updateSchedule, deleteSchedule, setWorkingDate, setSelectedScheduleId, deleteMember,
+        addSchedule, updateSchedule, deleteSchedule, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
         sendPasswordResetEmail, linkMemberToAccount, saveWeeklyAgenda, deleteWeeklyAgenda
     };

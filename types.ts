@@ -4,11 +4,22 @@ export enum UserRole {
   Member = 'Member',
 }
 
+export enum OfficerRole {
+  President = 'President',
+  VicePresidentEducation = 'Vice President Education',
+  VicePresidentMembership = 'Vice President Membership', 
+  VicePresidentPublicRelations = 'Vice President Public Relations',
+  Secretary = 'Secretary',
+  Treasurer = 'Treasurer',
+  SergeantAtArms = 'Sergeant at Arms'
+}
+
 export interface AppUser {
   uid: string;
   email: string;
   name: string;
   role: UserRole;
+  officerRole?: OfficerRole; // New field for officer position
   ownerId?: string; // Links member to the club owner who manages them
 }
 
@@ -46,6 +57,7 @@ export interface Member {
   uid?: string; // Link to the user account
   joinedDate?: string; // ISO date string when member joined
   ownerId?: string; // Links member to the club owner who manages them
+  officerRole?: OfficerRole; // Officer position within the club
 }
 
 export interface MemberAvailability {

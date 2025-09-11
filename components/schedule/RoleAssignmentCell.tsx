@@ -38,26 +38,23 @@ export const RoleAssignmentCell: React.FC<{
                 (!organization || !m.name.includes(organization.name))
               );
 
-        // For members (non-admins), show only qualified members and currently assigned member
+        // For members (non-admins), show qualified members but restrict editing permissions
         if (currentUser?.role !== 'Admin') {
             const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
             if (!currentMember) return [];
 
-            // Only show dropdown if role is unassigned OR if current user is assigned to this role
-            const isCurrentUserAssigned = assignedMemberId === currentMember.id || assignedMemberId === currentMember.uid;
+            // Check if current user can edit this role assignment
+            const isCurrentUserAssignedToRole = assignedMemberId === currentMember.id || assignedMemberId === currentMember.uid;
             const isRoleUnassigned = !assignedMemberId;
+            const canEdit = isRoleUnassigned || isCurrentUserAssignedToRole;
             
-            if (!isRoleUnassigned && !isCurrentUserAssigned) {
-                return []; // Don't show dropdown for other members' assignments
-            }
+            // Always show qualified members for viewing, but restrict editing based on permissions
+            let membersToShow = [...qualifiedMembers];
 
-            // Start with qualified members (including current user if qualified)
-            const membersToShow = qualifiedMembers.filter(m => m.id === currentMember.id);
-
-            // If someone else is currently assigned, also show them (but they'll be disabled in the options)
+            // If someone else is currently assigned, also show them
             if (assignedMemberId && assignedMemberId !== currentMember.id) {
                 const assignedMember = availableMembers.find(m => m.id === assignedMemberId);
-                if (assignedMember) {
+                if (assignedMember && !membersToShow.some(m => m.id === assignedMember.id)) {
                     membersToShow.unshift(assignedMember); // Add at the beginning
                 }
             }
@@ -142,7 +139,7 @@ export const RoleAssignmentCell: React.FC<{
     const assignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId) : null;
     
     // Check if current user is assigned to this role and account is linked
-    const isCurrentUserAssigned = currentUser?.uid && assignedMember?.uid === currentUser.uid;
+    const isCurrentUserAssignedToThisRole = currentUser?.uid && assignedMember?.uid === currentUser.uid;
 
     const baseClasses = "w-full bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-1.5 px-1 sm:py-2 sm:px-3 text-[12px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] text-center appearance-none min-w-0 overflow-hidden";
     const unassignedClasses = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 font-semibold !border-red-300 dark:!border-red-700";
@@ -155,7 +152,7 @@ export const RoleAssignmentCell: React.FC<{
     if (disabled && membersForThisRole.length === 0 && !assignedMemberId) {
         return (
             <div className="relative w-full">
-                <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3').replace('text-center', '')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssigned ? currentUserAssignedClasses : readOnlyClasses)}`}
+                <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3').replace('text-center', '')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssignedToThisRole ? currentUserAssignedClasses : readOnlyClasses)}`}
                      style={{
                          // Safari-specific fixes for text centering
                          textAlign: 'center',
@@ -171,7 +168,7 @@ export const RoleAssignmentCell: React.FC<{
     let dropdownClasses;
     if (isUnassigned) {
         dropdownClasses = unassignedClasses;
-    } else if (isCurrentUserAssigned) {
+    } else if (isCurrentUserAssignedToThisRole) {
         dropdownClasses = currentUserAssignedClasses;
     } else {
         dropdownClasses = assignedClasses;
@@ -185,7 +182,7 @@ export const RoleAssignmentCell: React.FC<{
                 disabled={disabled}
                 className={`${baseClasses.replace('text-center', '')} ${dropdownClasses} ${disabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''}`}
                 aria-label={`Assign role for ${role}`}
-                title={isCurrentUserAssigned ? "This is your assignment - click to change or unassign" : undefined}
+                title={isCurrentUserAssignedToThisRole ? "This is your assignment - click to change or unassign" : undefined}
                 style={{
                     // Safari-specific fixes for text centering
                     WebkitAppearance: 'none',
@@ -223,11 +220,14 @@ export const RoleAssignmentCell: React.FC<{
                 // Note: Green styling will be applied via CSS for available members without roles
 
                 // Check if this is the current user and account is linked
-                const isCurrentUser = currentUser?.uid && member.uid === currentUser.uid;
+                const isCurrentUserAssignedInRole = currentUser?.uid && member.uid === currentUser.uid;
                 const isAccountLinked = currentUser?.uid && member.uid === currentUser.uid;
                 
-                // For members (non-admins), only allow them to select themselves or unassign
-                const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUser;
+                // For members (non-admins), only allow them to select themselves, unassign, or if role is unassigned
+                const isRoleUnassigned = !assignedMemberId;
+                const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
+                const isCurrentUserAssignedToThisRole = assignedMemberId === currentMember?.id || assignedMemberId === currentMember?.uid;
+                const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUserAssignedInRole && !isRoleUnassigned && !isCurrentUserAssignedToThisRole;
 
                 // Enhanced display text for current user when account is linked
                 let finalDisplayText = displayText;
