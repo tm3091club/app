@@ -92,7 +92,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         }
     
         const { ownerId, invitedUserName, memberId } = inviteDoc.data()!;
-        console.log('Invitation data:', { ownerId, invitedUserName, memberId });
         const clubDataDocRef = db.collection('users').doc(ownerId);
         const userPointerDocRef = db.collection('users').doc(joiningUser.uid);
     
@@ -123,19 +122,33 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 });
                 
                 // Check if this invitation is for an existing member
-                console.log('Processing invitation with memberId:', memberId);
+                const existingSchedulingMembers = clubDoc.data()?.members || [];
+                const existingOrgMembers = clubDoc.data()?.organization?.members || [];
+                
+                let memberToLink = null;
+                
                 if (memberId) {
+                    // Try to find member by memberId first
+                    memberToLink = existingSchedulingMembers.find((m: any) => m.id === memberId);
+                }
+                
+                if (!memberToLink) {
+                    // Fallback: try to find member by name and email (for old invitations without memberId)
+                    memberToLink = existingSchedulingMembers.find((m: any) => 
+                        m.name.toLowerCase() === newName.toLowerCase() && 
+                        !m.uid // Only match unlinked members
+                    );
+                }
+                
+                if (memberToLink) {
                     // Link the existing member to the new user account
-                    const existingSchedulingMembers = clubDoc.data()?.members || [];
-                    const existingOrgMembers = clubDoc.data()?.organization?.members || [];
-                    
-                    // Update the existing member in the scheduling members array to link their UID
                     const updatedSchedulingMembers = existingSchedulingMembers.map((m: any) => 
-                        m.id === memberId ? { ...m, uid: joiningUser.uid } : m
+                        m.id === memberToLink.id ? { ...m, uid: joiningUser.uid } : m
                     );
                     
                     // Add the new user to organization.members (they don't exist there yet)
                     const updatedOrgMembers = [...existingOrgMembers, newUserToAdd];
+                    
                     
                     transaction.update(clubDataDocRef, {
                         'members': updatedSchedulingMembers,
@@ -540,7 +553,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
     const inviteUser = async (payload: { email: string; name: string; memberId?: string }) => {
         const { email, name, memberId } = payload;
-        console.log('inviteUser called with:', { email, name, memberId });
         if (!dataOwnerId || !currentUser || !organization) {
           throw new Error("Cannot send invite: missing user or organization data.");
         }
