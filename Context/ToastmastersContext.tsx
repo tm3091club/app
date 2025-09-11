@@ -436,17 +436,21 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     } else {
                         // Check for pending invitation token
                         const token = sessionStorage.getItem('inviteToken');
+                        console.log('DEBUG: Checking for inviteToken in sessionStorage:', token);
                         
                         if (token) {
+                            console.log('DEBUG: Found inviteToken, calling completeUserJoin...');
                             try {
                                 ownerIdToUse = await completeUserJoin(token, user);
+                                console.log('DEBUG: completeUserJoin successful, ownerIdToUse:', ownerIdToUse);
                                 sessionStorage.removeItem('inviteToken');
                             } catch (joinError: any) {
-                                console.error(`User join failed:`, joinError);
+                                console.error(`DEBUG: User join failed:`, joinError);
                                 // If join fails, user is not authorized
                                 throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                             }
                         } else {
+                            console.log('DEBUG: No inviteToken found in sessionStorage');
                             // Check if user exists as a member with ownerId in any club
                             const usersSnapshot = await db.collection('users').get();
                             
