@@ -40,7 +40,7 @@ class EmailService {
         },
         // The extension will use the default FROM address you configured
       });
-      console.log('Email queued successfully via Firebase Extension');
+      // Email queued successfully via Firebase Extension
     } catch (error) {
       console.error('Error queuing email:', error);
       throw error;
@@ -340,7 +340,7 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`
       };
 
       await this.queueEmail(emailRequest);
-      console.log(`Availability request emails queued for ${recipients.length} recipients`);
+      // Availability request emails queued
     } catch (error) {
       console.error('Error sending availability request emails:', error);
       throw error;
@@ -387,7 +387,7 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`
       };
 
       await this.queueEmail(emailRequest);
-      console.log(`Personalized availability request email queued for ${recipient.name}`);
+      // Personalized availability request email queued
     } catch (error) {
       console.error('Error sending personalized availability request email:', error);
       throw error;
@@ -429,7 +429,7 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`
       };
 
       await this.queueEmail(testEmailRequest);
-      console.log('Test email queued successfully');
+      // Test email queued successfully
     } catch (error) {
       console.error('Error sending test email:', error);
       throw error;

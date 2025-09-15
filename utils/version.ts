@@ -61,6 +61,6 @@ export const getNextVersion = (): string => {
 // Function to manually update version (for git hooks)
 export const updateVersion = (): void => {
   const newVersion = generateVersion();
-  console.log(`Version updated to: ${newVersion}`);
+  // Version updated
   // In a real implementation, this would write to a file or update git metadata
 };

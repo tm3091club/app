@@ -1,6 +1,0 @@
-Fix Safari mobile centering issue for dropdown names
-
-- Added Safari-specific CSS fixes for text centering in role assignment dropdowns
-- Wrapped select elements in container divs for better layout control
-- Added Webkit-specific text alignment properties to override Safari's default behavior
-- Applied fixes to both editable dropdowns and read-only display cases

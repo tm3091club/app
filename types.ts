@@ -91,6 +91,11 @@ export interface PendingInvite {
   email: string;
   invitedUserName: string;
   ownerId: string;
+  memberId?: string; // Link to existing member if provided
+  status?: 'pending' | 'completed';
+  createdAt?: any; // Firestore timestamp
+  completedAt?: any; // Firestore timestamp
+  completedBy?: string; // UID of user who completed the invitation
 }
 
 export enum NotificationType {

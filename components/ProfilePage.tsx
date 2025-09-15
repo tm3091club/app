@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { useAuth } from '../Context/AuthContext';
-import { AppUser, UserRole, Organization, OfficerRole } from '../types';
+import { AppUser, UserRole, Organization, OfficerRole, PendingInvite } from '../types';
 import { ConfirmationModal } from './common/ConfirmationModal';
 import NotificationScheduler from './NotificationScheduler';
 import { EmailTestComponent } from './EmailTestComponent';
@@ -387,7 +387,7 @@ const TeamMemberListItem: React.FC<{
 
 
 export const ProfilePage = (): React.ReactElement | null => {
-    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, updateUserRole, removeUser, sendPasswordResetEmail } = useToastmasters();
+    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, updateUserRole, removeUser, sendPasswordResetEmail, pendingInvites, inviteUser, revokeInvite, removeFromPendingLinking } = useToastmasters();
     const { updatePassword, user, updateUserEmail } = useAuth();
     
     // State for club profile form
@@ -638,6 +638,42 @@ export const ProfilePage = (): React.ReactElement | null => {
             setIsSendingPasswordReset(null);
         }
     };
+
+    const handleResendInvite = async (invite: PendingInvite) => {
+        try {
+            // Create a new invitation with the same details
+            await inviteUser({ 
+                email: invite.email, 
+                name: invite.invitedUserName, 
+                memberId: invite.memberId 
+            });
+        } catch (error: any) {
+            console.error("Failed to resend invitation", error);
+        }
+    };
+
+    const handleChangeInviteEmail = async (invite: PendingInvite, newEmail: string) => {
+        try {
+            // Revoke the old invitation
+            await revokeInvite(invite.id);
+            // Send a new invitation with the new email
+            await inviteUser({ 
+                email: newEmail, 
+                name: invite.invitedUserName, 
+                memberId: invite.memberId 
+            });
+        } catch (error: any) {
+            console.error("Failed to change invitation email", error);
+        }
+    };
+
+    const handleRemoveFromPendingLinking = async (inviteId: string) => {
+        try {
+            await removeFromPendingLinking(inviteId);
+        } catch (error: any) {
+            console.error("Failed to remove from pending linking", error);
+        }
+    };
     
     const hasClubProfileChanged = organization ? 
       clubName.trim() !== organization.name ||
@@ -872,6 +908,83 @@ export const ProfilePage = (): React.ReactElement | null => {
             </div>}
             
             
+            {/* Pending to be Linked Section */}
+            {isAdmin && pendingInvites.filter(invite => invite.memberId && invite.status === 'pending').length > 0 && (
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 mb-6">
+                    <div className="mb-6">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Pending to be Linked</h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Members who have been sent invitations but haven't linked their accounts yet.
+                        </p>
+                    </div>
+                    <div className="space-y-3">
+                        {pendingInvites
+                            .filter(invite => invite.memberId && invite.status === 'pending')
+                            .map(invite => {
+                                // Find the corresponding member in organization.members
+                                const member = organization?.members?.find(m => m.id === invite.memberId);
+                                const memberName = member?.name || invite.invitedUserName;
+                                
+                                const formatDate = (timestamp: any) => {
+                                    if (!timestamp) return 'Unknown';
+                                    if (timestamp.toDate) {
+                                        return timestamp.toDate().toLocaleDateString();
+                                    }
+                                    return new Date(timestamp).toLocaleDateString();
+                                };
+
+                                return (
+                                    <div key={invite.id} className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-grow">
+                                                <h4 className="font-medium text-gray-900 dark:text-white">{memberName}</h4>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    Invitation sent to: <span className="font-medium">{invite.email}</span>
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-500">
+                                                    Sent: {formatDate(invite.createdAt)}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={() => handleResendInvite(invite)}
+                                                    className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                                    title="Resend invitation"
+                                                >
+                                                    Resend
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        const newEmail = prompt('Enter new email address:', invite.email);
+                                                        if (newEmail && newEmail !== invite.email) {
+                                                            handleChangeInviteEmail(invite, newEmail);
+                                                        }
+                                                    }}
+                                                    className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                                    title="Change email"
+                                                >
+                                                    Change Email
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (confirm(`Remove ${memberName} from pending linking? This will delete the invitation and remove the member from the club.`)) {
+                                                            handleRemoveFromPendingLinking(invite.id);
+                                                        }
+                                                    }}
+                                                    className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30"
+                                                    title="Remove from pending"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                    </div>
+                </div>
+            )}
+
             {isAdmin && (
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
                     <div className="mb-6">

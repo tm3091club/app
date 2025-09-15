@@ -163,20 +163,16 @@ export const ScheduleView: React.FC = () => {
 
     // Handlers now perform actions that will be immediately reflected
     const handleNewSchedule = useCallback(async () => {
-        console.log('🚀 handleNewSchedule called!');
-        console.log('📋 Organization:', organization);
-        console.log('📋 Organization meetingDay:', organization?.meetingDay);
-        console.log('📋 Members count:', hydratedMembers?.length);
-        console.log('📋 Members:', hydratedMembers);
+        // Creating new schedule
         
         if (!hydratedMembers || hydratedMembers.length === 0) {
-            console.log('❌ No members found for schedule generation');
+            // No members found for schedule generation
             setError("Please go to 'Manage Members' and add members before generating a schedule.");
             return;
         }
         
         if (!organization?.meetingDay && organization?.meetingDay !== 0) {
-            console.log('❌ No meeting day set in organization');
+            // No meeting day set in organization
             setError("Please set a meeting day in your Club Profile first.");
             return;
         }
@@ -184,7 +180,7 @@ export const ScheduleView: React.FC = () => {
         // Automatically determine the next month to generate
         const nextMonthInfo = getNextScheduleMonth(schedules, organization.meetingDay);
         const { year, month } = nextMonthInfo;
-        console.log('📅 Next month info:', nextMonthInfo);
+        // Next month info determined
         
         const id = `${year}-${String(month + 1).padStart(2, '0')}`;
         if (Array.isArray(schedules) && schedules.some(s => s.id === id)) {
@@ -206,22 +202,14 @@ export const ScheduleView: React.FC = () => {
             
             if (numThemes > 0) {
                 try {
-                    console.log('🎯 Starting theme generation process...');
-                    console.log('📊 Theme generation parameters:', {
-                        month: new Date(year, month).toLocaleString('default', { month: 'long' }),
-                        year,
-                        numThemes,
-                        pastThemesCount: allPastThemes.length
-                    });
-                    
-                    console.log('🔧 About to call generateThemes function...');
+                    // Starting theme generation process
                     themes = await generateThemes(
                         new Date(year, month).toLocaleString('default', { month: 'long' }),
                         year,
                         allPastThemes,
                         numThemes
                     );
-                    console.log('✅ Successfully generated themes:', themes);
+                    // Successfully generated themes
                 } catch (themeError) {
                     console.error('❌ Failed to generate themes:', themeError);
                     console.error('Error details:', {

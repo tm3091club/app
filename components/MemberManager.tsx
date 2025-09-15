@@ -9,19 +9,42 @@ const LinkAccountModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     onLink: (email: string) => Promise<void>;
+    onSearchExisting: () => Promise<void>;
     memberName: string;
-}> = ({ isOpen, onClose, onLink, memberName }) => {
+    memberId: string;
+}> = ({ isOpen, onClose, onLink, onSearchExisting, memberName, memberId }) => {
     const [email, setEmail] = useState('');
     const [isLinking, setIsLinking] = useState(false);
+    const [isSearching, setIsSearching] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             setEmail('');
             setError(null);
+            setSuccess(null);
             setIsLinking(false);
+            setIsSearching(false);
         }
     }, [isOpen]);
+
+    const handleSearchExisting = async () => {
+        setIsSearching(true);
+        setError(null);
+        setSuccess(null);
+        
+        try {
+            const result = await onSearchExisting();
+            if (result) {
+                setSuccess(result);
+            }
+        } catch (error: any) {
+            setError(error.message || 'Failed to search for existing account.');
+        } finally {
+            setIsSearching(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,12 +79,69 @@ const LinkAccountModal: React.FC<{
                 <form onSubmit={handleSubmit}>
                     <div className="p-6">
                         <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                            Send Invitation for "{memberName}"
+                            Link Account for "{memberName}"
                         </h3>
                         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Enter the email address to send an invitation. They will receive an email with a link to create an account and join this member profile.
+                            First, try searching for an existing account, or send a new invitation if they don't have one yet.
                         </p>
+                        
+                        {success && (
+                            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                                <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
+                            </div>
+                        )}
+                        
+                        {error && (
+                            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+                            </div>
+                        )}
+                        
                         <div className="mt-4">
+                            <button
+                                type="button"
+                                onClick={handleSearchExisting}
+                                disabled={isSearching}
+                                className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            >
+                                {isSearching ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Searching...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        Search for Existing Account
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                        
+                        <div className="mt-6">
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+                                </div>
+                                <div className="relative flex justify-center text-sm">
+                                    <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-6">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Send New Invitation
+                            </label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                                Enter an email address to send a new invitation. They will receive an email with a link to create an account and join this member profile.
+                            </p>
+                            <div className="mt-4">
                             <label htmlFor="link-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Email Address
                             </label>
@@ -78,6 +158,7 @@ const LinkAccountModal: React.FC<{
                             {error && (
                                 <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
                             )}
+                            </div>
                         </div>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg">
@@ -213,10 +294,7 @@ const MemberRow: React.FC<{
     linkedUser?: AppUser | null;
     onLink: () => void;
     onUnlink: () => void;
-    onResendInvite: (invite: PendingInvite) => void;
-    onChangeInviteEmail: (invite: PendingInvite, newEmail: string) => void;
-    getPendingInviteForMember: (memberId: string) => PendingInvite | null;
-}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink, onResendInvite, onChangeInviteEmail, getPendingInviteForMember }) => {
+}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
     const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
     const isAdmin = currentUser?.role === UserRole.Admin;
     const canEditRow = isAdmin;
@@ -311,50 +389,11 @@ const MemberRow: React.FC<{
                             </div>
                             {linkedUser ? (
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{linkedUser.email}</p>
-                            ) : (() => {
-                                const pendingInvite = getPendingInviteForMember(member.id);
-                                if (pendingInvite) {
-                                    return (
-                                        <div className="mt-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
-                                                    Invitation sent to {pendingInvite.email}
-                                                </span>
-                                                {isAdmin && (
-                                                    <div className="flex gap-1">
-                                                        <button 
-                                                            onClick={() => onResendInvite(pendingInvite)}
-                                                            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                            title="Resend invitation"
-                                                        >
-                                                            Resend
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => {
-                                                                const newEmail = prompt('Enter new email address:', pendingInvite.email);
-                                                                if (newEmail && newEmail !== pendingInvite.email) {
-                                                                    onChangeInviteEmail(pendingInvite, newEmail);
-                                                                }
-                                                            }}
-                                                            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                            title="Change email"
-                                                        >
-                                                            Change
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                } else if (isAdmin) {
-                                    return (
-                                        <button onClick={onLink} className="mt-1 text-xs text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
-                                            Link Account...
-                                        </button>
-                                    );
-                                }
-                                return null;
-                            })()}
+                            ) : isAdmin ? (
+                                <button onClick={onLink} className="mt-1 text-xs text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
+                                    Link Account...
+                                </button>
+                            ) : null}
                         </div>
                     </div>
                 )}
@@ -469,10 +508,7 @@ const MobileMemberCard: React.FC<{
     linkedUser?: AppUser | null;
     onLink: () => void;
     onUnlink: () => void;
-    onResendInvite: (invite: PendingInvite) => void;
-    onChangeInviteEmail: (invite: PendingInvite, newEmail: string) => void;
-    getPendingInviteForMember: (memberId: string) => PendingInvite | null;
-}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink, onResendInvite, onChangeInviteEmail, getPendingInviteForMember }) => {
+}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
     const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
     const isAdmin = currentUser?.role === UserRole.Admin;
     const canEditRow = isAdmin;
@@ -662,45 +698,11 @@ const MobileMemberCard: React.FC<{
                                     </p>
                                 )}
                             </div>
-                            {(() => {
-                                const pendingInvite = getPendingInviteForMember(member.id);
-                                if (pendingInvite) {
-                                    return (
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
-                                                    Invitation sent to {pendingInvite.email}
-                                                </span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button 
-                                                    onClick={() => onResendInvite(pendingInvite)}
-                                                    className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                >
-                                                    Resend
-                                                </button>
-                                                <button 
-                                                    onClick={() => {
-                                                        const newEmail = prompt('Enter new email address:', pendingInvite.email);
-                                                        if (newEmail && newEmail !== pendingInvite.email) {
-                                                            onChangeInviteEmail(pendingInvite, newEmail);
-                                                        }
-                                                    }}
-                                                    className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                >
-                                                    Change Email
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                } else {
-                                    return (
-                                        <button onClick={onLink} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
-                                            Link Account...
-                                        </button>
-                                    );
-                                }
-                            })()}
+                            {isAdmin ? (
+                                <button onClick={onLink} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
+                                    Link Account...
+                                </button>
+                            ) : null}
                         </>
                     )}
                 </div>
@@ -820,15 +822,12 @@ const MembersTable: React.FC<{
     onSaveEdit: () => Promise<void>;
     onLink: (member: Member) => void;
     onUnlink: (memberId: string) => void;
-    onResendInvite: (invite: PendingInvite) => void;
-    onChangeInviteEmail: (invite: PendingInvite, newEmail: string) => void;
-    getPendingInviteForMember: (memberId: string) => PendingInvite | null;
     handleSortRequest?: () => void;
     sortConfig?: { direction: 'ascending' | 'descending' };
 }> = ({ 
     memberList, isMyProfileSection = false, isAdmin, meetingDates, monthName,
     editingMemberId, editedName, editError, organization, onNameChange, onStartEdit, onCancelEdit, onSaveEdit,
-    onLink, onUnlink, onResendInvite, onChangeInviteEmail, getPendingInviteForMember, handleSortRequest, sortConfig
+    onLink, onUnlink, handleSortRequest, sortConfig
 }) => {
     return (
         <>
@@ -871,9 +870,6 @@ const MembersTable: React.FC<{
                                 linkedUser={member?.uid ? { uid: member.uid, email: member.email || '', name: member.name, role: UserRole.Member } : null}
                                 onLink={() => onLink(member)}
                                 onUnlink={() => onUnlink(member.id)}
-                                onResendInvite={onResendInvite}
-                                onChangeInviteEmail={onChangeInviteEmail}
-                                getPendingInviteForMember={getPendingInviteForMember}
                             />
                         )) : (
                             <tr>
@@ -904,9 +900,6 @@ const MembersTable: React.FC<{
                         linkedUser={member?.uid ? { uid: member.uid, email: member.email || '', name: member.name, role: UserRole.Member } : null}
                         onLink={() => onLink(member)}
                         onUnlink={() => onUnlink(member.id)}
-                        onResendInvite={onResendInvite}
-                        onChangeInviteEmail={onChangeInviteEmail}
-                        getPendingInviteForMember={getPendingInviteForMember}
                     />
                  )) : (
                     <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -920,7 +913,7 @@ const MembersTable: React.FC<{
 
 
 export const MemberManager: React.FC = () => {
-    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, linkCurrentUserToMember, inviteUser, pendingInvites, revokeInvite } = useToastmasters();
+    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, linkCurrentUserToMember, inviteUser, pendingInvites, revokeInvite, removeFromPendingLinking, findAndLinkExistingUser } = useToastmasters();
     const [fullName, setFullName] = useState('');
     const [status, setStatus] = useState<MemberStatus>(MemberStatus.Active);
     const [qualifications, setQualifications] = useState({
@@ -1067,6 +1060,24 @@ export const MemberManager: React.FC = () => {
             .sort((a,b) => a.name.localeCompare(b.name));
     }, [organization?.members, ownerId]);
 
+    // NEW: Get pending linking members (invitations with memberId)
+    const pendingLinkingMembers = useMemo(() => {
+        if (!isAdmin) return [];
+        
+        return pendingInvites
+            .filter(invite => invite.memberId && invite.status === 'pending')
+            .map(invite => {
+                // Find the corresponding member in organization.members
+                const member = organization?.members?.find(m => m.id === invite.memberId);
+                return {
+                    ...invite,
+                    memberName: member?.name || invite.invitedUserName,
+                    member: member
+                };
+            })
+            .sort((a, b) => a.memberName.localeCompare(b.memberName));
+    }, [pendingInvites, organization?.members, isAdmin]);
+
     const handleQualificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = e.target;
         setQualifications(prev => ({ ...prev, [name]: checked }));
@@ -1140,17 +1151,42 @@ export const MemberManager: React.FC = () => {
         if (!memberToLink) return;
         setLinkError(null);
         try {
-            console.log('Sending invitation for member:', { email, memberName: memberToLink.name, memberId: memberToLink.id });
+            // Sending invitation for member
             // Always use the invitation system for now
             // This ensures the proper flow and email sending
             const result = await inviteUser({ email, name: memberToLink.name, memberId: memberToLink.id });
-            console.log('Invitation sent successfully');
+            // Invitation sent successfully
             
             setIsLinkModalOpen(false);
             setMemberToLink(null);
         } catch (error: any) {
             console.error('Failed to send invitation:', error);
             setLinkError(error.message);
+        }
+    };
+
+    const handleSearchExistingAccount = async () => {
+        if (!memberToLink) return;
+        setLinkError(null);
+        try {
+            // Searching for existing account for member
+            const result = await findAndLinkExistingUser(memberToLink.id);
+            
+            if (result.success) {
+                // Show success message briefly before closing
+                setTimeout(() => {
+                    setIsLinkModalOpen(false);
+                    setMemberToLink(null);
+                }, 2000);
+                // Return the success message to display in the modal
+                return result.message;
+            } else {
+                // Show the message in the modal
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            console.error('Failed to search for existing account:', error);
+            throw error; // Let the modal handle the error display
         }
     };
 
@@ -1191,6 +1227,14 @@ export const MemberManager: React.FC = () => {
         }
     };
 
+    const handleRemoveFromPendingLinking = async (inviteId: string) => {
+        try {
+            await removeFromPendingLinking(inviteId);
+        } catch (error: any) {
+            console.error("Failed to remove from pending linking", error);
+        }
+    };
+
     // Get pending invite for a specific member
     const getPendingInviteForMember = (memberId: string): PendingInvite | null => {
         return pendingInvites.find(invite => invite.memberId === memberId) || null;
@@ -1213,7 +1257,6 @@ export const MemberManager: React.FC = () => {
         monthName: availabilityMonthName, // Use availability month name
         editingMemberId, editedName, editError, organization, onNameChange: setEditedName, onStartEdit: handleStartEdit,
         onCancelEdit: handleCancelEdit, onSaveEdit: handleSaveEdit, onLink: handleOpenLinkModal, onUnlink: handleUnlinkAccount,
-        onResendInvite: handleResendInvite, onChangeInviteEmail: handleChangeInviteEmail, getPendingInviteForMember,
     };
 
     // NEW: Check if current month has remaining meetings
@@ -1245,6 +1288,7 @@ export const MemberManager: React.FC = () => {
         return false;
     }, [organization?.meetingDay]);
 
+
     return (
         <>
             <ConfirmationModal
@@ -1262,7 +1306,9 @@ export const MemberManager: React.FC = () => {
                 isOpen={isLinkModalOpen}
                 onClose={() => setIsLinkModalOpen(false)}
                 onLink={handleLinkAccount}
+                onSearchExisting={handleSearchExistingAccount}
                 memberName={memberToLink?.name || ''}
+                memberId={memberToLink?.id || ''}
             />
             {linkError && <p className="text-red-500">{linkError}</p>}
             
@@ -1397,7 +1443,6 @@ export const MemberManager: React.FC = () => {
                     )}
                 </div>
             </div>
-
 
 
             <div className="space-y-8">

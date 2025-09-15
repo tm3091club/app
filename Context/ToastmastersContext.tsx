@@ -39,9 +39,15 @@ interface ToastmastersState {
   inviteUser: (payload: { email: string, name: string, memberId?: string }) => Promise<{ inviteId: string, joinUrl: string } | void>;
   revokeInvite: (inviteId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
+  removeFromPendingLinking: (inviteId: string) => Promise<void>;
   linkMemberToAccount: (payload: { memberId: string, uid: string | null }) => Promise<void>;
   linkCurrentUserToMember: (memberId: string) => Promise<void>;
   linkMemberByEmail: (email: string, uid: string) => Promise<void>;
+  findAndLinkExistingUser: (memberId: string) => Promise<{ success: boolean; message: string; userEmail?: string }>;
+  checkMemberLinkingStatus: (memberId: string) => Promise<{ success: boolean; message?: string; [key: string]: any }>;
+  getAllUnlinkedUsers: () => Promise<{ success: boolean; message?: string; totalUsers?: number; unlinkedUsers?: any[]; allUsers?: any[] }>;
+  linkMemberToUid: (memberId: string, uid: string) => Promise<{ success: boolean; message: string }>;
+  linkMemberToFirebaseAuthUser: (memberId: string, email: string) => Promise<{ success: boolean; message: string }>;
   saveWeeklyAgenda: (agenda: WeeklyAgenda) => Promise<void>;
   deleteWeeklyAgenda: (agendaId: string) => Promise<void>;
 }
@@ -538,11 +544,26 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailLower)) {
           throw new Error("Enter a valid email address.");
         }
-        if (organization.members.some(m => (m.email || "").toLowerCase() === emailLower)) {
-          throw new Error("That email already belongs to a club member.");
+        // Check if email belongs to a member who is already linked (has UID)
+        const existingMember = organization.members.find(m => (m.email || "").toLowerCase() === emailLower);
+        if (existingMember && existingMember.uid) {
+          throw new Error("That email already belongs to a linked club member.");
         }
         if (pendingInvites.some(inv => inv.email.toLowerCase() === emailLower)) {
-          throw new Error("You’ve already sent an invite to this email.");
+          throw new Error("You've already sent an invite to this email.");
+        }
+
+        // If member exists but has no UID, update their email and create invitation
+        if (existingMember && !existingMember.uid) {
+            // Update the member's email
+            const updatedMembers = organization.members.map(m => 
+                m.id === existingMember.id ? { ...m, email: emailLower } : m
+            );
+            
+            const docRef = getDataDocRef();
+            if (docRef) {
+                await docRef.update({ 'organization.members': updatedMembers });
+            }
         }
 
         // Check if user already exists in Firebase Auth
@@ -559,7 +580,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 throw error;
             }
             // If there's an error checking Firebase Auth, continue with the invitation
-            console.warn("Could not verify if user exists in Firebase Auth:", error);
         }
         
         const newInviteRef = await db.collection("invitations").add({
@@ -574,7 +594,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
       
         const joinUrl = `https://tmapp.club/#/${organization.clubNumber}/join?token=${newInviteRef.id}`;
         
-        console.log('Created invitation with URL:', joinUrl);
         
         try {
             await db.collection("mail").add({
@@ -593,7 +612,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                   </div>`
               }
             });
-            console.log('Email queued successfully');
         } catch (emailError) {
             console.error('Failed to queue email:', emailError);
             // Continue anyway - we'll provide the URL manually
@@ -608,6 +626,37 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("Only club admins can revoke invitations.");
         }
         await db.collection('invitations').doc(inviteId).delete();
+    };
+
+    const removeFromPendingLinking = async (inviteId: string) => {
+        if (!dataOwnerId || !currentUser || (currentUser.uid !== dataOwnerId && currentUser.role !== UserRole.Admin)) {
+            throw new Error("Only club admins can remove pending invitations.");
+        }
+        
+        // Get the invitation to find the memberId
+        const inviteDoc = await db.collection('invitations').doc(inviteId).get();
+        if (!inviteDoc.exists) {
+            throw new Error("Invitation not found.");
+        }
+        
+        const inviteData = inviteDoc.data();
+        if (!inviteData?.memberId) {
+            throw new Error("Invalid invitation data.");
+        }
+        
+        // Delete the invitation
+        await db.collection('invitations').doc(inviteId).delete();
+        
+        // Also remove the member from the organization if they exist but aren't linked
+        if (organization) {
+            const memberToRemove = organization.members.find(m => m.id === inviteData.memberId && !m.uid);
+            if (memberToRemove) {
+                const docRef = getDataDocRef();
+                if (docRef) {
+                    await docRef.update({ 'organization.members': FieldValue.arrayRemove(memberToRemove) });
+                }
+            }
+        }
     };
 
     const sendPasswordResetEmail = async (email: string) => {
@@ -753,6 +802,451 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         console.log('Manually linking member by email:', { email, uid, memberToLink, updatedMembers });
         await docRef.update({ 'organization.members': updatedMembers });
         console.log('Successfully linked member by email');
+    };
+
+    const linkMemberToFirebaseAuthUser = async (memberId: string, email: string) => {
+        if (!dataOwnerId || !currentUser || !organization) {
+            throw new Error("Cannot link member: missing user or organization data.");
+        }
+        if (currentUser.uid !== dataOwnerId) {
+            throw new Error("Only the Club Admin can link members.");
+        }
+
+        try {
+            // Find the member
+            const member = organization.members.find(m => m.id === memberId);
+            if (!member) {
+                throw new Error("Member not found.");
+            }
+
+            // Check if the email has a Firebase Auth account
+            const { getAuth, fetchSignInMethodsForEmail } = await import('firebase/auth');
+            const auth = getAuth();
+            
+            console.log('Checking if email has Firebase Auth account:', email);
+            const methods = await fetchSignInMethodsForEmail(auth, email);
+            
+            if (!methods || methods.length === 0) {
+                throw new Error(`No Firebase Auth account found for email ${email}. The user needs to create an account first.`);
+            }
+            
+            console.log('Found Firebase Auth account for email:', email);
+            
+            // Get the user's UID from Firebase Auth
+            // Note: We can't get the UID directly from client-side, but we can create a user document
+            // The UID will be available when the user signs in
+            
+            // For now, we'll create a placeholder that will be updated when the user signs in
+            const docRef = getDataDocRef();
+            if (!docRef) throw new Error("Database reference not available.");
+
+            // Update the member with the email (UID will be set when user signs in)
+            const updatedMembers = organization.members.map(m => 
+                m.id === memberId ? { 
+                    ...m, 
+                    email: email,
+                    role: m.role || UserRole.Member 
+                } : m
+            );
+            
+            await docRef.update({ 'organization.members': updatedMembers });
+            
+            // Also update the separate members array for scheduling
+            const updatedSchedulingMembers = members.map(m => 
+                m.id === memberId ? { ...m, email: email } : m
+            );
+            setMembers(updatedSchedulingMembers);
+            
+            console.log('Successfully linked member email to Firebase Auth account');
+            
+            return { 
+                success: true, 
+                message: `Successfully linked ${member.name} to Firebase Auth account (${email}). The user can now sign in and their UID will be automatically linked.`
+            };
+        } catch (error: any) {
+            console.error("Error linking member to Firebase Auth user:", error);
+            return { success: false, message: `Error: ${error.message}` };
+        }
+    };
+
+    const linkMemberToUid = async (memberId: string, uid: string) => {
+        if (!dataOwnerId || !currentUser || !organization) {
+            throw new Error("Cannot link member: missing user or organization data.");
+        }
+        if (currentUser.uid !== dataOwnerId) {
+            throw new Error("Only the Club Admin can link members.");
+        }
+
+        try {
+            // Find the member
+            const member = organization.members.find(m => m.id === memberId);
+            if (!member) {
+                throw new Error("Member not found.");
+            }
+
+            // For Firebase Auth users, we don't need to check Firestore users collection
+            // The UID exists in Firebase Auth (as we can see in the Firebase console)
+            // We'll use the member's existing email or the UID as a fallback
+            const userData = {
+                email: member.email || `${uid}@firebase.auth` // Use member's email or create a fallback
+            };
+            console.log('Linking member to user:', { memberName: member.name, uid, userEmail: userData?.email });
+
+            // Update the member with the UID and email
+            const docRef = getDataDocRef();
+            if (!docRef) throw new Error("Database reference not available.");
+
+            const updatedMembers = organization.members.map(m => 
+                m.id === memberId ? { 
+                    ...m, 
+                    uid: uid,
+                    email: userData?.email || m.email,
+                    role: m.role || UserRole.Member 
+                } : m
+            );
+            
+            await docRef.update({ 'organization.members': updatedMembers });
+            
+            // Also update the separate members array for scheduling
+            const updatedSchedulingMembers = members.map(m => 
+                m.id === memberId ? { ...m, uid: uid, email: userData?.email || m.email } : m
+            );
+            setMembers(updatedSchedulingMembers);
+            
+            console.log('Successfully linked member to user account');
+            
+            return { 
+                success: true, 
+                message: `Successfully linked ${member.name} to user account (${userData?.email}).`
+            };
+        } catch (error: any) {
+            console.error("Error linking member to UID:", error);
+            return { success: false, message: `Error: ${error.message}` };
+        }
+    };
+
+    const getAllUnlinkedUsers = async () => {
+        if (!dataOwnerId || !currentUser || !organization) {
+            throw new Error("Cannot get unlinked users: missing user or organization data.");
+        }
+        if (currentUser.uid !== dataOwnerId) {
+            throw new Error("Only the Club Admin can view unlinked users.");
+        }
+
+        try {
+            console.log('Getting all users from Firebase...');
+            const usersSnapshot = await db.collection('users').get();
+            console.log('Found', usersSnapshot.docs.length, 'total users in Firebase');
+            
+            // Get all currently linked UIDs in this club
+            const linkedUids = new Set<string>();
+            if (organization?.members) {
+                organization.members.forEach((member: any) => {
+                    if (member.uid) {
+                        linkedUids.add(member.uid);
+                    }
+                });
+            }
+            console.log('Currently linked UIDs in this club:', Array.from(linkedUids));
+            
+            const allUsers = [];
+            const unlinkedUsers = [];
+            
+            for (const userDoc of usersSnapshot.docs) {
+                const userData = userDoc.data();
+                
+                // Skip club owner documents (they have organization data)
+                if (userData.organization) {
+                    console.log('Skipping club owner:', userDoc.id);
+                    continue;
+                }
+                
+                const userInfo = {
+                    uid: userDoc.id,
+                    email: userData.email || 'No email',
+                    name: userData.name || userData.displayName || 'Unknown',
+                    isLinked: linkedUids.has(userDoc.id)
+                };
+                
+                allUsers.push(userInfo);
+                
+                if (!userInfo.isLinked) {
+                    unlinkedUsers.push(userInfo);
+                }
+            }
+            
+            console.log('All users (excluding club owners):', allUsers);
+            console.log('Unlinked users available for linking:', unlinkedUsers);
+            
+            return {
+                success: true,
+                totalUsers: allUsers.length,
+                unlinkedUsers: unlinkedUsers,
+                allUsers: allUsers
+            };
+        } catch (error: any) {
+            console.error("Error getting unlinked users:", error);
+            return { success: false, message: `Error: ${error.message}` };
+        }
+    };
+
+    const checkMemberLinkingStatus = async (memberId: string) => {
+        if (!dataOwnerId || !currentUser || !organization) {
+            throw new Error("Cannot check linking status: missing user or organization data.");
+        }
+        if (currentUser.uid !== dataOwnerId) {
+            throw new Error("Only the Club Admin can check linking status.");
+        }
+
+        try {
+            // Find the member
+            const member = organization.members.find(m => m.id === memberId);
+            if (!member) {
+                return { success: false, message: "Member not found." };
+            }
+
+            const result = {
+                memberId: member.id,
+                memberName: member.name,
+                memberEmail: member.email,
+                hasUid: !!member.uid,
+                uid: member.uid,
+                userAccountExists: false,
+                userEmail: null,
+                isLinked: false,
+                linkingStatus: 'unknown'
+            };
+
+            if (member.uid) {
+                // Check if the user account exists
+                const userRef = db.collection('users').doc(member.uid);
+                const userDoc = await userRef.get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    result.userAccountExists = true;
+                    result.userEmail = userData?.email;
+                    result.isLinked = true;
+                    result.linkingStatus = 'properly_linked';
+                } else {
+                    result.linkingStatus = 'uid_exists_but_no_user_account';
+                }
+            } else {
+                result.linkingStatus = 'no_uid_assigned';
+            }
+
+            return { success: true, ...result };
+        } catch (error: any) {
+            console.error("Error checking member linking status:", error);
+            return { success: false, message: `Error: ${error.message}` };
+        }
+    };
+
+    const findAndLinkExistingUser = async (memberId: string) => {
+        if (!dataOwnerId || !currentUser || !organization) {
+            throw new Error("Cannot search for existing user: missing user or organization data.");
+        }
+        if (currentUser.uid !== dataOwnerId) {
+            throw new Error("Only the Club Admin can link accounts.");
+        }
+
+        const docRef = getDataDocRef();
+        if (!docRef) return { success: false, message: "Database reference not available." };
+
+        try {
+            // Find the member to link - check both organization.members and the separate members array
+            let memberToLink = organization.members.find(m => m.id === memberId);
+            
+            // If not found in organization.members, check the separate members array
+            if (!memberToLink) {
+                memberToLink = members.find(m => m.id === memberId);
+            }
+            
+            // If still not found, try to find by name (in case of ID mismatch)
+            if (!memberToLink && organization.members) {
+                // This is a fallback - try to find by name
+                console.log('Member not found by ID, trying to find by name...');
+            }
+            
+            // Double-check: Get fresh data from database to ensure we have the latest member info
+            if (memberToLink) {
+                console.log('Found member in context:', memberToLink);
+                // Refresh the member data from the database to get the most current UID
+                const freshOrgData = await docRef.get();
+                if (freshOrgData.exists) {
+                    const freshOrg = freshOrgData.data();
+                    const freshMember = freshOrg?.organization?.members?.find((m: any) => m.id === memberId);
+                    if (freshMember) {
+                        console.log('Fresh member data from DB:', freshMember);
+                        memberToLink = freshMember; // Use the fresh data
+                    }
+                }
+            }
+            
+            if (!memberToLink) {
+                return { success: false, message: "Member not found." };
+            }
+
+            // Check if member already has a uid - if so, verify it's properly linked
+            if (memberToLink.uid) {
+                console.log('Member already has UID:', memberToLink.uid);
+                // Check if this uid exists in the users collection
+                const userRef = db.collection('users').doc(memberToLink.uid);
+                const userDoc = await userRef.get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    if (userData?.email) {
+                        return { 
+                            success: true, 
+                            message: `This member is already linked to an account (${userData.email}).`,
+                            userEmail: userData.email
+                        };
+                    }
+                } else {
+                    console.log('Member has UID but user document does not exist:', memberToLink.uid);
+                    // UID exists but user document is missing - this is a data inconsistency
+                    return {
+                        success: false,
+                        message: `Member has UID (${memberToLink.uid}) but user account not found. This may be a data inconsistency.`
+                    };
+                }
+            }
+
+            // Check if member has an email - if so, try to find their Firebase Auth account
+            if (memberToLink.email) {
+                try {
+                    // Check if this email has a Firebase Auth account
+                    const { getAuth, fetchSignInMethodsForEmail } = await import('firebase/auth');
+                    const auth = getAuth();
+                    const methods = await fetchSignInMethodsForEmail(auth, memberToLink.email);
+                    
+                    if (methods && methods.length > 0) {
+                        // User has a Firebase Auth account - we need to link them
+                        // Since we can't get the UID directly from client-side, we'll create a user document
+                        // that will be updated when the user signs in
+                        
+                        const docRef = getDataDocRef();
+                        if (!docRef) return { success: false, message: "Database reference not available." };
+
+                        // Update the member with the email (UID will be set when user signs in)
+                        const updatedMembers = organization.members.map(m => 
+                            m.id === memberId ? { 
+                                ...m, 
+                                email: memberToLink.email,
+                                role: m.role || UserRole.Member 
+                            } : m
+                        );
+                        
+                        await docRef.update({ 'organization.members': updatedMembers });
+                        
+                        // Also update the separate members array for scheduling
+                        const updatedSchedulingMembers = members.map(m => 
+                            m.id === memberId ? { ...m, email: memberToLink.email } : m
+                        );
+                        setMembers(updatedSchedulingMembers);
+                        
+                        return {
+                            success: true,
+                            message: `Successfully linked ${memberToLink.name} to their existing Firebase Auth account (${memberToLink.email}). They can now sign in and their UID will be automatically linked.`,
+                            userEmail: memberToLink.email
+                        };
+                    }
+                } catch (error) {
+                    // If there's an error checking Firebase Auth, continue with normal search
+                }
+            }
+            
+            // Search Firestore users collection for unlinked users
+            const usersSnapshot = await db.collection('users').get();
+            const unlinkedUsers: any[] = [];
+            const linkedUids = new Set<string>();
+            
+            // Get all UIDs that are currently linked to members in THIS club
+            if (organization?.members) {
+                organization.members.forEach((member: any) => {
+                    if (member.uid) {
+                        linkedUids.add(member.uid);
+                    }
+                });
+            }
+
+            for (const userDoc of usersSnapshot.docs) {
+                const userData = userDoc.data();
+                
+                // Skip if this is a club owner document (has organization data)
+                if (userData.organization) {
+                    continue;
+                }
+
+                // Check if this user is linked to any member in THIS club
+                const isLinkedToThisClub = linkedUids.has(userDoc.id);
+                
+                if (!isLinkedToThisClub) {
+                    unlinkedUsers.push({
+                        uid: userDoc.id,
+                        email: userData.email,
+                        name: userData.name || userData.displayName || 'Unknown'
+                    });
+                }
+            }
+
+            // Try to find a match by email first, then by name similarity
+            let matchedUser = null;
+
+            // Try exact email match if member has an email
+            if (memberToLink.email) {
+                matchedUser = unlinkedUsers.find(u => u.email && u.email.toLowerCase() === memberToLink.email.toLowerCase());
+            }
+
+            // If no email match, try name similarity
+            if (!matchedUser) {
+                const memberNameLower = memberToLink.name.toLowerCase();
+                matchedUser = unlinkedUsers.find(u => {
+                    const userNameLower = u.name.toLowerCase();
+                    return userNameLower === memberNameLower || 
+                           userNameLower.includes(memberNameLower) || 
+                           memberNameLower.includes(userNameLower);
+                });
+            }
+
+            if (matchedUser) {
+                // Link the member to the existing user
+                const docRef = getDataDocRef();
+                if (!docRef) return { success: false, message: "Database reference not available." };
+
+                const updatedMembers = organization.members.map(m => 
+                    m.id === memberId ? { 
+                        ...m, 
+                        uid: matchedUser.uid,
+                        email: matchedUser.email,
+                        role: m.role || UserRole.Member 
+                    } : m
+                );
+                
+                await docRef.update({ 'organization.members': updatedMembers });
+                
+                // Also update the separate members array for scheduling
+                const updatedSchedulingMembers = members.map(m => 
+                    m.id === memberId ? { ...m, uid: matchedUser.uid, email: matchedUser.email } : m
+                );
+                setMembers(updatedSchedulingMembers);
+                
+                return { 
+                    success: true, 
+                    message: `Successfully linked ${memberToLink.name} to existing account (${matchedUser.email}).`,
+                    userEmail: matchedUser.email
+                };
+            } else {
+                return { 
+                    success: false, 
+                    message: `No existing unlinked user account found for ${memberToLink.name}${memberToLink.email ? ` (${memberToLink.email})` : ''}. You can send an invitation to create a new account.`
+                };
+            }
+        } catch (error: any) {
+            console.error("Error finding and linking existing user:", error);
+            return { success: false, message: `Error: ${error.message}` };
+        }
     };
 
 
@@ -995,12 +1489,16 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
-        sendPasswordResetEmail, linkMemberToAccount, linkCurrentUserToMember, linkMemberByEmail, saveWeeklyAgenda, deleteWeeklyAgenda
+        sendPasswordResetEmail, removeFromPendingLinking, linkMemberToAccount, linkCurrentUserToMember, linkMemberByEmail, findAndLinkExistingUser, checkMemberLinkingStatus, getAllUnlinkedUsers, linkMemberToUid, linkMemberToFirebaseAuthUser, saveWeeklyAgenda, deleteWeeklyAgenda
     };
 
-    // Expose linkMemberByEmail to window for debugging
+    // Expose functions to window for debugging
     if (typeof window !== 'undefined') {
         (window as any).linkMemberByEmail = linkMemberByEmail;
+        (window as any).getAllUnlinkedUsers = getAllUnlinkedUsers;
+        (window as any).linkMemberToUid = linkMemberToUid;
+        (window as any).linkMemberToFirebaseAuthUser = linkMemberToFirebaseAuthUser;
+        
     }
 
     return (
