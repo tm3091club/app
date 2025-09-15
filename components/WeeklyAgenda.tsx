@@ -247,10 +247,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   };
 
   const handleShare = async () => {
-    console.log('Share button clicked');
-    console.log('Current agenda:', agenda);
-    console.log('Current user:', user);
-    console.log('Current organization:', organization);
+    // Share button clicked
     
     if (!agenda || !user || !organization?.clubNumber) {
       if (!agenda) {
@@ -268,14 +265,14 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       return;
     }
     
-    console.log('Starting share process...');
+    // Starting share process
     setIsSaving(true);
     
     try {
       const agendaToShare = { ...agenda };
       const clubNumber = organization.clubNumber;
       
-      console.log('Creating share ID...');
+      // Creating share ID
       
       // Create share ID with format: agenda-THEME-month-day-vX
       const meetingDate = new Date(agenda.meetingDate);
@@ -285,16 +282,13 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       const themeSlug = agenda.theme ? agenda.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
       
       const docIdPrefix = `${clubNumber}_agenda-${themeSlug}-${monthName}-${day}-${year}-v`;
-      console.log('Document prefix:', docIdPrefix);
-      
       // Check for existing versions
-      console.log('Checking for existing versions...');
       const querySnapshot = await db.collection('publicAgendas')
         .where(firebase.firestore.FieldPath.documentId(), '>=', docIdPrefix)
         .where(firebase.firestore.FieldPath.documentId(), '<', docIdPrefix + 'z')
         .get();
       
-      console.log('Query completed, found', querySnapshot.size, 'existing versions');
+      // Query completed for existing versions
 
       let maxVersion = 0;
       querySnapshot.forEach(doc => {
@@ -312,9 +306,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       const humanReadableShareId = `${themeSlug}-${monthName}-${day}-${year}-v${newVersion}`;
       const firestoreDocId = `${clubNumber}_${humanReadableShareId}`;
       
-      console.log('Creating version', newVersion);
-      console.log('Share ID:', humanReadableShareId);
-      console.log('Firestore doc ID:', firestoreDocId);
+      // Creating version and share ID
       
       // Mark agenda as shared
       agendaToShare.shareId = humanReadableShareId;
@@ -328,24 +320,20 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
         clubName: organization.name,
       };
       
-      console.log('Saving to publicAgendas collection...');
       // Save to publicAgendas collection
       await db.collection('publicAgendas').doc(firestoreDocId).set(publicAgendaData);
-      console.log('Successfully saved to publicAgendas');
       
       // Update the local agenda with sharing info
       if (saveWeeklyAgenda) {
-        console.log('Updating local agenda...');
+        // Updating local agenda
         await saveWeeklyAgenda(agendaToShare);
-        console.log('Local agenda updated');
       }
       
       // Create share URL
       const url = `${window.location.origin}/#/${clubNumber}/agenda/${humanReadableShareId}`;
-      console.log('Generated share URL:', url);
       setShareUrl(url);
       setIsShareModalOpen(true);
-      console.log('Share completed successfully!');
+      // Share completed successfully
       
     } catch (error) {
       console.error('Error creating share URL:', error);
