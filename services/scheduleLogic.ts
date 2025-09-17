@@ -1,5 +1,5 @@
 import { Member, MonthlySchedule, Meeting, RoleAssignment, MemberStatus, AvailabilityStatus, MemberAvailability, OfficerRole } from '../types';
-import { TOASTMASTERS_ROLES } from '../Constants';
+import { TOASTMASTERS_ROLES, MAJOR_ROLES, MINOR_ROLES } from '../Constants';
 
 /**
  * Creates a deep clone of an object, stripping any non-POJO properties (like from Firestore).
@@ -30,17 +30,15 @@ export const deepClone = <T>(obj: T): T => {
 };
 
 
-// Role categories
-const HIGH_ROLES = ['President', 'Toastmaster', 'Table Topics Master', 'General Evaluator'];
+// Role categories (imported from Constants.ts for consistency across the app)
+// MAJOR_ROLES and MINOR_ROLES are defined and documented in Constants.ts
+const HIGH_ROLES = ['President', 'Toastmaster', 'Table Topics Master', 'General Evaluator']; // For legacy logic, but prefer MAJOR_ROLES
 const SPEAKER_ROLES = ['Speaker 1', 'Speaker 2', 'Speaker 3'];
 const EVALUATOR_ROLES = ['Evaluator 1', 'Evaluator 2', 'Evaluator 3'];
 const INSPIRATION_ROLE = 'Inspiration Award';
-const MINOR_ROLES = TOASTMASTERS_ROLES.filter(r => 
-    !HIGH_ROLES.includes(r) && 
-    !SPEAKER_ROLES.includes(r) && 
-    !EVALUATOR_ROLES.includes(r) && 
-    r !== INSPIRATION_ROLE
-);
+
+// NOTE: Use MAJOR_ROLES and MINOR_ROLES for all qualification and assignment logic.
+// HIGH_ROLES is kept for backward compatibility in this file, but should be replaced by MAJOR_ROLES in future refactors.
 
 // Helper to shuffle an array
 function shuffleArray<T,>(array: T[]): T[] {
@@ -168,34 +166,36 @@ export const generateNewMonthSchedule = (
         return null;
     };
 
-    // Special function for President role with President/VPE priority
+    /**
+     * Officer fallback logic for President role:
+     * - Assigns the member with officerRole === OfficerRole.President as President for the meeting.
+     * - If unavailable, assigns the member with officerRole === OfficerRole.VicePresidentEducation.
+     * - If neither is available, leaves the President role unassigned for manual assignment.
+     *
+     * See types.ts for documentation.
+     */
     const assignPresidentWithOfficerPriority = (): Member | null => {
-        
         // First, try to assign to the actual President if available
         const president = availableForMeeting.find(m => 
             m.officerRole === OfficerRole.President
         );
-        
         if (president) {
             assignments['President'] = president.id;
             // Don't add to assignedInMeeting - allow President to have multiple roles
             // Don't track role history - President can have same role every week
             return president;
         }
-
         // If President is not available, try VPE if available
         const vpe = availableForMeeting.find(m => 
             m.officerRole === OfficerRole.VicePresidentEducation
         );
-        
         if (vpe) {
             assignments['President'] = vpe.id;
             // Don't add to assignedInMeeting - allow VPE to have multiple roles when acting as President
             // Don't track role history - VPE can act as President multiple times
             return vpe;
         }
-        // If neither President nor VPE are available, leave the role unassigned
-        // (as requested - manual assignment only)
+        // If neither President nor VPE are available, leave the role unassigned (manual assignment only)
         return null;
     };
 
@@ -207,26 +207,23 @@ export const generateNewMonthSchedule = (
     // 2. Assign President role with officer priority first
     assignPresidentWithOfficerPriority();
 
-    // 3. Assign other High Roles to qualified members
-    HIGH_ROLES.forEach(role => {
-        if (role === 'President') {
-            // President role already handled above with officer priority
-            return;
-        }
-        
+
+    // 3. Assign other Major Roles (excluding President, which is handled above)
+    MAJOR_ROLES.forEach(role => {
+        if (role === 'President') return; // Already handled
         let qualifiedMembers: Member[] = [];
         if (role === 'Toastmaster') qualifiedMembers = availableForMeeting.filter(m => m.isToastmaster);
         if (role === 'Table Topics Master') qualifiedMembers = availableForMeeting.filter(m => m.isTableTopicsMaster);
         if (role === 'General Evaluator') qualifiedMembers = availableForMeeting.filter(m => m.isGeneralEvaluator);
-        
+        // Inspiration Award is handled separately below
         assignRole(role, shuffleArray(qualifiedMembers));
     });
-    
-    [INSPIRATION_ROLE, ...HIGH_ROLES].forEach(role => {
+
+    // Fallback: assign any unassigned major roles (except President) to any available member
+    [INSPIRATION_ROLE, ...MAJOR_ROLES].forEach(role => {
         if (!assignments[role]) {
             if (role === 'President') {
                 // President role already handled with officer priority - don't fallback
-                // Leave unassigned if neither President nor VPE are available
                 return;
             } else {
                 assignRole(role, availableForMeeting);

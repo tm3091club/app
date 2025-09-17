@@ -1,4 +1,5 @@
 import { MonthlySchedule, Member, MemberAvailability, MemberStatus, AvailabilityStatus } from '../types';
+// TOASTMASTERS_ROLES: All roles that appear on the monthly schedule. See Constants.ts for major/minor role definitions.
 import { TOASTMASTERS_ROLES } from '../Constants';
 
 const getMemberName = (memberId: string | null, members: Member[]) => {
