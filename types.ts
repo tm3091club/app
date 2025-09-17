@@ -14,6 +14,15 @@ export enum OfficerRole {
   SergeantAtArms = 'Sergeant at Arms'
 }
 
+/**
+ * Officer fallback logic for President role:
+ * - The member with officerRole === OfficerRole.President is assigned as President on the monthly schedule.
+ * - If the President is unavailable for a meeting, the member with officerRole === OfficerRole.VicePresidentEducation will be assigned as President for that meeting.
+ * - If neither is available, the President role remains unassigned and must be filled manually.
+ *
+ * This logic is implemented in the scheduling algorithm (see scheduleLogic.ts).
+ */
+
 export interface AppUser {
   uid: string;
   email: string;
@@ -58,7 +67,11 @@ export interface Member {
   uid?: string; // Link to the user account
   joinedDate?: string; // ISO date string when member joined
   ownerId?: string; // Links member to the club owner who manages them
-  officerRole?: OfficerRole; // Officer position within the club
+  /**
+   * Officer position within the club. Used for President fallback logic in scheduling.
+   * See OfficerRole and officer fallback documentation above.
+   */
+  officerRole?: OfficerRole;
 }
 
 export interface MemberAvailability {

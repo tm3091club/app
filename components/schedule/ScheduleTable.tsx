@@ -2,6 +2,7 @@
 
 import React, { JSX } from 'react';
 import { MonthlySchedule, Meeting, Member, AvailabilityStatus, MemberAvailability } from '../../types';
+// TOASTMASTERS_ROLES: All roles that appear on the monthly schedule. See Constants.ts for major/minor role definitions.
 import { TOASTMASTERS_ROLES } from '../../Constants';
 import { RoleAssignmentCell } from './RoleAssignmentCell';
 

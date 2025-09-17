@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/firebase';
 import { MonthlySchedule, Member } from '../types';
+// TOASTMASTERS_ROLES: All roles that appear on the monthly schedule. See Constants.ts for major/minor role definitions.
 import { TOASTMASTERS_ROLES } from '../Constants';
 import { APP_VERSION } from '../utils/version';
 

@@ -1,6 +1,9 @@
 
 import React, { useMemo } from 'react';
 import { Member, RoleAssignment, AvailabilityStatus } from '../../types';
+// TOASTMASTERS_ROLES: All roles that appear on the monthly schedule.
+// MAJOR_ROLES: Roles requiring more experience/leadership (see Constants.ts for full list and comments).
+// MINOR_ROLES: Supporting roles, typically require less experience (see Constants.ts).
 import { MAJOR_ROLES, TOASTMASTERS_ROLES } from '../../Constants';
 import { useToastmasters } from '../../Context/ToastmastersContext';
 
