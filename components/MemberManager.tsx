@@ -1373,7 +1373,7 @@ export const MemberManager: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 mb-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Availability Management</h3>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Availability Management</h2>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                             Select which month to view and update member availability
                         </p>

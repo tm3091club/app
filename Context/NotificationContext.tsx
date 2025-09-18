@@ -82,7 +82,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setLoading(false);
       },
       (error) => {
-        console.error('Error fetching notifications:', error);
         setLoading(false);
       }
     );
@@ -100,7 +99,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         readAt: Timestamp.now(),
       });
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      // Error marking notification as read
     }
   }, []);
 
@@ -119,7 +118,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       await batch.commit();
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      // Error marking all notifications as read
     }
   }, [notifications]);
 
@@ -131,7 +130,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         dismissedAt: Timestamp.now(),
       });
     } catch (error) {
-      console.error('Error dismissing notification:', error);
+      // Error dismissing notification
     }
   }, []);
 
@@ -171,7 +170,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       return previousNotifications;
     } catch (error) {
-      console.error('Error fetching previous notifications:', error);
       return [];
     }
   }, [user]);
