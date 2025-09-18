@@ -42,7 +42,6 @@ class EmailService {
       });
       // Email queued successfully via Firebase Extension
     } catch (error) {
-      console.error('Error queuing email:', error);
       throw error;
     }
   }
@@ -342,7 +341,6 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`
       await this.queueEmail(emailRequest);
       // Availability request emails queued
     } catch (error) {
-      console.error('Error sending availability request emails:', error);
       throw error;
     }
   }
@@ -389,7 +387,6 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`
       await this.queueEmail(emailRequest);
       // Personalized availability request email queued
     } catch (error) {
-      console.error('Error sending personalized availability request email:', error);
       throw error;
     }
   }
@@ -431,7 +428,6 @@ ${data.recipientEmail ? `This message was sent to ${data.recipientEmail}` : ''}`
       await this.queueEmail(testEmailRequest);
       // Test email queued successfully
     } catch (error) {
-      console.error('Error sending test email:', error);
       throw error;
     }
   }

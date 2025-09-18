@@ -12,6 +12,7 @@ This is an **open-source project** developed with the assistance of AI (Claude/G
 - **Member Management**: Track member qualifications and availability
 - **Notifications**: Automated notifications for role assignments and schedule changes
 - **Real-time Collaboration**: Multiple users can work on schedules simultaneously
+- **PWA Support**: Installable as a Progressive Web App (PWA) on mobile and desktop
 
 ## 🛠️ Technology Stack
 
@@ -151,6 +152,24 @@ This project uses an automated versioning system:
 - **Manual**: Run `npm run version:update` to update version manually
 - **Format**: `M.DD.YY-X` (Month.Day.Year-PushCount)
 
+## 🎯 Data Model Overview
+
+### Firestore Collections (at a glance)
+- `users` – club admins & members
+- `members` – per-club members and qualifications
+- `schedules` – monthly schedules with meetings & assignments
+- `weeklyAgendas` – weekly meeting agendas
+- `invitations` – pending invites
+- `notifications` – user notifications
+- `publicAgendas` / `publicSchedules` – read-only shared links
+
+➡️ For full details on schema, logic, and roadmap, see [TOASTMASTERS_APP_SPEC.md](./TOASTMASTERS_APP_SPEC.md)
+
+### Permissions Model
+- **Admins**: Full control (assign roles, manage members, schedules)
+- **Members**: Can update their availability, self-assign to unassigned roles (if qualified)
+- **Club Officers**: Specific logic (e.g., President always appears on schedule, fallback to VP Education if unavailable)
+
 ## 🤝 Contributing
 
 This is an open-source project, and contributions are welcome! Here's how you can help:
@@ -190,6 +209,7 @@ This is an open-source project, and contributions are welcome! Here's how you ca
 - Mobile-first approach
 - Works on all device sizes
 - Dark mode support
+- Progressive Web App (PWA) installable on mobile and desktop
 
 ## 🚨 Common Issues & Solutions
 
@@ -228,6 +248,9 @@ This project is open source and available under the [MIT License](LICENSE).
 - **Toastmasters International** - For the meeting structure and role system
 - **AI Assistants** - This project was developed with the help of AI tools like Claude and Gemini
 - **Open Source Community** - For the amazing tools and libraries that make this possible
+
+## 📘 Full Project Guide
+For the complete specification, app logic, database schema, and feature roadmap, see [TOASTMASTERS_APP_SPEC.md](./TOASTMASTERS_APP_SPEC.md)
 
 ## 📞 Support
 

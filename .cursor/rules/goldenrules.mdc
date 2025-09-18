@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+Always reference the file `TM App Golden Rules.md` in this repository as the single source of truth.  
+Follow its database schema, app logic, permissions model, and role assignment rules.  
+Never rename collections, fields, or roles unless the spec explicitly allows it.  
+Do not introduce a new database — all data must stay in Firebase Firestore.

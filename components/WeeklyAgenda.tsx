@@ -48,7 +48,12 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     
     // Simple logic: find the next upcoming meeting or current week
     for (let i = 0; i < schedule.meetings.length; i++) {
-      const meetingDate = new Date(schedule.meetings[i].date + 'T00:00:00');
+      const meeting = schedule.meetings[i];
+      if (!meeting.date) continue; // Skip meetings with invalid dates
+      
+      const meetingDate = new Date(meeting.date + 'T00:00:00');
+      if (isNaN(meetingDate.getTime())) continue; // Skip invalid dates
+      
       const meetingDateOnly = new Date(meetingDate.getFullYear(), meetingDate.getMonth(), meetingDate.getDate());
       
       // If meeting is today or in the future, show this week
@@ -139,6 +144,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     if (!schedule || selectedWeek >= schedule.meetings.length) return;
     
     const meeting = schedule.meetings[selectedWeek];
+    if (!meeting || !meeting.date) return; // Skip if meeting data is invalid
     const agendaId = `${scheduleId}-week${selectedWeek + 1}`;
     
     // Check if agenda exists
@@ -275,9 +281,10 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       // Creating share ID
       
       // Create share ID with format: agenda-THEME-month-day-vX
-      const meetingDate = new Date(agenda.meetingDate);
-      const monthName = meetingDate.toLocaleDateString('en-US', { month: 'long' }).toLowerCase();
-      const day = meetingDate.getDate();
+      const meetingDate = agenda.meetingDate ? new Date(agenda.meetingDate) : new Date();
+      const isValidDate = !isNaN(meetingDate.getTime());
+      const monthName = isValidDate ? meetingDate.toLocaleDateString('en-US', { month: 'long' }).toLowerCase() : 'unknown';
+      const day = isValidDate ? meetingDate.getDate() : 1;
       const year = meetingDate.getFullYear();
       const themeSlug = agenda.theme ? agenda.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
       
@@ -394,13 +401,21 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   const handleExportPDF = async () => {
     if (!agenda) return;
-    const meetingDate = new Date(meeting.date + 'T00:00:00');
+    const meetingDate = meeting.date ? new Date(meeting.date + 'T00:00:00') : new Date();
+    if (isNaN(meetingDate.getTime())) {
+      console.warn('Invalid meeting date for PDF export');
+      return;
+    }
     exportWeeklyAgendaToPDF(agenda, organization, meetingDate);
   };
 
   const handleCopyToClipboard = () => {
     if (!agenda) return;
-    const meetingDate = new Date(meeting.date + 'T00:00:00');
+    const meetingDate = meeting.date ? new Date(meeting.date + 'T00:00:00') : new Date();
+    if (isNaN(meetingDate.getTime())) {
+      console.warn('Invalid meeting date for TSV export');
+      return;
+    }
     const tsv = exportWeeklyAgendaToTSV(agenda, organization, meetingDate);
     navigator.clipboard.writeText(tsv);
     setCopySuccess(true);
@@ -413,8 +428,56 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     setIsExportMenuOpen(false);
   };
 
+  // Check if schedule exists and has meetings
   if (!schedule || schedule.meetings.length === 0) {
-    return <div className="p-4">No meetings found in the schedule.</div>;
+    return (
+      <div className="max-w-7xl mx-auto p-4">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
+            No Schedule Generated Yet
+          </h3>
+          <p className="text-yellow-700 dark:text-yellow-400 mb-4">
+            You need to generate a schedule first before you can view the weekly agenda.
+          </p>
+          <p className="text-sm text-yellow-600 dark:text-yellow-500">
+            Go to the Scheduler tab and click "Generate Schedule" to automatically assign members to roles.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if schedule is prepared but not generated (has meetings but no role assignments)
+  const hasAnyRoleAssignments = schedule.meetings.some(meeting => 
+    Object.values(meeting.assignments).some(assignment => assignment !== null)
+  );
+
+  if (!hasAnyRoleAssignments) {
+    return (
+      <div className="max-w-7xl mx-auto p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-300 mb-2">
+            Schedule Prepared - Ready to Generate
+          </h3>
+          <p className="text-blue-700 dark:text-blue-400 mb-4">
+            Your schedule is prepared with meeting dates, but you need to generate role assignments.
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-500">
+            Go back to the Scheduler tab and click "Generate Schedule" to automatically assign members to roles for each meeting.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const meeting = schedule.meetings[selectedWeek];
@@ -437,11 +500,17 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
           onChange={(e) => setSelectedWeek(Number(e.target.value))}
           className="w-full md:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
         >
-          {schedule.meetings.map((meeting, index) => (
-            <option key={index} value={index}>
-              Week {index + 1} - {format(new Date(meeting.date + 'T00:00:00'), 'MMMM d, yyyy')}
-            </option>
-          ))}
+          {schedule.meetings.map((meeting, index) => {
+            // Validate date before formatting
+            const meetingDate = meeting.date ? new Date(meeting.date + 'T00:00:00') : null;
+            const isValidDate = meetingDate && !isNaN(meetingDate.getTime());
+            
+            return (
+              <option key={index} value={index}>
+                Week {index + 1} - {isValidDate ? format(meetingDate, 'MMMM d, yyyy') : 'Invalid Date'}
+              </option>
+            );
+          })}
         </select>
       </div>
 
@@ -549,7 +618,13 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             <h1 className="text-2xl font-bold mb-2">{organization?.name || 'Toastmasters Club'}</h1>
             <p className="text-lg mb-2">Club #{organization?.clubNumber || 'XXXXX'}</p>
             <h2 className="text-xl font-semibold mb-2">Meeting Agenda</h2>
-            <p className="text-lg">{format(new Date(meeting.date + 'T00:00:00'), 'MMMM d, yyyy')}</p>
+            <p className="text-lg">
+              {(() => {
+                if (!meeting.date) return 'Date TBD';
+                const meetingDate = new Date(meeting.date + 'T00:00:00');
+                return isNaN(meetingDate.getTime()) ? 'Invalid Date' : format(meetingDate, 'MMMM d, yyyy');
+              })()}
+            </p>
             {agenda.theme && (
               <p className="text-lg mt-2 font-medium agenda-theme">Theme: {agenda.theme}</p>
             )}

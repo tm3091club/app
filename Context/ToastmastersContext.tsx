@@ -22,6 +22,7 @@ interface ToastmastersState {
   weeklyAgendas: WeeklyAgenda[];
   loading: boolean;
   error: string | null;
+  needsEmailVerification: boolean;
   addMember: (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => Promise<void>;
   updateMemberName: (payload: { memberId: string; newName: string; }) => Promise<void>;
   updateMemberStatus: (payload: { id: string; status: MemberStatus; }) => Promise<void>;
@@ -69,6 +70,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
     const dataSubscription = useRef<(() => void) | null>(null);
     const invitesSubscription = useRef<(() => void) | null>(null);
     const agendasSubscription = useRef<(() => void) | null>(null);
@@ -84,25 +86,26 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         return db.collection('users').doc(dataOwnerId);
     }, [dataOwnerId]);
 
-    const cleanupSubscriptions = useCallback(() => {
+    const cleanupSubscriptions = useCallback((resetVerification = true) => {
         if (dataSubscription.current) dataSubscription.current();
         if (invitesSubscription.current) invitesSubscription.current();
         dataSubscription.current = null;
         invitesSubscription.current = null;
+        // Only reset verification flag if explicitly requested
+        if (resetVerification) {
+            setNeedsEmailVerification(false);
+        }
     }, []);
 
     const linkMemberAccount = useCallback(async (token: string, joiningUser: firebase.User): Promise<string> => {
-        console.log('linkMemberAccount called with token:', token, 'user:', joiningUser.email);
         const inviteRef = db.collection('invitations').doc(token);
         const inviteDoc = await inviteRef.get();
     
         if (!inviteDoc.exists || inviteDoc.data()?.status !== 'pending' || inviteDoc.data()?.email.toLowerCase() !== joiningUser.email?.toLowerCase()) {
-            console.error('Invalid invitation:', { exists: inviteDoc.exists, status: inviteDoc.data()?.status, email: inviteDoc.data()?.email, userEmail: joiningUser.email });
             throw new Error("This invitation is invalid, expired, or for a different email address. Please request a new link.");
         }
-    
+
         const { ownerId, memberId } = inviteDoc.data()!;
-        console.log('Invitation data:', { ownerId, memberId });
         const clubDataDocRef = db.collection('users').doc(ownerId);
     
         try {
@@ -114,9 +117,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         
                 // Find the existing member to link
                 const existingMembers = clubDoc.data()?.organization?.members || [];
-                console.log('Existing members:', existingMembers);
                 const memberToLink = existingMembers.find((m: any) => m.id === memberId);
-                console.log('Member to link:', memberToLink);
                 
                 if (!memberToLink) {
                     throw new Error("Member not found. Please contact your club administrator.");
@@ -135,14 +136,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         role: m.role || UserRole.Member 
                     } : m
                 );
-                console.log('Updated members:', updatedMembers);
                 
                 // Verify the member was actually updated
                 const linkedMember = updatedMembers.find((m: any) => m.id === memberId);
                 if (!linkedMember || !linkedMember.uid) {
                     throw new Error("Failed to add UID to member record");
                 }
-                console.log('Successfully prepared member with UID:', linkedMember.uid);
                 
                 transaction.update(clubDataDocRef, {
                     'organization.members': updatedMembers,
@@ -162,14 +161,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             
             return ownerId;
         } catch (error: any) {
-            console.error("Error linking member account:", error);
             throw new Error(`Failed to link account: ${error.message}`);
         }
     }, []);
 
     const setupListeners = useCallback((ownerId: string) => {
         if (!user?.uid) {
-            console.warn('Cannot setup listeners: user.uid is not available');
             return;
         }
         
@@ -190,6 +187,25 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 ? data.organization.members.find((m: AppUser) => m.uid === user.uid) || null 
                 : null;
 
+            // Check if email is verified for club owners
+            
+            // For new accounts: check if emailVerified is explicitly false
+            // For existing accounts: check if user.emailVerified is false (Firebase Auth verification status)
+            const isNewAccount = data.emailVerified === false;
+            const isExistingAccountUnverified = !user.emailVerified && !('emailVerified' in data);
+            
+            if (user?.uid === ownerId && (isNewAccount || isExistingAccountUnverified)) {
+                // Set verification needed flag and stop loading
+                setNeedsEmailVerification(true);
+                setLoading(false);
+                // Don't call cleanupSubscriptions here as it resets needsEmailVerification
+                if (dataSubscription.current) dataSubscription.current();
+                if (invitesSubscription.current) invitesSubscription.current();
+                dataSubscription.current = null;
+                invitesSubscription.current = null;
+                return;
+            }
+
             if (me && user?.email && user?.uid && me.email !== user.email) {
                 const updatedMembers = data.organization.members.map((m: AppUser) =>
                     m.uid === user.uid ? { ...m, email: user.email! } : m
@@ -198,40 +214,67 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 return; 
             }
 
-            const loadedSchedules = deepClone(data.schedules || []);
-            setSchedules(loadedSchedules);
+            // Ensure schedules is always an array (migration fix for old data)
+            let loadedSchedules = data.schedules || [];
+            if (!Array.isArray(loadedSchedules)) {
+                loadedSchedules = [];
+            }
+            setSchedules(deepClone(loadedSchedules));
             setAvailability(deepClone(data.availability || {}));
-            setOrganization(deepClone(data.organization || null));
+            
+            // Fix organization structure before setting it
+            let correctedOrg = deepClone(data.organization || null);
+            if (correctedOrg && !Array.isArray(correctedOrg.members)) {
+                correctedOrg.members = [];
+            }
+            setOrganization(correctedOrg);
             
             // Sync officer roles from organization members to scheduling members
             let schedulingMembers = deepClone(data.members || []);
             if (data.organization?.members) {
-                // MIGRATION: If scheduling members array is empty, populate it from organization members
-                if (schedulingMembers.length === 0 && data.organization.members.length > 0) {
-                    schedulingMembers = data.organization.members.map((orgMember: any) => {
-                        const member: any = {
-                            id: orgMember.id || orgMember.uid || uuidv4(),
-                            name: orgMember.name || '',
-                            status: orgMember.status || 'Active',
-                            isToastmaster: orgMember.isToastmaster || false,
-                            isTableTopicsMaster: orgMember.isTableTopicsMaster || false,
-                            isGeneralEvaluator: orgMember.isGeneralEvaluator || false,
-                            isPastPresident: orgMember.isPastPresident || false
-                        };
-                        
-                        // Only add fields that are not undefined
-                        if (orgMember.uid !== undefined) member.uid = orgMember.uid;
-                        if (orgMember.joinedDate !== undefined) member.joinedDate = orgMember.joinedDate;
-                        if (orgMember.ownerId !== undefined) member.ownerId = orgMember.ownerId;
-                        if (orgMember.officerRole !== undefined) member.officerRole = orgMember.officerRole;
-                        
-                        return member;
+                // MIGRATION: Fix organization.members if it's an object instead of array
+                let orgMembers = data.organization.members;
+                if (!Array.isArray(orgMembers)) {
+                    orgMembers = [];
+                    // Update the database to fix the structure
+                    const docRef = db.collection('users').doc(ownerId);
+                    docRef.update({ 'organization.members': orgMembers }).catch((error) => {
+                        // Failed to fix organization.members structure
                     });
+                }
+                
+                // MIGRATION: If scheduling members array is empty, populate it from organization members
+                // BUT exclude the club admin from being migrated as a regular member
+                if (schedulingMembers.length === 0 && orgMembers.length > 0) {
+                    schedulingMembers = orgMembers
+                        .filter((orgMember: any) => {
+                            // Exclude the club admin (ownerId) from regular members
+                            return orgMember.uid !== ownerId;
+                        })
+                        .map((orgMember: any) => {
+                            const member: any = {
+                                id: orgMember.id || orgMember.uid || uuidv4(),
+                                name: orgMember.name || '',
+                                status: orgMember.status || 'Active',
+                                isToastmaster: orgMember.isToastmaster || false,
+                                isTableTopicsMaster: orgMember.isTableTopicsMaster || false,
+                                isGeneralEvaluator: orgMember.isGeneralEvaluator || false,
+                                isPastPresident: orgMember.isPastPresident || false
+                            };
+                            
+                            // Only add fields that are not undefined
+                            if (orgMember.uid !== undefined) member.uid = orgMember.uid;
+                            if (orgMember.joinedDate !== undefined) member.joinedDate = orgMember.joinedDate;
+                            if (orgMember.ownerId !== undefined) member.ownerId = orgMember.ownerId;
+                            if (orgMember.officerRole !== undefined) member.officerRole = orgMember.officerRole;
+                            
+                            return member;
+                        });
                     
                     // Save the migrated data to the database
                     const docRef = db.collection('users').doc(ownerId);
                     docRef.update({ 'members': schedulingMembers }).catch((error) => {
-                        console.error('Migration failed:', error);
+                        // Migration failed
                     });
                 } else {
                     // Normal sync: Update scheduling members with officer roles from organization members
@@ -246,29 +289,58 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 }
             }
             setMembers(schedulingMembers);
-            setWeeklyAgendas(deepClone(data.weeklyAgendas || []));
             
-            // Set currentUser - if me is null but user is club owner, create a currentUser object
+            // Ensure weeklyAgendas is always an array (migration fix for old data)
+            let loadedWeeklyAgendas = data.weeklyAgendas || [];
+            if (!Array.isArray(loadedWeeklyAgendas)) {
+                loadedWeeklyAgendas = [];
+            }
+            setWeeklyAgendas(deepClone(loadedWeeklyAgendas));
+            
+            // Update email verification status if user is verified
+            if (user?.emailVerified && data.emailVerified === false) {
+                await clubDataDocRef.update({ emailVerified: true });
+                return; // Let the listener reload with updated data
+            }
+            
+            // Set currentUser - prioritize admin field, then organization members, then create from user
             if (me) {
                 setCurrentUser(me);
             } else if (user?.uid === ownerId) {
-                // User is the club owner, create a currentUser object
-                const clubOwnerUser = {
-                    uid: user.uid,
-                    email: user.email!,
-                    name: user.displayName || user.email!,
-                    role: UserRole.Admin
-                };
+                // User is the club owner, check if admin info is stored separately
+                let clubOwnerUser;
+                
+                if (data.admin) {
+                    // Use stored admin info
+                    clubOwnerUser = data.admin;
+                } else {
+                    // Fallback: create admin user from Firebase user info
+                    const emailName = user.email!.split('@')[0] || user.email!;
+                    clubOwnerUser = {
+                        uid: user.uid,
+                        email: user.email!,
+                        name: user.displayName || emailName,
+                        role: UserRole.Admin
+                    };
+                    
+                    // Update the database to store admin info separately
+                    try {
+                        await clubDataDocRef.update({ admin: clubOwnerUser });
+                    } catch (error) {
+                        // Failed to update admin info
+                    }
+                }
+                
                 setCurrentUser(clubOwnerUser);
                 
-                // If no organization exists, create one with the owner as the first member
+                // If no organization exists, create one with empty members (admin is separate)
                 if (!data.organization) {
                     const initialOrganization = {
                         name: '',
                         district: '',
                         clubNumber: '',
                         ownerId: user.uid,
-                        members: [clubOwnerUser]
+                        members: [] // Start with empty members array - admin is separate
                     };
                     
                     // Update the database with the initial organization
@@ -277,7 +349,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         schedules: [],
                         weeklyAgendas: []
                     }).catch(error => {
-                        console.error('Failed to create initial organization:', error);
+                        // Failed to create initial organization
                     });
                 }
             } else {
@@ -299,7 +371,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                             }));
                             setPendingInvites(invitesData);
                         }, (err) => {
-                            console.error("Error listening to invites:", err);
                             setPendingInvites([]);
                         });
                 }
@@ -341,7 +412,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setError(null);
             setLoading(false);
         }, (err) => {
-            console.error("Error listening to club data:", err);
             setError("Failed to load club data. You may not have the required permissions.");
             setLoading(false);
         });
@@ -365,7 +435,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
         // Add additional safety check to ensure user has required properties
         if (!user.uid || !user.email) {
-            console.warn('User object is incomplete, waiting for authentication to complete');
             return;
         }
 
@@ -373,8 +442,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
         const initializeUserSession = async () => {
             try {
-                console.log('Initializing user session for:', user.email);
-                console.log('Current sessionStorage contents:', Object.keys(sessionStorage).map(key => ({ key, value: sessionStorage.getItem(key) })));
                 let ownerIdToUse: string | null = null;
                 
                 // Check if user is a club owner (has their own club document)
@@ -384,34 +451,32 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 } else {
                     // Check for pending invitation token
                     const token = sessionStorage.getItem('inviteToken');
-                    console.log('Checking for invitation token:', token);
                     
                     if (token) {
                         try {
-                            console.log('Processing invitation token:', token);
                             ownerIdToUse = await linkMemberAccount(token, user);
-                            console.log('Successfully linked member, ownerId:', ownerIdToUse);
                             sessionStorage.removeItem('inviteToken');
                         } catch (joinError: any) {
-                            console.error(`Member linking failed:`, joinError);
                             throw new Error("Invalid or expired invitation. Please request a new invitation from your club administrator.");
                         }
                     } else {
-                        console.log('No invitation token found, searching for existing member...');
-                        console.log('Looking for user UID:', user.uid);
                         // Search for this user's uid in all club members arrays
                         const usersSnapshot = await db.collection('users').get();
                         
                         for (const doc of usersSnapshot.docs) {
                             const data = doc.data();
-                            console.log('Checking club:', doc.id, 'members:', data.organization?.members);
+                            // Check if user is the club admin
+                            if (data.admin && data.admin.uid === user.uid) {
+                                ownerIdToUse = doc.id;
+                                break;
+                            }
+                            
+                            // Check if user is a regular member
                             if (data.organization?.members) {
                                 const member = data.organization.members.find((m: any) => m.uid === user.uid);
-                                console.log('Found member with matching UID:', member);
                                 
                                 if (member) {
                                     ownerIdToUse = doc.id;
-                                    console.log('Found matching club:', doc.id);
                                     break;
                                 }
                             }
@@ -430,7 +495,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     throw new Error("You are not authorized to access this application. Please contact your club administrator for an invitation.");
                 }
             } catch(e: any) {
-                console.error("Error initializing user session:", e);
                 setError(e.message || "Access denied. Please contact your club administrator for assistance.");
                 setLoading(false);
             }
@@ -457,26 +521,30 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             throw new Error("Name cannot be empty.");
         }
 
-        const updatedMembers = organization.members.map(m => m.uid === uid ? { ...m, name: newName.trim() } : m);
-        await docRef.update({ 'organization.members': updatedMembers });
+        // Check if this is the club admin (ownerId)
+        if (uid === dataOwnerId) {
+            // Update admin info separately
+            const updatedAdmin = { ...currentUser!, name: newName.trim() };
+            setCurrentUser(updatedAdmin);
+            await docRef.update({ admin: updatedAdmin });
+        } else {
+            // Update regular member
+            const updatedMembers = organization.members.map(m => m.uid === uid ? { ...m, name: newName.trim() } : m);
+            await docRef.update({ 'organization.members': updatedMembers });
+        }
     };
 
     const updateClubProfile = async (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; timezone?: string; }) => {
         const docRef = getDataDocRef();
         if (!docRef) return;
         
-        // If no organization exists yet, create a new one with the current user as the first member
+        // If no organization exists yet, create a new one with empty members (admin is separate)
         const currentOrg = organization || {
             name: '',
             district: '',
             clubNumber: '',
             ownerId: dataOwnerId || '',
-            members: currentUser ? [{
-                uid: currentUser.uid,
-                email: currentUser.email,
-                name: currentUser.name,
-                role: currentUser.role
-            }] : []
+            members: [] // Admin is stored separately, not in members array
         };
         
         const updatedOrg = { 
@@ -613,7 +681,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
               }
             });
         } catch (emailError) {
-            console.error('Failed to queue email:', emailError);
             // Continue anyway - we'll provide the URL manually
         }
         
@@ -736,8 +803,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         // Also update the separate members array for scheduling
         const updatedSchedulingMembers = members.map(m => m.id === memberId ? { ...m, uid } : m);
         setMembers(updatedSchedulingMembers);
-        
-        console.log('Successfully linked member to account:', { memberId, uid });
     };
 
     // New function to directly link the current user to a member
@@ -767,9 +832,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             } : m
         );
         
-        console.log('Linking current user to member:', { memberId, uid: user.uid, updatedMembers });
         await docRef.update({ 'organization.members': updatedMembers });
-        console.log('Successfully linked current user to member');
     };
 
     // Manual function to link a member by email to a specific UID
@@ -799,9 +862,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             } : m
         );
         
-        console.log('Manually linking member by email:', { email, uid, memberToLink, updatedMembers });
         await docRef.update({ 'organization.members': updatedMembers });
-        console.log('Successfully linked member by email');
     };
 
     const linkMemberToFirebaseAuthUser = async (memberId: string, email: string) => {
@@ -823,14 +884,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             const { getAuth, fetchSignInMethodsForEmail } = await import('firebase/auth');
             const auth = getAuth();
             
-            console.log('Checking if email has Firebase Auth account:', email);
             const methods = await fetchSignInMethodsForEmail(auth, email);
             
             if (!methods || methods.length === 0) {
                 throw new Error(`No Firebase Auth account found for email ${email}. The user needs to create an account first.`);
             }
-            
-            console.log('Found Firebase Auth account for email:', email);
             
             // Get the user's UID from Firebase Auth
             // Note: We can't get the UID directly from client-side, but we can create a user document
@@ -857,14 +915,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             );
             setMembers(updatedSchedulingMembers);
             
-            console.log('Successfully linked member email to Firebase Auth account');
-            
             return { 
                 success: true, 
                 message: `Successfully linked ${member.name} to Firebase Auth account (${email}). The user can now sign in and their UID will be automatically linked.`
             };
         } catch (error: any) {
-            console.error("Error linking member to Firebase Auth user:", error);
             return { success: false, message: `Error: ${error.message}` };
         }
     };
@@ -890,7 +945,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             const userData = {
                 email: member.email || `${uid}@firebase.auth` // Use member's email or create a fallback
             };
-            console.log('Linking member to user:', { memberName: member.name, uid, userEmail: userData?.email });
 
             // Update the member with the UID and email
             const docRef = getDataDocRef();
@@ -913,14 +967,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             );
             setMembers(updatedSchedulingMembers);
             
-            console.log('Successfully linked member to user account');
-            
             return { 
                 success: true, 
                 message: `Successfully linked ${member.name} to user account (${userData?.email}).`
             };
         } catch (error: any) {
-            console.error("Error linking member to UID:", error);
             return { success: false, message: `Error: ${error.message}` };
         }
     };
@@ -934,9 +985,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         }
 
         try {
-            console.log('Getting all users from Firebase...');
             const usersSnapshot = await db.collection('users').get();
-            console.log('Found', usersSnapshot.docs.length, 'total users in Firebase');
             
             // Get all currently linked UIDs in this club
             const linkedUids = new Set<string>();
@@ -947,7 +996,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                     }
                 });
             }
-            console.log('Currently linked UIDs in this club:', Array.from(linkedUids));
             
             const allUsers = [];
             const unlinkedUsers = [];
@@ -957,7 +1005,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 
                 // Skip club owner documents (they have organization data)
                 if (userData.organization) {
-                    console.log('Skipping club owner:', userDoc.id);
                     continue;
                 }
                 
@@ -975,9 +1022,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 }
             }
             
-            console.log('All users (excluding club owners):', allUsers);
-            console.log('Unlinked users available for linking:', unlinkedUsers);
-            
             return {
                 success: true,
                 totalUsers: allUsers.length,
@@ -985,7 +1029,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 allUsers: allUsers
             };
         } catch (error: any) {
-            console.error("Error getting unlinked users:", error);
             return { success: false, message: `Error: ${error.message}` };
         }
     };
@@ -1037,7 +1080,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
             return { success: true, ...result };
         } catch (error: any) {
-            console.error("Error checking member linking status:", error);
             return { success: false, message: `Error: ${error.message}` };
         }
     };
@@ -1065,19 +1107,16 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             // If still not found, try to find by name (in case of ID mismatch)
             if (!memberToLink && organization.members) {
                 // This is a fallback - try to find by name
-                console.log('Member not found by ID, trying to find by name...');
             }
             
             // Double-check: Get fresh data from database to ensure we have the latest member info
             if (memberToLink) {
-                console.log('Found member in context:', memberToLink);
                 // Refresh the member data from the database to get the most current UID
                 const freshOrgData = await docRef.get();
                 if (freshOrgData.exists) {
                     const freshOrg = freshOrgData.data();
                     const freshMember = freshOrg?.organization?.members?.find((m: any) => m.id === memberId);
                     if (freshMember) {
-                        console.log('Fresh member data from DB:', freshMember);
                         memberToLink = freshMember; // Use the fresh data
                     }
                 }
@@ -1089,7 +1128,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
             // Check if member already has a uid - if so, verify it's properly linked
             if (memberToLink.uid) {
-                console.log('Member already has UID:', memberToLink.uid);
                 // Check if this uid exists in the users collection
                 const userRef = db.collection('users').doc(memberToLink.uid);
                 const userDoc = await userRef.get();
@@ -1104,7 +1142,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                         };
                     }
                 } else {
-                    console.log('Member has UID but user document does not exist:', memberToLink.uid);
                     // UID exists but user document is missing - this is a data inconsistency
                     return {
                         success: false,
@@ -1244,7 +1281,6 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 };
             }
         } catch (error: any) {
-            console.error("Error finding and linking existing user:", error);
             return { success: false, message: `Error: ${error.message}` };
         }
     };
@@ -1367,6 +1403,11 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         }
     
         if (status === AvailabilityStatus.Unavailable || status === AvailabilityStatus.Possible) {
+            // Ensure schedules is an array before cloning
+            if (!Array.isArray(schedules)) {
+                return;
+            }
+            
             const updatedSchedules = deepClone(schedules);
             
             const targetDate = new Date(`${date}T00:00:00Z`);
@@ -1485,7 +1526,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const value = {
-        schedules, availability, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, pendingInvites, weeklyAgendas,
+        schedules, availability, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, needsEmailVerification, pendingInvites, weeklyAgendas,
         addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
@@ -1501,6 +1542,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         
     }
 
+
     return (
         <ToastmastersContext.Provider value={value}>
             {loading ? (
@@ -1511,6 +1553,74 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         <p className="text-xl text-gray-700 dark:text-gray-300">Loading Your Club Data...</p>
+                    </div>
+                </div>
+            ) : needsEmailVerification ? (
+                <div className="min-h-screen flex items-center justify-center bg-blue-50 dark:bg-blue-900/10 p-4">
+                    <div className="text-center bg-white dark:bg-blue-900/20 p-8 rounded-lg shadow-lg border border-blue-200 dark:border-blue-800 max-w-md">
+                        <div className="mx-auto h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6">
+                            <svg className="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-200 mb-4">Email Verification Required</h2>
+                        <p className="text-blue-600 dark:text-blue-300 mb-6">
+                            Please check your email and click the verification link to access your club. If you don't see the email, check your spam folder.
+                        </p>
+                        
+                        {/* Manual verification option */}
+                        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                            <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                                Email not received?
+                            </h3>
+                            <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                                If you didn't receive the verification email, you can manually verify your account:
+                            </p>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        // Get the verification URL from the database
+                                        const userDoc = await db.collection('users').doc(user?.uid).get();
+                                        const userData = userDoc.data();
+                                        const verificationUrl = userData?.emailVerificationUrl;
+                                        
+                                        if (verificationUrl) {
+                                            // Open the verification URL in a new tab
+                                            window.open(verificationUrl, '_blank');
+                                            alert('Verification link opened in a new tab. After clicking the link, come back here and click "I\'ve Verified My Email".');
+                                        } else {
+                                            alert('No verification link found. Please try creating your account again.');
+                                        }
+                                        } catch (error) {
+                                            alert('Error getting verification link. Please try again.');
+                                        }
+                                }}
+                                className="w-full px-3 py-2 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700 transition-colors"
+                            >
+                                Open Verification Link Manually
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => {
+                                    setNeedsEmailVerification(false);
+                                    window.location.reload();
+                                }}
+                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                                I've Verified My Email
+                            </button>
+                            <button
+                                onClick={() => {
+                                    logOut();
+                                    setNeedsEmailVerification(false);
+                                }}
+                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                            >
+                                Sign Out
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : error ? (

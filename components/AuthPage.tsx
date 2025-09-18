@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
 import { APP_VERSION } from '../utils/version';
 import { db } from '../services/firebase';
+import { EmailVerificationPage } from './EmailVerificationPage';
 
 type AuthView = 'login' | 'signup' | 'reset';
 
@@ -21,6 +22,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingInvite, setIsLoadingInvite] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
   const { logIn, signUpAndCreateClub, sendPasswordReset, signUpInvitedUser } = useAuth();
 
   useEffect(() => {
@@ -76,12 +78,21 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
           await signUpInvitedUser(email, password);
         } else {
           await signUpAndCreateClub(email, password, { clubName, district, clubNumber, meetingDay });
+          // Show verification page after successful club creation
+          setShowVerification(true);
+          return;
         }
       } else if (view === 'reset') {
         await sendPasswordReset(email);
         setMessage('If an account with that email exists, a password reset link has been sent.');
       }
     } catch (err: any) {
+      // Handle email verification flow
+      if (err.message === 'VERIFICATION_SENT') {
+        setShowVerification(true);
+        return;
+      }
+      
       // Don't remove the token on failure, as the user might need to log in.
       if (err && err.code) {
         if (view === 'reset' && err.code === 'auth/user-not-found') {
@@ -158,6 +169,11 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
             case 'reset': return 'Send Reset Link';
         }
     }
+
+  // Show email verification page if needed
+  if (showVerification) {
+    return <EmailVerificationPage email={email} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

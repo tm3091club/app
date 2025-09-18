@@ -5,6 +5,7 @@ import { ScheduleView } from './components/ScheduleView';
 import { MemberManager } from './components/MemberManager';
 import { ProfilePage } from './components/ProfilePage';
 import WeeklyAgenda from './components/WeeklyAgenda';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useAuth } from './Context/AuthContext';
 import { AuthPage } from './components/AuthPage';
 import { ToastmastersProvider, useToastmasters } from './Context/ToastmastersContext';
@@ -17,7 +18,7 @@ import { APP_VERSION } from './utils/version';
 type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda';
 
 function App() {
-  const { user, loading, logOut } = useAuth();
+  const { user, loading, logOut, verifyEmailWithToken } = useAuth();
   const [currentView, setCurrentView] = useState<View>('schedule');
 
   // --- Top-level Routing Logic ---
@@ -31,6 +32,28 @@ function App() {
   const urlParams = new URLSearchParams(hash.split('?')[1] || '');
   const inviteToken = urlParams.get('token');
   
+  // Handle email verification token
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const verifyToken = urlParams.get('verify');
+    
+    if (verifyToken && user) {
+      verifyEmailWithToken(verifyToken)
+        .then(() => {
+          // Remove the verification token from URL
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('verify');
+          window.history.replaceState(null, '', newUrl.pathname + newUrl.hash);
+          
+          // Show success message or redirect
+          alert('Email verified successfully! You can now access your club.');
+        })
+        .catch((error) => {
+          alert('Email verification failed. Please try again or contact support.');
+        });
+    }
+  }, [user, verifyEmailWithToken]);
+
   // Clean up URL if it ends with just a hash
   useEffect(() => {
     if (window.location.hash === '#') {
@@ -51,7 +74,11 @@ function App() {
           </div>
         );
       }
-      return <WeeklyAgenda scheduleId={selectedScheduleId} />;
+      return (
+        <ErrorBoundary>
+          <WeeklyAgenda scheduleId={selectedScheduleId} />
+        </ErrorBoundary>
+      );
     };
 
     const renderView = () => {

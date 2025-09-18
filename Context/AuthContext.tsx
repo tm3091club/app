@@ -12,8 +12,10 @@ interface AuthContextType {
     logIn: (email: string, password: string) => Promise<firebase.auth.UserCredential>;
     logOut: () => Promise<void>;
     sendPasswordReset: (email: string) => Promise<void>;
+    sendEmailVerification: () => Promise<void>;
     updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
     updateUserEmail: (currentPassword: string | null, newEmail: string) => Promise<void>;
+    verifyEmailWithToken: (token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,7 +30,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(user);
             setLoading(false);
         }, (error) => {
-            console.error('Auth state change error:', error);
             setUser(null);
             setLoading(false);
         });
@@ -37,31 +38,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const signUpAndCreateClub = async (email: string, password: string, clubDetails: { clubName: string; district: string; clubNumber: string; meetingDay: number; }) => {
+        // Create user account
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const newUser = userCredential.user;
         if (!newUser) {
             throw new Error("User creation failed.");
         }
 
+        try {
+            await sendCustomEmailVerification(newUser.email!, newUser.uid);
+        } catch (emailError: any) {
+            // Don't throw error - let user proceed with manual verification
+        }
+
+        // Create club data but mark as unverified
         const dataDocRef = db.collection('users').doc(newUser.uid);
-        const newName = newUser.displayName || newUser.email!;
-        const newAppUser: AppUser = { uid: newUser.uid, email: newUser.email!, name: newName, role: UserRole.Admin };
+        
+        // Create club admin user - separate from regular members
+        // Extract name from email (part before @) or use email if no @ found
+        const emailName = newUser.email!.split('@')[0] || newUser.email!;
+        const adminName = newUser.displayName || emailName;
+        
+        const newAppUser: AppUser = { 
+            uid: newUser.uid, 
+            email: newUser.email!, 
+            name: adminName, 
+            role: UserRole.Admin 
+        };
+        
+        // Create organization with empty members array - admin is separate
         const newOrg: Organization = {
             name: clubDetails.clubName,
-            members: [newAppUser],
+            members: [], // Start with empty members array - admin is not a regular member
             district: clubDetails.district,
             clubNumber: clubDetails.clubNumber,
             ownerId: newUser.uid,
             meetingDay: clubDetails.meetingDay,
         };
+        
         const initialData = {
-            schedules: {},
+            schedules: [],
             availability: {},
-            weeklyAgendas: {},
+            weeklyAgendas: [],
             organization: newOrg,
-            email: newUser.email
+            email: newUser.email,
+            emailVerified: false,
+            clubDetails: clubDetails,
+            // Store admin info separately from regular members
+            admin: newAppUser
         };
-        await dataDocRef.set(initialData);
+        try {
+            await dataDocRef.set(initialData);
+        } catch (error) {
+            throw new Error('Failed to create club data. Please try again.');
+        }
+
+        try {
+            await sendCustomEmailVerification(newUser.email!, newUser.uid);
+        } catch (emailError) {
+            // Don't throw error - let user proceed with manual verification
+        }
+        
+        // Don't throw VERIFICATION_SENT error - let the user proceed to verification page
     };
 
     const signUpInvitedUser = (email: string, password: string): Promise<firebase.auth.UserCredential> => {
@@ -79,6 +117,103 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const sendPasswordReset = (email: string) => {
         return auth.sendPasswordResetEmail(email);
+    };
+
+    const sendCustomEmailVerification = async (email: string, userId: string) => {
+        const verificationToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const verificationUrl = `${window.location.origin}/?verify=${verificationToken}`;
+        
+        await db.collection('users').doc(userId).set({
+            emailVerificationToken: verificationToken,
+            emailVerificationSent: new Date().toISOString(),
+            emailVerificationUrl: verificationUrl,
+            emailVerificationQueued: true
+        }, { merge: true });
+
+        try {
+            await db.collection("mail").add({
+                to: [email],
+                message: {
+                    subject: `Verify your email for Toastmasters Monthly Scheduler`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: #004165; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                                <h1 style="margin: 0; font-size: 24px;">Toastmasters Monthly Scheduler</h1>
+                            </div>
+                            <div style="padding: 30px; background: white; border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
+                                <h2 style="color: #004165; margin-top: 0;">Email Verification Required</h2>
+                                <p>Hello!</p>
+                                <p>Thank you for creating your Toastmasters club account. To complete your registration and access your club management features, please verify your email address.</p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${verificationUrl}" 
+                                       style="display: inline-block; padding: 15px 30px; background: #004165; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+                                        Verify My Email Address
+                                    </a>
+                                </div>
+                                <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                                <p style="word-break: break-all; color: #666; background: #f7fafc; padding: 10px; border-radius: 4px; font-family: monospace;">
+                                    ${verificationUrl}
+                                </p>
+                                <p><strong>Important:</strong> This verification link will expire in 24 hours.</p>
+                                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+                                <p style="font-size: 12px; color: #718096;">
+                                    If you didn't create this account, please ignore this email or contact us at 
+                                    <a href="mailto:tmprofessionallyspeaking@gmail.com">tmprofessionallyspeaking@gmail.com</a>
+                                </p>
+                            </div>
+                        </div>
+                    `,
+                    text: `Toastmasters Monthly Scheduler - Email Verification Required
+
+Hello!
+
+Thank you for creating your Toastmasters club account. To complete your registration and access your club management features, please verify your email address.
+
+Click this link to verify your email:
+${verificationUrl}
+
+Important: This verification link will expire in 24 hours.
+
+If you didn't create this account, please ignore this email or contact us at tmprofessionallyspeaking@gmail.com
+
+---
+Toastmasters Monthly Scheduler`
+                }
+            });
+        } catch (emailError) {
+            throw emailError;
+        }
+    };
+
+    const sendEmailVerification = async () => {
+        const user = auth.currentUser;
+        if (!user) {
+            throw new Error("No user is currently signed in.");
+        }
+        await sendCustomEmailVerification(user.email!, user.uid);
+    };
+
+    const verifyEmailWithToken = async (token: string) => {
+        try {
+            // Verify the token and update the user's email verification status
+            const userDoc = await db.collection('users').where('emailVerificationToken', '==', token).get();
+            
+            if (userDoc.empty) {
+                throw new Error('Invalid or expired verification token.');
+            }
+
+            const userData = userDoc.docs[0];
+            const userId = userData.id;
+            
+            // Update the email verification status
+            await db.collection('users').doc(userId).update({
+                emailVerified: true,
+                emailVerificationToken: null // Clear the token
+            });
+
+        } catch (error) {
+            throw error;
+        }
     };
 
     const updatePassword = async (currentPassword: string, newPassword: string) => {
@@ -124,8 +259,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logIn,
         logOut,
         sendPasswordReset,
+        sendEmailVerification,
         updatePassword,
         updateUserEmail,
+        verifyEmailWithToken,
     };
 
     return (
