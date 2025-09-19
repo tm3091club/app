@@ -1,10 +1,11 @@
 
 
-import React, { JSX } from 'react';
+import React, { JSX, useRef, useEffect } from 'react';
 import { MonthlySchedule, Meeting, Member, AvailabilityStatus, MemberAvailability } from '../../types';
 // TOASTMASTERS_ROLES: All roles that appear on the monthly schedule. See Constants.ts for major/minor role definitions.
 import { TOASTMASTERS_ROLES } from '../../Constants';
 import { RoleAssignmentCell } from './RoleAssignmentCell';
+import { getCurrentWeekIndex, getNextWeekIndex } from '../../utils/adminTransitionUtils';
 
 interface ScheduleTableProps {
   activeSchedule: MonthlySchedule;
@@ -21,6 +22,8 @@ interface ScheduleTableProps {
   canEditRoleAssignment: (meetingIndex: number, role: string) => boolean;
   canEditTheme: (meetingIndex: number) => boolean;
   canToggleBlackout: (meetingIndex: number) => boolean;
+  // For auto-scrolling
+  organization: { meetingDay: number; timezone: string };
 }
 
 const ReadOnlyRoleCell: React.FC<{ name: string | null }> = ({ name }) => (
@@ -43,10 +46,64 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   canEditRoleAssignment,
   canEditTheme,
   canToggleBlackout,
+  organization,
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to current or next week on mobile
+  useEffect(() => {
+    const scrollToRelevantWeek = () => {
+      if (!scrollContainerRef.current || !activeSchedule?.meetings) return;
+      
+      // Only auto-scroll on mobile (screen width < 768px)
+      if (window.innerWidth >= 768) return;
+      
+      const currentWeekIndex = getCurrentWeekIndex(activeSchedule, organization.meetingDay, organization.timezone);
+      const nextWeekIndex = getNextWeekIndex(activeSchedule, currentWeekIndex);
+      
+      // Determine which week to focus on
+      let targetWeekIndex = currentWeekIndex;
+      if (currentWeekIndex === -1 || !activeSchedule.meetings[currentWeekIndex]?.date) {
+        // No current week found, use next week
+        targetWeekIndex = nextWeekIndex;
+      } else {
+        // Check if current week's meeting has passed
+        const currentMeeting = activeSchedule.meetings[currentWeekIndex];
+        const meetingDate = new Date(currentMeeting.date + 'T23:59:59');
+        const now = new Date();
+        
+        if (now > meetingDate) {
+          // Current week meeting has passed, focus on next week
+          targetWeekIndex = nextWeekIndex;
+        }
+      }
+      
+      if (targetWeekIndex === -1 || targetWeekIndex >= activeSchedule.meetings.length) return;
+      
+      // Calculate scroll position
+      // Each column is approximately 130-250px wide (min-w-[130px] max-w-[250px])
+      const columnWidth = 180; // Average width
+      const previousMonthColumns = previousScheduleToShow?.length || 0;
+      const scrollPosition = (previousMonthColumns + targetWeekIndex) * columnWidth;
+      
+      // Scroll to the target week with smooth animation
+      scrollContainerRef.current.scrollTo({
+        left: scrollPosition,
+        behavior: 'smooth'
+      });
+    };
+    
+    // Add a small delay to ensure the table is fully rendered
+    const timer = setTimeout(scrollToRelevantWeek, 100);
+    
+    return () => clearTimeout(timer);
+  }, [activeSchedule, previousScheduleToShow, organization.meetingDay, organization.timezone]);
   
   return (
-    <div className="overflow-x-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg printable-schedule-container scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+    <div 
+      ref={scrollContainerRef}
+      className="overflow-x-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg printable-schedule-container scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800"
+    >
       <table className="min-w-full">
         <thead className="bg-gray-50 dark:bg-gray-700/50">
           <tr>

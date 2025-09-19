@@ -35,7 +35,8 @@ export const ScheduleView: React.FC = () => {
         setSelectedScheduleId, 
         organization,
         currentUser,
-        ownerId
+        ownerId,
+        adminStatus
     } = useToastmasters();
     
     // Component State
@@ -53,7 +54,7 @@ export const ScheduleView: React.FC = () => {
     const [shareUrl, setShareUrl] = useState('');
     const [copySuccess, setCopySuccess] = useState(false);
 
-    const isAdmin = currentUser?.role === UserRole.Admin;
+    const isAdmin = adminStatus?.hasAdminRights || false;
 
     // --- Data Hydration ---
     const hydratedMembers = useMemo(() => {
@@ -765,7 +766,7 @@ export const ScheduleView: React.FC = () => {
         const meeting = updatedSchedule.meetings[meetingIndex];
 
         // Check if user is unassigning themselves from a speaker role
-        if (previousMemberId && !newMemberId && currentUser?.role !== UserRole.Admin) {
+        if (previousMemberId && !newMemberId && !isAdmin) {
             const currentMember = members.find(m => m.id === previousMemberId);
             if (currentMember?.uid === user?.uid && role.includes('Speaker')) {
                 // Show confirmation to find replacement
@@ -803,7 +804,7 @@ export const ScheduleView: React.FC = () => {
         assignments[role] = newMemberId;
 
         // Send notifications for role changes
-        if (previousMemberId !== newMemberId && currentUser?.role === UserRole.Admin) {
+        if (previousMemberId !== newMemberId && isAdmin) {
             const previousMember = previousMemberId ? organization?.members.find(m => m.id === previousMemberId) : null;
             const newMember = newMemberId ? organization?.members.find(m => m.id === newMemberId) : null;
 
@@ -873,7 +874,7 @@ export const ScheduleView: React.FC = () => {
             });
             
             // Notify all active members about the blackout
-            if (!wasBlackout && currentUser?.role === UserRole.Admin) {
+            if (!wasBlackout && isAdmin) {
                 await notificationService.notifyMeetingBlackout(
                     members.filter(m => m.status === MemberStatus.Active),
                     new Date(meeting.date).toLocaleDateString(),
@@ -989,6 +990,7 @@ export const ScheduleView: React.FC = () => {
                         canEditRoleAssignment={canEditRoleAssignment}
                         canEditTheme={canEditTheme}
                         canToggleBlackout={canToggleBlackout}
+                        organization={organization}
                     />
                 </div>
             ) : (
