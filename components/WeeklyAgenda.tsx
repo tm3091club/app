@@ -24,6 +24,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     saveWeeklyAgenda,
     deleteWeeklyAgenda,
     currentUser,
+    adminStatus,
   } = useToastmasters();
   const { user } = useAuth();
   
@@ -82,7 +83,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   // Helper function to check if user can edit (Admin OR Toastmaster for this week)
   const canEdit = (): boolean => {
-    return currentUser?.role === 'Admin' || isToastmasterForWeek();
+    return adminStatus?.hasAdminRights || isToastmasterForWeek();
   };
   
   // Update selected week when schedule changes or loads

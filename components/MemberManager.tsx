@@ -295,8 +295,8 @@ const MemberRow: React.FC<{
     onLink: () => void;
     onUnlink: () => void;
 }> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
-    const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
-    const isAdmin = currentUser?.role === UserRole.Admin;
+    const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser, adminStatus } = useToastmasters();
+    const isAdmin = adminStatus?.hasAdminRights || false;
     const canEditRow = isAdmin;
     const canEditAvailability = isAdmin || isSelf;
     
@@ -509,8 +509,8 @@ const MobileMemberCard: React.FC<{
     onLink: () => void;
     onUnlink: () => void;
 }> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
-    const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser } = useToastmasters();
-    const isAdmin = currentUser?.role === UserRole.Admin;
+    const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser, adminStatus } = useToastmasters();
+    const isAdmin = adminStatus?.hasAdminRights || false;
     const canEditRow = isAdmin;
     const canEditAvailability = isAdmin || isSelf;
 
@@ -913,7 +913,7 @@ const MembersTable: React.FC<{
 
 
 export const MemberManager: React.FC = () => {
-    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, linkCurrentUserToMember, inviteUser, pendingInvites, revokeInvite, removeFromPendingLinking, findAndLinkExistingUser } = useToastmasters();
+    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, linkCurrentUserToMember, inviteUser, pendingInvites, revokeInvite, removeFromPendingLinking, findAndLinkExistingUser, adminStatus } = useToastmasters();
     const [fullName, setFullName] = useState('');
     const [status, setStatus] = useState<MemberStatus>(MemberStatus.Active);
     const [qualifications, setQualifications] = useState({
@@ -941,7 +941,7 @@ export const MemberManager: React.FC = () => {
     // NEW: State for availability month selection
     const [availabilityMonth, setAvailabilityMonth] = useState<{ year: number; month: number } | null>(null);
     
-    const isAdmin = currentUser?.role === UserRole.Admin;
+    const isAdmin = adminStatus?.hasAdminRights || false;
 
 
 

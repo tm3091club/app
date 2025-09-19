@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import NotificationBell from './NotificationBell';
+import AdminStatusIndicator from './AdminStatusIndicator';
 
 type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda';
 
@@ -22,7 +23,7 @@ const NavLink: React.FC<{
     return (
         <button
             onClick={onClick}
-            className={`block w-full text-left md:w-auto md:text-center px-4 py-3 rounded-md text-base md:text-sm font-semibold md:font-medium transition-colors duration-150 ${isActive ? activeClasses : inactiveClasses}`}
+            className={`block w-full text-left md:w-auto md:text-center px-4 py-2 md:py-3 rounded-md text-base md:text-sm font-semibold md:font-medium transition-colors duration-150 ${isActive ? activeClasses : inactiveClasses}`}
         >
             {children}
         </button>
@@ -31,7 +32,7 @@ const NavLink: React.FC<{
 
 export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, logOut, userEmail }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const { organization, currentUser } = useToastmasters();
+    const { organization, currentUser, adminStatus } = useToastmasters();
 
     const handleNavClick = (view: View) => {
         setCurrentView(view);
@@ -55,13 +56,18 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                     {/* Right side: Desktop Nav & Mobile menu button */}
                     <div className="flex items-center">
                          {/* Desktop Nav */}
-                        <div className="hidden md:flex items-center space-x-4">
+                        <div className="hidden lg:flex items-center space-x-4">
                             <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
-                            <nav className="flex items-baseline space-x-4">
+                            <AdminStatusIndicator 
+                                adminStatus={adminStatus} 
+                                userRole={currentUser?.role}
+                                officerRole={currentUser?.officerRole}
+                            />
+                            <nav className="flex items-baseline space-x-2 lg:space-x-4">
                                 <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Monthly Schedule</NavLink>
                                 <NavLink isActive={currentView === 'weekly-agenda'} onClick={() => handleNavClick('weekly-agenda')}>Weekly Agenda</NavLink>
                                 <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
-                                    {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}
+                                    {adminStatus?.hasAdminRights ? 'Manage Members' : 'My Availability'}
                                 </NavLink>
                             </nav>
                              <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-4"></div>
@@ -75,15 +81,24 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                                 </button>
                                 <button
                                     onClick={logOut}
-                                    className="px-4 py-2 text-base font-semibold text-white bg-[#004165] hover:bg-[#003554] rounded-md transition-colors"
+                                    className="px-2 py-2 text-sm font-semibold text-white bg-[#004165] hover:bg-[#003554] rounded-md transition-colors whitespace-nowrap"
                                 >
                                     Log Out
                                 </button>
                             </div>
                         </div>
 
-                        {/* Mobile Menu Button */}
-                        <div className="flex items-center md:hidden">
+                        {/* Mobile/Tablet Navigation */}
+                        <div className="flex items-center lg:hidden">
+                            {/* Show admin status and notifications on medium screens */}
+                            <div className="hidden md:flex items-center space-x-2 mr-2">
+                                <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
+                                <AdminStatusIndicator 
+                                    adminStatus={adminStatus} 
+                                    userRole={currentUser?.role}
+                                    officerRole={currentUser?.officerRole}
+                                />
+                            </div>
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                                 type="button"
@@ -109,23 +124,37 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
 
             {/* Mobile menu, show/hide based on menu state. */}
             {isMobileMenuOpen && (
-                <div className="md:hidden" id="mobile-menu">
-                    <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <div className="lg:hidden" id="mobile-menu">
+                    <div className="px-2 pt-2 pb-2 space-y-0.5 sm:px-3">
                         {/* Club Name with Profile */}
-                        <div className="flex items-center justify-between px-3 py-3 bg-gray-50 dark:bg-gray-700 rounded-md mb-3">
-                            <div className="flex items-center gap-3">
-                                <span className="text-base font-semibold text-gray-900 dark:text-white truncate">{displayName}</span>
-                                <button
-                                    onClick={() => handleNavClick('profile')}
-                                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-2 py-1 rounded border border-blue-200 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                >
-                                    Profile
-                                </button>
-                            </div>
+                        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-md mb-2">
+                            <button
+                                onClick={() => handleNavClick('profile')}
+                                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-2 py-1 rounded border border-blue-200 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex-shrink-0"
+                            >
+                                Profile
+                            </button>
+                            <button
+                                onClick={() => handleNavClick('profile')}
+                                className="text-base font-semibold text-gray-900 dark:text-white truncate text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer flex-grow"
+                                title="Go to Profile"
+                            >
+                                {displayName}
+                            </button>
+                        </div>
+                        
+                        {/* Admin Status */}
+                        <div className="px-3 py-1">
+                            <AdminStatusIndicator 
+                                adminStatus={adminStatus} 
+                                userRole={currentUser?.role}
+                                officerRole={currentUser?.officerRole}
+                                className="text-xs" 
+                            />
                         </div>
                         
                         {/* Notifications */}
-                        <div className="flex items-center justify-between px-3 py-3">
+                        <div className="flex items-center justify-between px-3 py-2">
                             <span className="text-base font-semibold text-gray-700 dark:text-gray-300">Notifications</span>
                             <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
                         </div>
@@ -134,16 +163,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                         <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Monthly Schedule</NavLink>
                         <NavLink isActive={currentView === 'weekly-agenda'} onClick={() => handleNavClick('weekly-agenda')}>Weekly Agenda</NavLink>
                         <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
-                            {currentUser?.role === 'Admin' ? 'Manage Members' : 'My Availability'}
+                            {adminStatus?.hasAdminRights ? 'Manage Members' : 'My Availability'}
                         </NavLink>
                         
-                        <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                         
                         {/* Log Out */}
-                        <div className="px-2 py-2">
+                        <div className="px-2 py-1">
                              <button
                                 onClick={() => { logOut(); setIsMobileMenuOpen(false); }}
-                                className="w-full text-left block px-4 py-3 rounded-md text-base font-semibold text-white bg-[#004165] hover:bg-[#003554] transition-colors"
+                                className="w-full text-left block px-4 py-2 rounded-md text-base font-semibold text-white bg-[#004165] hover:bg-[#003554] transition-colors"
                             >
                                 Log Out
                             </button>

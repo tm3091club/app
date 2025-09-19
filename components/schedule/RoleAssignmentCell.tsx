@@ -6,6 +6,7 @@ import { Member, RoleAssignment, AvailabilityStatus } from '../../types';
 // MINOR_ROLES: Supporting roles, typically require less experience (see Constants.ts).
 import { MAJOR_ROLES, TOASTMASTERS_ROLES } from '../../Constants';
 import { useToastmasters } from '../../Context/ToastmastersContext';
+import { canUnassignSelfFromToastmaster } from '../../utils/adminTransitionUtils';
 
 export const RoleAssignmentCell: React.FC<{
   meetingIndex: number;
@@ -18,7 +19,7 @@ export const RoleAssignmentCell: React.FC<{
   meetingDate: string;
   availability: { [memberId: string]: any };
 }> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled, meetingDate, availability }) => {
-    const { currentUser, ownerId, organization } = useToastmasters();
+    const { currentUser, ownerId, organization, schedules, selectedScheduleId } = useToastmasters();
     
     const membersForThisRole = useMemo(() => {
         // Get the required qualification for this role
@@ -42,7 +43,7 @@ export const RoleAssignmentCell: React.FC<{
               );
 
         // For members (non-admins), only show themselves and currently assigned member
-        if (currentUser?.role !== 'Admin') {
+        if (disabled) {
             const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
             if (!currentMember) return [];
 
@@ -138,7 +139,37 @@ export const RoleAssignmentCell: React.FC<{
     }, [role, availableMembers, assignedMemberId, currentUser, allAssignmentsForMeeting, meetingDate, availability]);
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        onAssignmentChange(meetingIndex, role, e.target.value || null);
+        const newMemberId = e.target.value || null;
+        
+        // Check for buffer protection when unassigning self from Toastmaster role
+        if (role === 'Toastmaster' && assignedMemberId && !newMemberId && currentUser?.uid) {
+            const activeSchedule = schedules.find(s => s.id === selectedScheduleId);
+            
+            if (activeSchedule && organization) {
+                const bufferCheck = canUnassignSelfFromToastmaster(
+                    currentUser.uid,
+                    currentUser.role || 'Member',
+                    activeSchedule,
+                    organization,
+                    availableMembers,
+                    organization.meetingDay || 2,
+                    organization.timezone || 'UTC',
+                    meetingIndex
+                );
+                
+                if (!bufferCheck.canUnassign) {
+                    if (bufferCheck.reason === 'buffer_protection_active') {
+                        const hoursRemaining = Math.ceil(bufferCheck.bufferTimeRemaining || 0);
+                        alert(`Cannot unassign yourself from Toastmaster role within 24 hours of the meeting. ${hoursRemaining} hours remaining.`);
+                    } else {
+                        alert(`Cannot unassign yourself from Toastmaster role: ${bufferCheck.reason}`);
+                    }
+                    return;
+                }
+            }
+        }
+        
+        onAssignmentChange(meetingIndex, role, newMemberId);
     };
 
     const isUnassigned = !assignedMemberId;

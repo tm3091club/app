@@ -7,6 +7,7 @@ import { deepClone } from '../services/scheduleLogic';
 import { useAuth } from './AuthContext';
 import { db, FieldValue } from '../services/firebase';
 import firebase from 'firebase/compat/app';
+import { getUserAdminStatus, ToastmasterAdminStatus } from '../utils/adminTransitionUtils';
 
 
 
@@ -23,6 +24,7 @@ interface ToastmastersState {
   loading: boolean;
   error: string | null;
   needsEmailVerification: boolean;
+  adminStatus: ToastmasterAdminStatus | null;
   addMember: (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => Promise<void>;
   updateMemberName: (payload: { memberId: string; newName: string; }) => Promise<void>;
   updateMemberStatus: (payload: { id: string; status: MemberStatus; }) => Promise<void>;
@@ -71,6 +73,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
+    const [adminStatus, setAdminStatus] = useState<ToastmasterAdminStatus | null>(null);
     const dataSubscription = useRef<(() => void) | null>(null);
     const invitesSubscription = useRef<(() => void) | null>(null);
     const agendasSubscription = useRef<(() => void) | null>(null);
@@ -96,6 +99,37 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             setNeedsEmailVerification(false);
         }
     }, []);
+
+    // Function to update admin status based on current data
+    const updateAdminStatus = useCallback(() => {
+        if (!user?.uid || !organization || !schedules.length || !selectedScheduleId) {
+            setAdminStatus(null);
+            return;
+        }
+
+        const activeSchedule = schedules.find(s => s.id === selectedScheduleId);
+        if (!activeSchedule) {
+            setAdminStatus(null);
+            return;
+        }
+
+        const status = getUserAdminStatus(
+            user.uid,
+            currentUser?.role || 'Member',
+            activeSchedule,
+            organization,
+            members,
+            organization.meetingDay || 2,
+            organization.timezone || 'UTC'
+        );
+
+        setAdminStatus(status);
+    }, [user?.uid, organization, schedules, selectedScheduleId, currentUser?.role, members]);
+
+    // Update admin status when relevant data changes
+    useEffect(() => {
+        updateAdminStatus();
+    }, [updateAdminStatus]);
 
     const linkMemberAccount = useCallback(async (token: string, joiningUser: firebase.User): Promise<string> => {
         const inviteRef = db.collection('invitations').doc(token);
@@ -1526,7 +1560,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const value = {
-        schedules, availability, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, needsEmailVerification, pendingInvites, weeklyAgendas,
+        schedules, availability, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, needsEmailVerification, pendingInvites, weeklyAgendas, adminStatus,
         addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,

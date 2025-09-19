@@ -5,6 +5,7 @@ import { AppUser, UserRole, Organization, OfficerRole, PendingInvite } from '../
 import { ConfirmationModal } from './common/ConfirmationModal';
 import NotificationScheduler from './NotificationScheduler';
 import { EmailTestComponent } from './EmailTestComponent';
+import AdminStatusIndicator from './AdminStatusIndicator';
 import { db, FieldValue } from '../services/firebase';
 
 const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U']);
@@ -387,7 +388,7 @@ const TeamMemberListItem: React.FC<{
 
 
 export const ProfilePage = (): React.ReactElement | null => {
-    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, updateUserRole, removeUser, sendPasswordResetEmail, pendingInvites, inviteUser, revokeInvite, removeFromPendingLinking } = useToastmasters();
+    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, updateUserRole, removeUser, sendPasswordResetEmail, pendingInvites, inviteUser, revokeInvite, removeFromPendingLinking, adminStatus } = useToastmasters();
     const { updatePassword, user, updateUserEmail } = useAuth();
     
     // State for club profile form
@@ -818,7 +819,16 @@ export const ProfilePage = (): React.ReactElement | null => {
             </div>
             
             <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
-                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">My Profile</h2>
+                 <div className="flex items-center justify-between mb-4">
+                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">My Profile</h2>
+                     {currentUser?.role === UserRole.Admin && !currentUser?.officerRole && (
+                         <AdminStatusIndicator 
+                             adminStatus={adminStatus} 
+                             userRole={currentUser?.role}
+                             officerRole={currentUser?.officerRole}
+                         />
+                     )}
+                 </div>
                  <EditableUser user={currentUser} isCurrentUser={true} onSaveName={handleSaveUserName} />
             </div>
 
@@ -935,20 +945,20 @@ export const ProfilePage = (): React.ReactElement | null => {
 
                                 return (
                                     <div key={invite.id} className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                             <div className="flex-grow">
                                                 <h4 className="font-medium text-gray-900 dark:text-white">{memberName}</h4>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                    Invitation sent to: <span className="font-medium">{invite.email}</span>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                                                    {invite.email}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-500">
                                                     Sent: {formatDate(invite.createdAt)}
                                                 </p>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-row items-center gap-1 sm:gap-2">
                                                 <button 
                                                     onClick={() => handleResendInvite(invite)}
-                                                    className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                                    className="flex-1 sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-2 sm:px-3 py-2 bg-blue-600 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 sm:text-sm whitespace-nowrap"
                                                     title="Resend invitation"
                                                 >
                                                     Resend
@@ -960,7 +970,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                                                             handleChangeInviteEmail(invite, newEmail);
                                                         }
                                                     }}
-                                                    className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                                    className="flex-1 sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-2 sm:px-3 py-2 bg-white dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] dark:focus:ring-offset-gray-800 sm:text-sm whitespace-nowrap"
                                                     title="Change email"
                                                 >
                                                     Change Email
@@ -971,7 +981,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                                                             handleRemoveFromPendingLinking(invite.id);
                                                         }
                                                     }}
-                                                    className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30"
+                                                    className="flex-1 sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-2 sm:px-3 py-2 bg-red-600 text-xs font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 sm:text-sm whitespace-nowrap"
                                                     title="Remove from pending"
                                                 >
                                                     Remove
