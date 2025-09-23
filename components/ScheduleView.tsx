@@ -715,11 +715,19 @@ export const ScheduleView: React.FC = () => {
         }
 
         if (newMemberId && MAJOR_ROLES.includes(role)) {
-            const currentMajorRole = Object.keys(assignments).find(r =>
-                assignments[r] === newMemberId && MAJOR_ROLES.includes(r) && r !== role
-            );
-            if (currentMajorRole) {
-                assignments[currentMajorRole] = null;
+            // Special handling: President can have multiple roles, so don't unassign them from President
+            // Also, when assigning someone as President, don't unassign them from other roles
+            if (role === 'President') {
+                // When assigning President, don't unassign them from other roles
+                // This allows President to also be a speaker, evaluator, etc.
+            } else {
+                // For other major roles, unassign from other major roles (except President)
+                const currentMajorRole = Object.keys(assignments).find(r =>
+                    assignments[r] === newMemberId && MAJOR_ROLES.includes(r) && r !== role && r !== 'President'
+                );
+                if (currentMajorRole) {
+                    assignments[currentMajorRole] = null;
+                }
             }
         }
         assignments[role] = newMemberId;

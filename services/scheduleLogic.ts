@@ -166,6 +166,23 @@ export const generateNewMonthSchedule = (
         return null;
     };
 
+    // Special assignment function for Inspiration Award - doesn't prevent other role assignments
+    const assignInspirationAward = (memberPool: Member[]): Member | null => {
+        for (const member of memberPool) {
+            // Only check if they've already been assigned Inspiration Award this month
+            if (memberRoleHistory.get(member.id)?.has(INSPIRATION_ROLE)) {
+                continue;
+            }
+
+            assignments[INSPIRATION_ROLE] = member.id;
+            memberRoleHistory.get(member.id)?.add(INSPIRATION_ROLE);
+            // Note: Don't add to assignedInMeeting to allow other role assignments
+
+            return member;
+        }
+        return null;
+    };
+
     /**
      * Officer fallback logic for President role:
      * - Assigns the member with officerRole === OfficerRole.President as President for the meeting.
@@ -201,8 +218,8 @@ export const generateNewMonthSchedule = (
 
     // --- Assignment Order ---
 
-    // 1. Assign Inspiration Role to Past Presidents
-    assignRole(INSPIRATION_ROLE, shuffleArray(availableForMeeting.filter(m => m.isPastPresident)));
+    // 1. Assign Inspiration Role to Past Presidents (special handling - doesn't prevent other roles)
+    assignInspirationAward(shuffleArray(availableForMeeting.filter(m => m.isPastPresident)));
 
     // 2. Assign President role with officer priority first
     assignPresidentWithOfficerPriority();
@@ -220,7 +237,7 @@ export const generateNewMonthSchedule = (
     });
 
     // Fallback: assign any unassigned major roles (except President) to any available member
-    [INSPIRATION_ROLE, ...MAJOR_ROLES].forEach(role => {
+    MAJOR_ROLES.forEach(role => {
         if (!assignments[role]) {
             if (role === 'President') {
                 // President role already handled with officer priority - don't fallback

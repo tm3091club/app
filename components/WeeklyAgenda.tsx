@@ -98,7 +98,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     if (schedule && schedule.meetings.length > 0) {
       loadOrCreateAgenda();
     }
-  }, [selectedWeek, schedule, weeklyAgendas]);
+  }, [selectedWeek, schedule?.id]); // Removed weeklyAgendas dependency to prevent unwanted reloads
 
   // Auto-sync when schedule changes (real-time)
   useEffect(() => {
@@ -141,7 +141,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadOrCreateAgenda = () => {
+  const loadOrCreateAgenda = (forceReload = false) => {
     if (!schedule || selectedWeek >= schedule.meetings.length) return;
     
     const meeting = schedule.meetings[selectedWeek];
@@ -151,7 +151,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     // Check if agenda exists
     const existingAgenda = Array.isArray(weeklyAgendas) ? weeklyAgendas.find(a => a.id === agendaId) : null;
     
-    if (existingAgenda) {
+    if (existingAgenda && !forceReload) {
       setAgenda(existingAgenda);
     } else {
       // Create new agenda from template
@@ -599,7 +599,12 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             <button
               onClick={() => {
                 setIsEditing(false);
-                loadOrCreateAgenda(); // Reset changes
+                // Only reload if no existing agenda, otherwise keep current agenda
+                const agendaId = `${scheduleId}-week${selectedWeek + 1}`;
+                const existingAgenda = Array.isArray(weeklyAgendas) ? weeklyAgendas.find(a => a.id === agendaId) : null;
+                if (!existingAgenda) {
+                  loadOrCreateAgenda();
+                }
               }}
               className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-3 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition whitespace-nowrap"
             >

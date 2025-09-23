@@ -28,6 +28,7 @@ export const TOASTMASTERS_ROLES = [
 /**
  * Minor roles: typically require less experience or are supporting roles.
  * Used in scheduling logic to prioritize assignment order and qualification checks.
+ * Note: Inspiration Award is restricted to Past Presidents only but is not a major role.
  */
 export const MINOR_ROLES = [
   'Pledge',
@@ -39,6 +40,7 @@ export const MINOR_ROLES = [
   'Evaluator 1',
   'Evaluator 2',
   'Evaluator 3',
+  'Inspiration Award',
 ];
 
 /**
@@ -54,6 +56,5 @@ export const MAJOR_ROLES = [
   'Speaker 1',
   'Speaker 2',
   'Speaker 3',
-  'Inspiration Award',
 ];
 
