@@ -17,7 +17,6 @@ interface ScheduleToolbarProps {
   onCopyToClipboard: () => void;
   onExportToPdf: () => void;
   onGenerateSchedule: () => void;
-  onGenerateThemes: () => void;
   onPrepareSchedule: (type: 'next' | 'previous') => void;
   hasUnassignedRoles: boolean;
   copySuccess: boolean;
@@ -38,7 +37,6 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   onCopyToClipboard,
   onExportToPdf,
   onGenerateSchedule,
-  onGenerateThemes,
   onPrepareSchedule,
   hasUnassignedRoles,
   copySuccess,
@@ -210,11 +208,6 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                     )}
                 </div>
                 <div className="grid grid-cols-2 gap-1 md:flex md:flex-row md:items-center md:gap-2 lg:gap-3">
-                    {isAdmin && (
-                        <button onClick={onGenerateThemes} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition w-full md:flex-initial md:whitespace-nowrap">
-                            Generate Themes
-                        </button>
-                    )}
                     {isAdmin && (
                         <button onClick={onGenerateSchedule} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-1 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition w-full md:flex-initial md:whitespace-nowrap">
                             Generate Schedule

@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { generateNewMonthSchedule, deepClone } from '../services/scheduleLogic';
 import { getNextScheduleMonth, getMeetingDatesForMonth as getMonthMeetingDates } from '../utils/monthUtils';
-import { generateThemes } from '../services/geminiService';
 import { exportScheduleToTsv } from '../services/googleSheetsService';
 import { notificationService } from '../services/notificationService';
 import { MAJOR_ROLES, TOASTMASTERS_ROLES } from '../Constants';
@@ -114,10 +113,6 @@ export const ScheduleView: React.FC = () => {
             
             return true;
         }), [hydratedMembers, ownerId, organization]);
-    const allPastThemes = useMemo(() => {
-        if (!Array.isArray(schedules)) return [];
-        return schedules.flatMap(s => s.meetings.map(m => m.theme));
-    }, [schedules]);
     
     const previousSchedule = useMemo(() => {
         if (!activeSchedule || !Array.isArray(schedules)) return null;
@@ -197,32 +192,9 @@ export const ScheduleView: React.FC = () => {
             // Get meeting dates for the month
             const meetingDates = getMonthMeetingDates(year, month, organization.meetingDay, organization.timezone);
 
-            // Generate themes first
+            // Create default themes
             const numThemes = meetingDates.length;
-            let themes: string[] = [];
-            
-            if (numThemes > 0) {
-                try {
-                    // Starting theme generation process
-                    themes = await generateThemes(
-                        new Date(year, month).toLocaleString('default', { month: 'long' }),
-                        year,
-                        allPastThemes,
-                        numThemes
-                    );
-                    // Successfully generated themes
-                } catch (themeError) {
-                    console.error('❌ Failed to generate themes:', themeError);
-                    console.error('Error details:', {
-                        message: themeError instanceof Error ? themeError.message : 'Unknown error',
-                        stack: themeError instanceof Error ? themeError.stack : 'No stack trace'
-                    });
-                    // Set error message to show user what went wrong
-                    setError(`Failed to generate themes: ${themeError instanceof Error ? themeError.message : 'Unknown error'}`);
-                    // Create fallback themes instead of empty strings
-                    themes = Array(numThemes).fill(0).map((_, i) => `Meeting Theme ${i + 1}`);
-                }
-            }
+            const themes: string[] = Array(numThemes).fill(0).map((_, i) => `Meeting Theme ${i + 1}`);
 
             // Generate the schedule with themes
             const newSchedule = generateNewMonthSchedule(year, month, meetingDates, themes, hydratedMembers, availability, Array.isArray(schedules) ? schedules : [], ownerId || undefined, organization?.name);
@@ -235,7 +207,7 @@ export const ScheduleView: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [addSchedule, availability, hydratedMembers, schedules, organization, allPastThemes, setSelectedScheduleId]);
+    }, [addSchedule, availability, hydratedMembers, schedules, organization, setSelectedScheduleId]);
 
     const handlePrepareSchedule = useCallback(async (type: 'next' | 'previous') => {
         if (!hydratedMembers || hydratedMembers.length === 0) {
@@ -366,30 +338,18 @@ export const ScheduleView: React.FC = () => {
                 m.theme.startsWith('Meeting Theme ')
             );
             
-            // Generate themes for meetings that don't have them yet
+            // Keep existing themes or use default ones
             if (needsThemes) {
-                try {
-                    const newThemes = await generateThemes(
-                        new Date(activeSchedule.year, activeSchedule.month).toLocaleString('default', { month: 'long' }),
-                        activeSchedule.year,
-                        allPastThemes,
-                        nonBlackoutMeetings.length
-                    );
-                    
-                    // Replace empty or default themes with generated ones
-                    let themeIndex = 0;
-                    themes = activeSchedule.meetings.map(meeting => {
-                        if (meeting.isBlackout) return meeting.theme || '';
-                        if (!meeting.theme || 
-                            meeting.theme.trim() === '' || 
-                            meeting.theme.startsWith('Meeting Theme ')) {
-                            return newThemes[themeIndex++] || '';
-                        }
-                        return meeting.theme;
-                    });
-                } catch (themeError) {
-                    setError(`Failed to generate themes: ${themeError instanceof Error ? themeError.message : 'Unknown error'}`);
-                }
+                let themeIndex = 0;
+                themes = activeSchedule.meetings.map(meeting => {
+                    if (meeting.isBlackout) return meeting.theme || '';
+                    if (!meeting.theme || 
+                        meeting.theme.trim() === '' || 
+                        meeting.theme.startsWith('Meeting Theme ')) {
+                        return `Meeting Theme ${++themeIndex}`;
+                    }
+                    return meeting.theme;
+                });
             }
             
             const regeneratedSchedule = generateNewMonthSchedule(
@@ -422,47 +382,8 @@ export const ScheduleView: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [activeSchedule, availability, hydratedMembers, schedules, updateSchedule, allPastThemes]);
+    }, [activeSchedule, availability, hydratedMembers, schedules, updateSchedule]);
 
-    const handleGenerateThemes = useCallback(async () => {
-        if (!activeSchedule) return;
-        
-        setIsLoading(true);
-        setLoadingMessage('Generating creative themes with AI...');
-        setError(null);
-        
-        try {
-            const nonBlackoutMeetings = activeSchedule.meetings.filter(m => !m.isBlackout);
-            
-            if (nonBlackoutMeetings.length === 0) {
-                setIsLoading(false);
-                return;
-            }
-            
-            const newThemes = await generateThemes(
-                new Date(activeSchedule.year, activeSchedule.month).toLocaleString('default', { month: 'long' }),
-                activeSchedule.year,
-                allPastThemes,
-                nonBlackoutMeetings.length
-            );
-            
-            // Update all non-blackout meetings with new themes
-            const updatedSchedule = deepClone(activeSchedule);
-            let themeIndex = 0;
-            updatedSchedule.meetings.forEach((meeting) => {
-                if (!meeting.isBlackout) {
-                    meeting.theme = newThemes[themeIndex] || meeting.theme;
-                    themeIndex++;
-                }
-            });
-            
-            await updateSchedule({ schedule: updatedSchedule });
-        } catch (e: any) {
-            setError(e.message || 'Failed to generate themes.');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [activeSchedule, allPastThemes, updateSchedule]);
 
     const handleShare = useCallback(async () => {
         if (!activeSchedule || !user || !organization?.clubNumber) {
@@ -964,7 +885,6 @@ export const ScheduleView: React.FC = () => {
                 onShare={handleShare}
                 onCopyToClipboard={handleCopyToClipboard}
                 onExportToPdf={handleExportToPdf}
-                onGenerateThemes={handleGenerateThemes}
                 onGenerateSchedule={() => {
                     setIsGenerateConfirmOpen(true);
                 }}
