@@ -55,7 +55,6 @@ Extensions/Functions: Outbound email via Firebase extension (club invitations, n
 
 PDF/Sheets: jsPDF + autotable for PDF; TSV for Google Sheets export.
 
-AI helpers: Optional “Generate Themes” via @google/genai; keep as an additive feature.
 
 Versioning: Automatic date-and-push counter displayed in footer (e.g., 9.17.25-2). Do not remove.
 
@@ -149,7 +148,6 @@ President of the club is placed as President by default. If unavailable that wee
 5) Permissions Matrix
 Action	Admin	Member
 Create/Delete monthly schedule	✅	❌
-Generate AI Themes	✅	❌
 Toggle Blackout	✅	❌
 Edit meeting Theme	✅	❌
 Assign roles for anyone	✅	❌
@@ -235,7 +233,7 @@ Schedule Manager (default thereafter):
 
 Dropdown to select existing month; special “Prepare Next/Previous” if absent.
 
-Buttons: Generate Themes, Generate Schedule, Share, Export (PDF/TSV), Compare with Previous Month.
+Buttons: Generate Schedule, Share, Export (PDF/TSV), Compare with Previous Month.
 
 Table: sticky Role column; columns per meeting date; Blackout checkbox in header cell per meeting; theme row; role rows; bottom “Availability” lists (Available/Possible/Unavailable).
 
