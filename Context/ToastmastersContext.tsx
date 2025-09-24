@@ -199,6 +199,49 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
+    // Helper function to determine the appropriate schedule to select
+    const getAppropriateScheduleId = useCallback((schedules: MonthlySchedule[]): string | null => {
+        if (schedules.length === 0) return null;
+        
+        const now = new Date();
+        const currentMonth = now.getMonth(); // 0-based month
+        const currentYear = now.getFullYear();
+        
+        // Sort schedules by year and month (most recent first)
+        const sortedSchedules = [...schedules].sort((a, b) =>
+            (a.year !== b.year) ? b.year - a.year : b.month - a.month
+        );
+        
+        // First, try to find a schedule for the current month
+        const currentMonthSchedule = sortedSchedules.find(s => 
+            s.year === currentYear && s.month === currentMonth
+        );
+        
+        if (currentMonthSchedule) {
+            return currentMonthSchedule.id;
+        }
+        
+        // If no current month schedule exists, find the most recent schedule with future meetings
+        const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        for (const schedule of sortedSchedules) {
+            // Check if this schedule has any future meetings
+            const hasFutureMeetings = schedule.meetings.some(meeting => {
+                if (meeting.isBlackout) return false;
+                const meetingDate = new Date(meeting.date);
+                return meetingDate >= currentDate;
+            });
+            
+            // If this schedule has future meetings, use it
+            if (hasFutureMeetings) {
+                return schedule.id;
+            }
+        }
+        
+        // If no schedule has future meetings, return the most recent one
+        return sortedSchedules[0].id;
+    }, []);
+
     const setupListeners = useCallback((ownerId: string) => {
         if (!user?.uid) {
             return;
@@ -427,20 +470,14 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 // Check if the currently selected schedule still exists
                 const currentScheduleExists = loadedSchedules.some(s => s.id === currentSelectedId);
                 if (!currentScheduleExists) {
-                    // Current schedule was deleted, select the most recent one
-                    const sortedSchedules = [...loadedSchedules].sort((a, b) =>
-                        (a.year !== b.year) ? b.year - a.year : b.month - a.month
-                    );
-                    const newSelectedId = sortedSchedules[0].id;
+                    // Current schedule was deleted, select the most appropriate one
+                    const newSelectedId = getAppropriateScheduleId(loadedSchedules);
                     setSelectedScheduleIdState(newSelectedId);
                 }
                 // If current schedule exists, keep it selected (don't change)
             } else if (currentSelectedId === null && loadedSchedules.length > 0) {
-                // Initial load with no schedule selected, select the most recent
-                const sortedSchedules = [...loadedSchedules].sort((a, b) =>
-                    (a.year !== b.year) ? b.year - a.year : b.month - a.month
-                );
-                const newSelectedId = sortedSchedules[0].id;
+                // Initial load with no schedule selected, select the most appropriate
+                const newSelectedId = getAppropriateScheduleId(loadedSchedules);
                 setSelectedScheduleIdState(newSelectedId);
             }
             setError(null);
@@ -1499,7 +1536,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         
         if (selectedScheduleId === payload.scheduleId) {
             const remainingSchedules = schedules.filter(s => s.id !== payload.scheduleId);
-            const newSelection = remainingSchedules.length > 0 ? remainingSchedules.sort((a,b) => b.year - a.year || b.month - a.month)[0].id : null;
+            const newSelection = getAppropriateScheduleId(remainingSchedules);
             setSelectedScheduleIdState(newSelection);
         }
     };
