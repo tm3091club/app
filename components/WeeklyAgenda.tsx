@@ -151,10 +151,11 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
           };
         }
         
-        // Update theme if changed
+        // Update theme and meeting date if changed
         const shouldUpdate = updatedItems.some((item, index) => item !== agenda.items[index]) || 
                            (meeting.theme && meeting.theme !== agenda.theme) ||
-                           JSON.stringify(newNextMeetingInfo) !== JSON.stringify(agenda.nextMeetingInfo);
+                           JSON.stringify(newNextMeetingInfo) !== JSON.stringify(agenda.nextMeetingInfo) ||
+                           (meeting.date && meeting.date !== agenda.meetingDate);
         
         if (shouldUpdate) {
           setAgenda({
@@ -162,6 +163,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             theme: meeting.theme || agenda.theme,
             items: updatedItems,
             nextMeetingInfo: newNextMeetingInfo,
+            meetingDate: meeting.date || agenda.meetingDate,
           });
         }
       }
