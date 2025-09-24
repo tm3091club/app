@@ -77,7 +77,20 @@ export const PublicAgendaPage: React.FC<{ clubNumber: string; shareId: string }>
         return null;
     }
 
-    const meetingDate = new Date(agendaData.meetingDate);
+    // Parse the date correctly to avoid timezone issues
+    let meetingDate;
+    if (agendaData.meetingDate) {
+        // If meetingDate is in YYYY-MM-DD format, parse it as local date
+        const dateStr = agendaData.meetingDate;
+        if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            meetingDate = new Date(year, month - 1, day); // month is 0-indexed
+        } else {
+            meetingDate = new Date(agendaData.meetingDate);
+        }
+    } else {
+        meetingDate = new Date();
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 print:bg-white print:min-h-0">

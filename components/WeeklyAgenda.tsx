@@ -340,22 +340,38 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       // Creating share ID
       
       // Create share ID with format: agenda-THEME-month-day-vX
-      const meetingDate = agenda.meetingDate ? new Date(agenda.meetingDate) : new Date();
+      // Parse the date correctly to avoid timezone issues
+      let meetingDate;
+      if (agenda.meetingDate) {
+        // If meetingDate is in YYYY-MM-DD format, parse it as local date
+        const dateStr = agenda.meetingDate;
+        if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          meetingDate = new Date(year, month - 1, day); // month is 0-indexed
+        } else {
+          meetingDate = new Date(agenda.meetingDate);
+        }
+      } else {
+        meetingDate = new Date();
+      }
+      
       const isValidDate = !isNaN(meetingDate.getTime());
       const monthName = isValidDate ? meetingDate.toLocaleDateString('en-US', { month: 'long' }).toLowerCase() : 'unknown';
       const day = isValidDate ? meetingDate.getDate() : 1;
       const year = meetingDate.getFullYear();
       const themeSlug = agenda.theme ? agenda.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
       
-      const docIdPrefix = `${clubNumber}_agenda-${themeSlug}-${monthName}-${day}-${year}-v`;
-      // Check for existing versions
+      // Always create a new version when sharing to ensure updated content is reflected
+      const baseShareId = `${themeSlug}-${monthName}-${day}-${year}`;
+      const docIdPrefix = `${clubNumber}_${baseShareId}-v`;
+      
+      // Check for existing versions of this specific agenda
       const querySnapshot = await db.collection('publicAgendas')
         .where(firebase.firestore.FieldPath.documentId(), '>=', docIdPrefix)
         .where(firebase.firestore.FieldPath.documentId(), '<', docIdPrefix + 'z')
         .get();
       
-      // Query completed for existing versions
-
+      // Find the highest version number
       let maxVersion = 0;
       querySnapshot.forEach(doc => {
         const docId = doc.id;
@@ -368,6 +384,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
         }
       });
       
+      // Always increment version to ensure fresh content
       const newVersion = maxVersion + 1;
       const humanReadableShareId = `${themeSlug}-${monthName}-${day}-${year}-v${newVersion}`;
       const firestoreDocId = `${clubNumber}_${humanReadableShareId}`;
