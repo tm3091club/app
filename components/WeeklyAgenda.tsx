@@ -116,20 +116,57 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
           return item;
         });
         
+        // Update next meeting info based on current week
+        let nextMeeting = null;
+        let newNextMeetingInfo = null;
+        
+        // First, try to find next meeting within the same month
+        if (selectedWeek < schedule.meetings.length - 1) {
+          nextMeeting = schedule.meetings[selectedWeek + 1];
+        } else {
+          // If this is the last week of the month, look for next month's schedule
+          const currentDate = new Date(schedule.year, schedule.month);
+          const nextMonthDate = new Date(currentDate);
+          nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+          
+          const nextMonthScheduleId = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+          const nextMonthSchedule = Array.isArray(monthlySchedules) ? monthlySchedules.find(s => s.id === nextMonthScheduleId) : null;
+          
+          if (nextMonthSchedule && nextMonthSchedule.meetings.length > 0) {
+            // Use the first meeting of next month
+            nextMeeting = nextMonthSchedule.meetings[0];
+          }
+        }
+        
+        if (nextMeeting) {
+          newNextMeetingInfo = {
+            toastmaster: getMemberName(nextMeeting.assignments['Toastmaster']),
+            speakers: [
+              getMemberName(nextMeeting.assignments['Speaker 1']),
+              getMemberName(nextMeeting.assignments['Speaker 2']),
+              getMemberName(nextMeeting.assignments['Speaker 3']),
+            ].filter(Boolean),
+            tableTopicsMaster: getMemberName(nextMeeting.assignments['Table Topics Master']),
+            isManualOverride: false,
+          };
+        }
+        
         // Update theme if changed
         const shouldUpdate = updatedItems.some((item, index) => item !== agenda.items[index]) || 
-                           (meeting.theme && meeting.theme !== agenda.theme);
+                           (meeting.theme && meeting.theme !== agenda.theme) ||
+                           JSON.stringify(newNextMeetingInfo) !== JSON.stringify(agenda.nextMeetingInfo);
         
         if (shouldUpdate) {
           setAgenda({
             ...agenda,
             theme: meeting.theme || agenda.theme,
             items: updatedItems,
+            nextMeetingInfo: newNextMeetingInfo,
           });
         }
       }
     }
-  }, [schedule, selectedWeek, agenda, isEditing]);
+  }, [schedule, selectedWeek, agenda, isEditing, monthlySchedules]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -185,8 +222,27 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       };
       
       // Auto-populate next meeting info
+      let nextMeeting = null;
+      
+      // First, try to find next meeting within the same month
       if (selectedWeek < schedule.meetings.length - 1) {
-        const nextMeeting = schedule.meetings[selectedWeek + 1];
+        nextMeeting = schedule.meetings[selectedWeek + 1];
+      } else {
+        // If this is the last week of the month, look for next month's schedule
+        const currentDate = new Date(schedule.year, schedule.month);
+        const nextMonthDate = new Date(currentDate);
+        nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+        
+        const nextMonthScheduleId = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        const nextMonthSchedule = Array.isArray(monthlySchedules) ? monthlySchedules.find(s => s.id === nextMonthScheduleId) : null;
+        
+        if (nextMonthSchedule && nextMonthSchedule.meetings.length > 0) {
+          // Use the first meeting of next month
+          nextMeeting = nextMonthSchedule.meetings[0];
+        }
+      }
+      
+      if (nextMeeting) {
         newAgenda.nextMeetingInfo = {
           toastmaster: getMemberName(nextMeeting.assignments['Toastmaster']),
           speakers: [
