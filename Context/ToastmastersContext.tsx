@@ -296,6 +296,70 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             if (!Array.isArray(loadedSchedules)) {
                 loadedSchedules = [];
             }
+            
+            // Auto-fix meeting dates if they don't match the meeting day setting
+            if (data.organization?.meetingDay !== undefined && loadedSchedules.length > 0) {
+                // Import the function dynamically
+                import('../utils/monthUtils').then(({ getMeetingDatesForMonth }) => {
+                let schedulesUpdated = false;
+                
+                loadedSchedules = loadedSchedules.map(schedule => {
+                    // Check if meeting dates need to be corrected
+                    const correctMeetingDates = getMeetingDatesForMonth(
+                        schedule.year, 
+                        schedule.month, 
+                        data.organization.meetingDay, 
+                        data.organization.timezone
+                    );
+                    
+                    const currentMeetingDates = schedule.meetings.map(m => m.date);
+                    const correctDates = correctMeetingDates.map(d => d.toISOString().split('T')[0]);
+                    
+                    // Check if dates match
+                    const datesMatch = currentMeetingDates.length === correctDates.length &&
+                        currentMeetingDates.every((date, index) => date === correctDates[index]);
+                    
+                    if (!datesMatch) {
+                        console.log('🔧 Auto-fixing meeting dates for schedule:', schedule.id);
+                        console.log('Current dates:', currentMeetingDates);
+                        console.log('Correct dates:', correctDates);
+                        
+                        schedulesUpdated = true;
+                        
+                        // Update meeting dates
+                        return {
+                            ...schedule,
+                            meetings: schedule.meetings.map((meeting, index) => ({
+                                ...meeting,
+                                date: correctDates[index] || meeting.date
+                            }))
+                        };
+                    }
+                    
+                    return schedule;
+                });
+                
+                // Update database if schedules were corrected
+                if (schedulesUpdated) {
+                    console.log('💾 Updating schedules in database with corrected meeting dates');
+                    const docRef = db.collection('users').doc(ownerId);
+                    docRef.update({ schedules: loadedSchedules }).catch(error => {
+                        console.error('Failed to update schedules with corrected meeting dates:', error);
+                    });
+                }
+                
+                // Update the state with corrected schedules
+                setSchedules(deepClone(loadedSchedules));
+                }).catch(error => {
+                    console.error('Failed to load monthUtils:', error);
+                    // Fallback: set schedules without correction
+                    setSchedules(deepClone(loadedSchedules));
+                });
+            } else {
+                // No correction needed, set schedules normally
+                setSchedules(deepClone(loadedSchedules));
+            }
+            
             setSchedules(deepClone(loadedSchedules));
             setAvailability(deepClone(data.availability || {}));
             

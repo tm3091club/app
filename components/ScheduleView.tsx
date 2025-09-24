@@ -666,9 +666,8 @@ export const ScheduleView: React.FC = () => {
             }
 
             // --- Save and Open ---
-            const blob = doc.output('blob');
-            const blobURL = URL.createObjectURL(blob);
-            window.open(blobURL, '_blank');
+            const fileName = `TM - ${clubName} - ${monthYear} - Monthly Schedule.pdf`;
+            doc.save(fileName);
         } catch (e: any) {
             console.error('PDF generation error:', e);
             setError("Could not generate PDF.");
