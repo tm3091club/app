@@ -206,6 +206,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const now = new Date();
         const currentMonth = now.getMonth(); // 0-based month
         const currentYear = now.getFullYear();
+        const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
         // Sort schedules by year and month (most recent first)
         const sortedSchedules = [...schedules].sort((a, b) =>
@@ -218,17 +219,40 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         );
         
         if (currentMonthSchedule) {
-            return currentMonthSchedule.id;
+            // Check if the current month schedule has any future meetings
+            const hasFutureMeetings = currentMonthSchedule.meetings.some(meeting => {
+                if (meeting.isBlackout) return false;
+                const meetingDate = new Date(meeting.date + 'T00:00:00');
+                return meetingDate >= currentDate;
+            });
+            
+            // If current month has future meetings, use it
+            if (hasFutureMeetings) {
+                return currentMonthSchedule.id;
+            }
+            
+            // Current month schedule exists but no future meetings - check if we should move to next month
+            // Look for next month's schedule
+            const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+            const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+            
+            const nextMonthSchedule = sortedSchedules.find(s => 
+                s.year === nextYear && s.month === nextMonth
+            );
+            
+            if (nextMonthSchedule) {
+                // If next month schedule exists, switch to it
+                return nextMonthSchedule.id;
+            }
         }
         
-        // If no current month schedule exists, find the most recent schedule with future meetings
-        const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
+        // If no current month schedule exists, or current month has no future meetings and no next month,
+        // find the most recent schedule with future meetings
         for (const schedule of sortedSchedules) {
             // Check if this schedule has any future meetings
             const hasFutureMeetings = schedule.meetings.some(meeting => {
                 if (meeting.isBlackout) return false;
-                const meetingDate = new Date(meeting.date);
+                const meetingDate = new Date(meeting.date + 'T00:00:00');
                 return meetingDate >= currentDate;
             });
             
