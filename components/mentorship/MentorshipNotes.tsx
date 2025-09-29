@@ -228,9 +228,9 @@ export default function MentorshipNotes({
             </div>
             {goals.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {goals.map(goal => (
+                {goals.map((goal, index) => (
                   <span
-                    key={goal}
+                    key={goal || `goal-${index}`}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded dark:bg-blue-900 dark:text-blue-200"
                   >
                     {goal}
@@ -295,9 +295,9 @@ export default function MentorshipNotes({
                 <div className="mt-2">
                   <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Goals:</div>
                   <div className="flex flex-wrap gap-1">
-                    {note.goals.map(goal => (
+                    {note.goals.map((goal, index) => (
                       <span
-                        key={goal}
+                        key={goal || `note-goal-${index}`}
                         className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded dark:bg-blue-900 dark:text-blue-200"
                       >
                         {goal}

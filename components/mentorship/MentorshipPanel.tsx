@@ -77,11 +77,11 @@ export default function MentorshipPanel({ memberId, memberName }: MentorshipPane
   return (
     <div>
       <div className="space-y-3">
-        {mentorPairs.map(pair => {
+        {mentorPairs.map((pair, index) => {
             const mentorName = getMemberName(pair.mentorId);
             
             return (
-              <div key={pair.id} className="flex items-center justify-between">
+              <div key={pair.id || `mentor-${index}`} className="flex items-center justify-between">
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                   {mentorName}
                 </div>
