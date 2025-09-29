@@ -2,6 +2,7 @@ import React from 'react';
 import { ToastmasterAdminStatus } from '../utils/adminTransitionUtils';
 import { getAdminStatusDescription } from '../utils/adminTransitionUtils';
 import { UserRole, OfficerRole } from '../types';
+import { abbreviateOfficerRole } from '../utils/officerRoleUtils';
 
 interface AdminStatusIndicatorProps {
   adminStatus: ToastmasterAdminStatus | null;
@@ -78,8 +79,8 @@ export const AdminStatusIndicator: React.FC<AdminStatusIndicatorProps> = ({
     // For permanent admin rights, show specific role based on officer position
     if (adminStatus.reason === 'permanent_admin') {
       if (officerRole) {
-        // Show the officer role title
-        return officerRole;
+        // Show the abbreviated officer role title
+        return abbreviateOfficerRole(officerRole);
       } else {
         // Admin without officer role
         return 'Admin';

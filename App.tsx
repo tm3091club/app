@@ -13,9 +13,10 @@ import { NotificationProvider } from './Context/NotificationContext';
 import { PublicSchedulePage } from './components/PublicSchedulePage';
 import { PublicAgendaPage } from './components/PublicAgendaPage';
 import { UnsubscribePage } from './components/UnsubscribePage';
+import { MentorshipPage } from './components/MentorshipPage';
 import { APP_VERSION } from './utils/version';
 
-type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda';
+type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda' | 'mentorship';
 
 function App() {
   const { user, loading, logOut, verifyEmailWithToken } = useAuth();
@@ -91,6 +92,8 @@ function App() {
           return <ProfilePage />;
         case 'weekly-agenda':
           return <WeeklyAgendaWrapper />;
+        case 'mentorship':
+          return <MentorshipPage />;
         default:
           return <ScheduleView />;
       }

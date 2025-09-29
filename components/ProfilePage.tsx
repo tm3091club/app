@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { useAuth } from '../Context/AuthContext';
 import { AppUser, UserRole, Organization, OfficerRole, PendingInvite } from '../types';
+import { abbreviateOfficerRole } from '../utils/officerRoleUtils';
 import { ConfirmationModal } from './common/ConfirmationModal';
 import NotificationScheduler from './NotificationScheduler';
 import { EmailTestComponent } from './EmailTestComponent';
 import AdminStatusIndicator from './AdminStatusIndicator';
 import { db, FieldValue } from '../services/firebase';
+import MentorshipPanel from './mentorship/MentorshipPanel';
 
 const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U']);
 
@@ -265,7 +267,7 @@ const TeamMemberListItem: React.FC<{
                         <div className="mt-1">
                             {member.officerRole ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-                                    {member.officerRole}
+                                    {abbreviateOfficerRole(member.officerRole)}
                                     {/* X button for mobile to remove officer role */}
                                     <button
                                         onClick={() => onOfficerRoleChange(member.uid || member.id, null)}
@@ -830,6 +832,15 @@ export const ProfilePage = (): React.ReactElement | null => {
                      )}
                  </div>
                  <EditableUser user={currentUser} isCurrentUser={true} onSaveName={handleSaveUserName} />
+                 
+                 {/* Mentorship Panel */}
+                 {(() => {
+                     const currentMember = organization?.members?.find(m => m.uid === currentUser?.uid);
+                     if (currentMember) {
+                         return <MentorshipPanel memberId={currentMember.id} memberName={currentMember.name} />;
+                     }
+                     return null;
+                 })()}
             </div>
 
             <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
@@ -1051,6 +1062,7 @@ export const ProfilePage = (): React.ReactElement | null => {
 
                 </div>
             )}
+
 
             {isAdmin && (
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">

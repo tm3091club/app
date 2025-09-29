@@ -1,0 +1,16 @@
+{
+  "mcp": {
+    "servers": {
+      "graphiti-toastmasters": {
+        "command": "python",
+        "args": ["graphiti-knowledge-base/core/mcp_server.py"],
+        "env": {
+          "FALKORDB_HOST": "localhost",
+          "FALKORDB_PORT": "6379",
+          "GRAPHITI_TELEMETRY_ENABLED": "false"
+        },
+        "description": "Graphiti Knowledge Base for Toastmasters AI Agent - Provides persistent memory and context for AI agents working on the Toastmasters project"
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ import { useToastmasters } from '../Context/ToastmastersContext';
 import NotificationBell from './NotificationBell';
 import AdminStatusIndicator from './AdminStatusIndicator';
 
-type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda';
+type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda' | 'mentorship';
 
 interface HeaderProps {
     currentView: View;
@@ -69,6 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                                 <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
                                     {adminStatus?.hasAdminRights ? 'Manage Members' : 'My Availability'}
                                 </NavLink>
+                                <NavLink isActive={currentView === 'mentorship'} onClick={() => handleNavClick('mentorship')}>Mentorship</NavLink>
                             </nav>
                              <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-4"></div>
                              <div className="flex items-center space-x-3">
@@ -165,6 +166,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                         <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
                             {adminStatus?.hasAdminRights ? 'Manage Members' : 'My Availability'}
                         </NavLink>
+                        <NavLink isActive={currentView === 'mentorship'} onClick={() => handleNavClick('mentorship')}>Mentorship</NavLink>
                         
                         <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                         

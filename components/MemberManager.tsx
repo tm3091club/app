@@ -3,7 +3,8 @@ import { useToastmasters } from '../Context/ToastmastersContext';
 import { MemberStatus, Member, AvailabilityStatus, AppUser, UserRole, Organization, MonthlySchedule, PendingInvite } from '../types';
 import { getMeetingDatesForMonth } from '../services/scheduleLogic';
 import { WithTooltip } from './common/WithTooltip';
-import { getCurrentMonthInfo, getNextMonthInfo, getRelevantMonthsForAvailability, getNextScheduleMonth } from '../utils/monthUtils';
+import { getCurrentMonthInfo, getNextMonthInfo, getRelevantMonthsForAvailability, getNextScheduleMonth, getAppropriateAvailabilityMonth } from '../utils/monthUtils';
+import MentorshipPanel from './mentorship/MentorshipPanel';
 
 const LinkAccountModal: React.FC<{
     isOpen: boolean;
@@ -431,7 +432,7 @@ const MemberRow: React.FC<{
                     onChange={handleStatusChange}
                     aria-label={`Status for ${displayName}`}
                     disabled={!canEditRow}
-                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                    className={`border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
                     style={{
                         // Safari-specific fixes for text centering
                         WebkitAppearance: 'none',
@@ -448,6 +449,9 @@ const MemberRow: React.FC<{
                         <option key={status} value={status}>{status}</option>
                     ))}
                 </select>
+            </td>
+            <td className="px-6 py-4 text-sm">
+                <MentorshipPanel memberId={member.id} memberName={displayName} />
             </td>
             <td className="px-6 py-4 whitespace-normal text-sm">
                  <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -593,12 +597,17 @@ const MobileMemberCard: React.FC<{
                             onChange={handleStatusChange}
                             aria-label={`Status for ${displayName}`}
                             disabled={!canEditRow}
-                            className={`w-auto border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                            className={`w-auto border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
                         >
                             {Object.values(MemberStatus).map(status => (
                                 <option key={status} value={status}>{status}</option>
                             ))}
                         </select>
+                    </div>
+                    
+                    {/* Mentorship Section */}
+                    <div>
+                        <MentorshipPanel memberId={member.id} memberName={displayName} />
                     </div>
                 </div>
 
@@ -729,7 +738,7 @@ const ArchivedMemberRow: React.FC<{ member: Member; onDelete: (member: Member) =
                     value={member.status}
                     onChange={handleStatusChange}
                     aria-label={`Status for archived member ${member.name}`}
-                    className={`border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
+                    className={`border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
                 >
                     {Object.values(MemberStatus).map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -765,7 +774,7 @@ const ArchivedMobileMemberCard: React.FC<{ member: Member; onDelete: (member: Me
                     value={member.status}
                     onChange={handleStatusChange}
                     aria-label={`Status for archived member ${member.name}`}
-                    className={`mt-2 w-full sm:w-auto border-transparent rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
+                    className={`mt-2 w-full sm:w-auto border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
                 >
                     {Object.values(MemberStatus).map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -846,9 +855,10 @@ const MembersTable: React.FC<{
                                     <span>Name</span>
                                 )}
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Qualifications</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined</th>
+                            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Qualifications</th>
+                            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Mentor</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Availability ({monthName})</th>
                         </tr>
                     </thead>
@@ -873,7 +883,7 @@ const MembersTable: React.FC<{
                             />
                         )) : (
                             <tr>
-                                <td colSpan={isAdmin ? 4 : 3} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <td colSpan={isAdmin ? 5 : 4} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                                     No members in this list.
                                 </td>
                             </tr>
@@ -945,12 +955,13 @@ export const MemberManager: React.FC = () => {
 
 
 
-    // NEW: Auto-set availability month to current month for better UX
+    // NEW: Auto-set availability month to appropriate month for better UX
     // This is completely independent of schedule planning
+    // Uses same logic as schedule - shows current month if it has remaining meetings, otherwise shows next month
     useEffect(() => {
         if (organization?.meetingDay !== undefined && !availabilityMonth) {
-            const relevantMonths = getRelevantMonthsForAvailability(organization.meetingDay);
-            setAvailabilityMonth({ year: relevantMonths.current.year, month: relevantMonths.current.month });
+            const appropriateMonth = getAppropriateAvailabilityMonth(organization.meetingDay);
+            setAvailabilityMonth({ year: appropriateMonth.year, month: appropriateMonth.month });
         }
     }, [organization?.meetingDay, availabilityMonth]);
 
@@ -1513,8 +1524,8 @@ export const MemberManager: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                              <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                                    <th scope="col" className="px-6 py-3 text-center text-xs font-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>

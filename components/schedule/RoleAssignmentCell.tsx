@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Member, RoleAssignment, AvailabilityStatus } from '../../types';
 // TOASTMASTERS_ROLES: All roles that appear on the monthly schedule.
 // MAJOR_ROLES: Roles requiring more experience/leadership (see Constants.ts for full list and comments).
@@ -7,6 +7,8 @@ import { Member, RoleAssignment, AvailabilityStatus } from '../../types';
 import { MAJOR_ROLES, TOASTMASTERS_ROLES } from '../../Constants';
 import { useToastmasters } from '../../Context/ToastmastersContext';
 import { canUnassignSelfFromToastmaster } from '../../utils/adminTransitionUtils';
+import { mentorshipService } from '../../services/mentorshipService';
+import { MentorshipPair } from '../../types';
 
 export const RoleAssignmentCell: React.FC<{
   meetingIndex: number;
@@ -19,7 +21,45 @@ export const RoleAssignmentCell: React.FC<{
   meetingDate: string;
   availability: { [memberId: string]: any };
 }> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled, meetingDate, availability }) => {
-    const { currentUser, ownerId, organization, schedules, selectedScheduleId } = useToastmasters();
+    const { currentUser, ownerId, organization, schedules, selectedScheduleId, adminStatus } = useToastmasters();
+    const [mentorshipPairs, setMentorshipPairs] = useState<MentorshipPair[]>([]);
+    
+    const isAdmin = adminStatus?.hasAdminRights || false;
+
+    // Load mentorship pairs for the organization
+    useEffect(() => {
+        if (!organization?.ownerId) return;
+        
+        const loadPairs = async () => {
+            try {
+                const pairs = await mentorshipService.getAllPairs(organization.ownerId);
+                setMentorshipPairs(pairs.filter(pair => pair.active));
+            } catch (error) {
+                console.error('Error loading mentorship pairs:', error);
+            }
+        };
+        
+        loadPairs();
+    }, [organization?.ownerId]);
+
+    // Check if current user can see mentorship info for a member
+    const canSeeMentorshipInfo = useCallback((memberId: string) => {
+        if (!currentUser?.uid || !isAdmin) return false;
+        
+        // Find mentorship pair involving this member
+        const pair = mentorshipPairs.find(p => p.mentorId === memberId || p.menteeId === memberId);
+        if (!pair) return false;
+        
+        // Admin can see all, or if current user is the mentor/mentee in the pair
+        return isAdmin || 
+               pair.mentorId === currentUser.uid || 
+               pair.menteeId === currentUser.uid;
+    }, [currentUser?.uid, isAdmin, mentorshipPairs]);
+
+    // Check if member is a mentee
+    const isMentee = useCallback((memberId: string) => {
+        return mentorshipPairs.some(pair => pair.menteeId === memberId);
+    }, [mentorshipPairs]);
     
     const membersForThisRole = useMemo(() => {
         // Get the required qualification for this role
@@ -187,6 +227,9 @@ export const RoleAssignmentCell: React.FC<{
     // If disabled and has no edit permissions, show read-only display
     // But always allow unassigning if someone is currently assigned
     if (disabled && membersForThisRole.length === 0 && !assignedMemberId) {
+        const showMentorshipIcon = assignedMemberId && canSeeMentorshipInfo(assignedMemberId) && isMentee(assignedMemberId);
+        const displayName = showMentorshipIcon ? `📝 ${assignedMember?.name || '-- Unknown --'}` : (assignedMember?.name || '-- Unknown --');
+        
         return (
             <div className="relative w-full">
                 <div className={`${baseClasses.replace('py-1.5 px-1 sm:py-2 sm:px-3', 'py-2 px-2 sm:py-2 sm:px-3').replace('text-center', '')} ${isUnassigned ? unassignedClasses : (isCurrentUserAssignedToThisRole ? currentUserAssignedClasses : readOnlyClasses)}`}
@@ -195,7 +238,7 @@ export const RoleAssignmentCell: React.FC<{
                          textAlign: 'center',
                          WebkitTextAlign: 'center'
                      }}>
-                    {isUnassigned ? '-- Unassigned --' : assignedMember?.name || '-- Unknown --'}
+                    {isUnassigned ? '-- Unassigned --' : displayName}
                 </div>
             </div>
         );
@@ -210,6 +253,17 @@ export const RoleAssignmentCell: React.FC<{
     } else {
         dropdownClasses = assignedClasses;
     }
+
+    // Get display text for currently assigned member
+    const getAssignedMemberDisplayText = () => {
+        if (!assignedMemberId) return '';
+        
+        const assignedMember = availableMembers.find(m => m.id === assignedMemberId);
+        if (!assignedMember) return '-- Unknown --';
+        
+        const showMentorshipIcon = canSeeMentorshipInfo(assignedMemberId) && isMentee(assignedMemberId);
+        return showMentorshipIcon ? `📝 ${assignedMember.name}` : assignedMember.name;
+    };
 
     return (
         <div className="relative w-full">
@@ -233,6 +287,12 @@ export const RoleAssignmentCell: React.FC<{
                 }}
             >
             <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">-- Unassigned --</option>
+            {/* Custom option for currently assigned member with mentorship icon */}
+            {assignedMemberId && !membersForThisRole.some(m => m.id === assignedMemberId) && (
+                <option value={assignedMemberId} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">
+                    {getAssignedMemberDisplayText()}
+                </option>
+            )}
             {membersForThisRole.map(member => {
                 const dateKey = meetingDate.split('T')[0];
                 const memberAvailability = availability[member.id]?.[dateKey];
@@ -271,6 +331,12 @@ export const RoleAssignmentCell: React.FC<{
                 // Remove the "(You)" suffix - just show the name normally
                 if (isAccountLinked && member.id === assignedMemberId) {
                     finalDisplayText = `👤 ${member.name}`;
+                }
+                
+                // Add mentorship icon for mentees (only visible to admins and mentors)
+                const showMentorshipIcon = canSeeMentorshipInfo(member.id) && isMentee(member.id);
+                if (showMentorshipIcon && !finalDisplayText.includes('👤')) {
+                    finalDisplayText = `📝 ${member.name}`;
                 }
 
                 return (

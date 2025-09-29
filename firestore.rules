@@ -97,5 +97,61 @@ service cloud.firestore {
       // The Firebase Extension will handle reading and processing
       allow read, update, delete: if false;
     }
+
+    // --- Organizations Collection (Club Data) ---
+    match /organizations/{orgId} {
+      // Allow authenticated users to read/write their own organization data
+      allow read, write: if isAuthenticated();
+
+      // --- Mentorship Policy Collection ---
+      match /mentorshipPolicy/{policyId} {
+        // Anyone can read policy (not sensitive)
+        allow read: if true;
+        // Only authenticated users can write policy (will be filtered by app logic)
+        allow write: if isAuthenticated();
+      }
+
+      // --- Mentorship Overrides Collection ---
+      match /mentorshipOverrides/{memberId} {
+        // Allow authenticated users to read/write overrides (will be filtered by app logic)
+        allow read, write: if isAuthenticated();
+      }
+
+      // --- Member Metrics Collection ---
+      match /memberMetrics/{memberId} {
+        // Anyone can read metrics (for eligibility display)
+        allow read: if true;
+        // Allow authenticated users to write metrics (will be filtered by app logic)
+        allow write: if isAuthenticated();
+      }
+
+      // --- Mentorship Pairs Collection ---
+      match /mentorshipPairs/{pairId} {
+        // Allow read/write for club members
+        allow read, write: if isAuthenticated();
+
+        // --- Mentorship Notes Collection ---
+        match /notes/{noteId} {
+          // Allow authenticated users to create notes
+          allow create: if isAuthenticated();
+          
+          // Allow read based on note visibility and user role
+          allow read: if isAuthenticated() && (
+            // Creator can always read
+            resource.data.createdByUid == getUserId() ||
+            // Admins can read all notes
+            isAdmin() ||
+            // Check visibility permissions (simplified for now - full logic in app)
+            resource.data.visibility in ['both', 'mentor', 'mentee', 'officers']
+          );
+          
+          // Allow update/delete by creator or admin
+          allow update, delete: if isAuthenticated() && (
+            resource.data.createdByUid == getUserId() || 
+            isAdmin()
+          );
+        }
+      }
+    }
   }
 }

@@ -142,3 +142,31 @@ export function shouldSendAvailabilityNotification(autoNotificationDay: number =
 export function getMonthKey(year: number, month: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 }
+
+/**
+ * Determines the appropriate availability month to show by default.
+ * Similar to schedule logic - if current month has remaining meetings, show current month.
+ * Otherwise, show next month for planning ahead.
+ */
+export function getAppropriateAvailabilityMonth(meetingDay: number = 2): MonthInfo {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  // Get meeting dates for current month
+  const currentMonthMeetings = getMeetingDatesForMonth(currentYear, currentMonth, meetingDay);
+  
+  // Check if current month has any future meetings
+  const hasFutureMeetings = currentMonthMeetings.some(meetingDate => {
+    return meetingDate >= currentDate;
+  });
+  
+  if (hasFutureMeetings) {
+    // Current month has remaining meetings, show current month
+    return getCurrentMonthInfo(meetingDay);
+  } else {
+    // Current month has no remaining meetings, show next month for planning
+    return getNextMonthInfo(meetingDay);
+  }
+}

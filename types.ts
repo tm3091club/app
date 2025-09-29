@@ -7,29 +7,20 @@ export enum UserRole {
 export enum OfficerRole {
   President = 'President',
   VicePresidentEducation = 'Vice President Education',
-  VicePresidentMembership = 'Vice President Membership', 
+  VicePresidentMembership = 'Vice President Membership',
   VicePresidentPublicRelations = 'Vice President Public Relations',
   Secretary = 'Secretary',
   Treasurer = 'Treasurer',
-  SergeantAtArms = 'Sergeant at Arms'
+  SergeantAtArms = 'Sergeant at Arms',
 }
-
-/**
- * Officer fallback logic for President role:
- * - The member with officerRole === OfficerRole.President is assigned as President on the monthly schedule.
- * - If the President is unavailable for a meeting, the member with officerRole === OfficerRole.VicePresidentEducation will be assigned as President for that meeting.
- * - If neither is available, the President role remains unassigned and must be filled manually.
- *
- * This logic is implemented in the scheduling algorithm (see scheduleLogic.ts).
- */
 
 export interface AppUser {
   uid: string;
   email: string;
   name: string;
   role: UserRole;
-  officerRole?: OfficerRole; // New field for officer position
   ownerId?: string; // Links member to the club owner who manages them
+  officerRole?: OfficerRole;
 }
 
 export interface Organization {
@@ -40,7 +31,6 @@ export interface Organization {
     ownerId: string;
     meetingDay?: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday
     autoNotificationDay?: number; // Day of month to send availability notifications (1-28)
-    timezone?: string; // IANA timezone identifier (e.g., 'America/New_York', 'America/Los_Angeles')
 }
 
 export enum MemberStatus {
@@ -67,11 +57,6 @@ export interface Member {
   uid?: string; // Link to the user account
   joinedDate?: string; // ISO date string when member joined
   ownerId?: string; // Links member to the club owner who manages them
-  /**
-   * Officer position within the club. Used for President fallback logic in scheduling.
-   * See OfficerRole and officer fallback documentation above.
-   */
-  officerRole?: OfficerRole;
 }
 
 export interface MemberAvailability {
@@ -104,11 +89,7 @@ export interface PendingInvite {
   email: string;
   invitedUserName: string;
   ownerId: string;
-  memberId?: string; // Link to existing member if provided
-  status?: 'pending' | 'completed';
-  createdAt?: any; // Firestore timestamp
-  completedAt?: any; // Firestore timestamp
-  completedBy?: string; // UID of user who completed the invitation
+  memberId?: string; // Optional member ID if linking to existing member
 }
 
 export enum NotificationType {
@@ -176,3 +157,56 @@ export interface WeeklyAgenda {
 export interface AgendaTemplate {
   items: Omit<AgendaItem, 'id'>[];
 }
+
+export interface MentorshipPair {
+  id: string;            // mentorId_menteeId
+  mentorId: string;      // Member.id
+  menteeId: string;      // Member.id
+  createdAt: any;        // firebase.firestore.FieldValue
+  active: boolean;
+}
+
+export type MentorshipNoteVisibility = 'mentor' | 'mentee' | 'both' | 'officers';
+export type MentorshipNoteType = 'session' | 'goal' | 'feedback' | 'milestone' | 'general';
+
+export interface MentorshipNote {
+  id: string;
+  createdAt: any;
+  createdByUid: string;
+  visibility: MentorshipNoteVisibility;
+  type: MentorshipNoteType;
+  text: string;
+  goals?: string[];
+  status?: 'open' | 'in_progress' | 'done';
+  meetingDate?: string;
+  linkedRole?: string;
+}
+
+export interface MentorshipPolicy {
+  minSpeeches: number;
+  minMonths: number;
+  minAttendancePct90: number;
+  minRoles90: number;
+}
+
+export interface MentorshipOverride {
+  eligible: boolean;
+  reason: string;
+  setByUid: string;
+  expiresAt?: any; // firebase.firestore.FieldValue
+}
+
+export interface MemberMetrics {
+  speechesCompleted: number;
+  monthsSinceJoin: number;
+  attendancePct90: number;
+  rolesIn90: number;
+  lastUpdated: any; // firebase.firestore.FieldValue
+}
+
+export type MentorshipEligibilityStatus = 
+  | 'eligible' 
+  | 'needs_review' 
+  | 'not_eligible' 
+  | 'override_eligible' 
+  | 'override_blocked';

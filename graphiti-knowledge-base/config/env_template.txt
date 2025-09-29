@@ -1,0 +1,12 @@
+# Graphiti Knowledge Base Environment Variables
+# Copy this file to .env and update the values
+
+# OpenAI API Key for Graphiti operations
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Graphiti Configuration
+GRAPHITI_TELEMETRY_ENABLED=false
+
+# FalkorDB Configuration
+FALKORDB_HOST=localhost
+FALKORDB_PORT=6379
