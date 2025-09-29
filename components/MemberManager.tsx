@@ -1212,7 +1212,8 @@ export const MemberManager: React.FC = () => {
 
     const handleResendInvite = async (invite: PendingInvite) => {
         try {
-            // Create a new invitation with the same details
+            // First revoke the old invitation, then create a new one
+            await revokeInvite(invite.id);
             await inviteUser({ 
                 email: invite.email, 
                 name: invite.invitedUserName, 
