@@ -7,8 +7,6 @@ import { Member, RoleAssignment, AvailabilityStatus } from '../../types';
 import { MAJOR_ROLES, TOASTMASTERS_ROLES } from '../../Constants';
 import { useToastmasters } from '../../Context/ToastmastersContext';
 import { canUnassignSelfFromToastmaster } from '../../utils/adminTransitionUtils';
-import { mentorshipService } from '../../services/mentorshipService';
-import { MentorshipPair } from '../../types';
 
 export const RoleAssignmentCell: React.FC<{
   meetingIndex: number;
@@ -22,44 +20,8 @@ export const RoleAssignmentCell: React.FC<{
   availability: { [memberId: string]: any };
 }> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled, meetingDate, availability }) => {
     const { currentUser, ownerId, organization, schedules, selectedScheduleId, adminStatus } = useToastmasters();
-    const [mentorshipPairs, setMentorshipPairs] = useState<MentorshipPair[]>([]);
     
     const isAdmin = adminStatus?.hasAdminRights || false;
-
-    // Load mentorship pairs for the organization
-    useEffect(() => {
-        if (!organization?.ownerId) return;
-        
-        const loadPairs = async () => {
-            try {
-                const pairs = await mentorshipService.getAllPairs(organization.ownerId);
-                setMentorshipPairs(pairs.filter(pair => pair.active));
-            } catch (error) {
-                console.error('Error loading mentorship pairs:', error);
-            }
-        };
-        
-        loadPairs();
-    }, [organization?.ownerId]);
-
-    // Check if current user can see mentorship info for a member
-    const canSeeMentorshipInfo = useCallback((memberId: string) => {
-        if (!currentUser?.uid || !isAdmin) return false;
-        
-        // Find mentorship pair involving this member
-        const pair = mentorshipPairs.find(p => p.mentorId === memberId || p.menteeId === memberId);
-        if (!pair) return false;
-        
-        // Admin can see all, or if current user is the mentor/mentee in the pair
-        return isAdmin || 
-               pair.mentorId === currentUser.uid || 
-               pair.menteeId === currentUser.uid;
-    }, [currentUser?.uid, isAdmin, mentorshipPairs]);
-
-    // Check if member is a mentee
-    const isMentee = useCallback((memberId: string) => {
-        return mentorshipPairs.some(pair => pair.menteeId === memberId);
-    }, [mentorshipPairs]);
     
     const membersForThisRole = useMemo(() => {
         // Get the required qualification for this role
@@ -227,8 +189,7 @@ export const RoleAssignmentCell: React.FC<{
     // If disabled and has no edit permissions, show read-only display
     // But always allow unassigning if someone is currently assigned
     if (disabled && membersForThisRole.length === 0 && !assignedMemberId) {
-        const showMentorshipIcon = assignedMemberId && canSeeMentorshipInfo(assignedMemberId) && isMentee(assignedMemberId);
-        const displayName = showMentorshipIcon ? `📝 ${assignedMember?.name || '-- Unknown --'}` : (assignedMember?.name || '-- Unknown --');
+        const displayName = assignedMember?.name || '-- Unknown --';
         
         return (
             <div className="relative w-full">
@@ -261,8 +222,7 @@ export const RoleAssignmentCell: React.FC<{
         const assignedMember = availableMembers.find(m => m.id === assignedMemberId);
         if (!assignedMember) return '-- Unknown --';
         
-        const showMentorshipIcon = canSeeMentorshipInfo(assignedMemberId) && isMentee(assignedMemberId);
-        return showMentorshipIcon ? `📝 ${assignedMember.name}` : assignedMember.name;
+        return assignedMember.name;
     };
 
     return (
@@ -333,11 +293,7 @@ export const RoleAssignmentCell: React.FC<{
                     finalDisplayText = `👤 ${member.name}`;
                 }
                 
-                // Add mentorship icon for mentees (only visible to admins and mentors)
-                const showMentorshipIcon = canSeeMentorshipInfo(member.id) && isMentee(member.id);
-                if (showMentorshipIcon && !finalDisplayText.includes('👤')) {
-                    finalDisplayText = `📝 ${member.name}`;
-                }
+                // Mentorship icons removed from schedule display - mentorship system is separate
 
                 return (
                     <option

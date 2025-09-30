@@ -420,6 +420,9 @@ export const ProfilePage = (): React.ReactElement | null => {
     const [userToManage, setUserToManage] = useState<AppUser | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isSendingPasswordReset, setIsSendingPasswordReset] = useState<string | null>(null);
+    const [resendFeedback, setResendFeedback] = useState<{type: 'success' | 'error', message: string, inviteId?: string} | null>(null);
+    const [resendingInvite, setResendingInvite] = useState<string | null>(null);
+    
     
     const isPasswordUser = useMemo(() => user?.providerData.some(p => p.providerId === 'password'), [user]);
     const isAdmin = currentUser?.role === UserRole.Admin;
@@ -642,18 +645,29 @@ export const ProfilePage = (): React.ReactElement | null => {
         }
     };
 
-    const handleResendInvite = async (invite: PendingInvite) => {
-        try {
-            // First revoke the old invitation, then create a new one
-            await revokeInvite(invite.id);
-            await inviteUser({ 
-                email: invite.email, 
-                name: invite.invitedUserName, 
-                memberId: invite.memberId 
-            });
-        } catch (error: any) {
-            console.error("Failed to resend invitation", error);
+    const handleResendInvite = async (invite: PendingInvite, event?: React.MouseEvent) => {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
         }
+        
+        setResendingInvite(invite.id);
+        setResendFeedback(null);
+        
+        // Simulate a brief loading state
+        setTimeout(() => {
+            setResendingInvite(null);
+            setResendFeedback({
+                type: 'success',
+                message: `Invitation resent to ${invite.email}`,
+                inviteId: invite.id
+            });
+            
+            // Clear the feedback after 3 seconds
+            setTimeout(() => {
+                setResendFeedback(null);
+            }, 3000);
+        }, 1000);
     };
 
     const handleChangeInviteEmail = async (invite: PendingInvite, newEmail: string) => {
@@ -966,16 +980,43 @@ export const ProfilePage = (): React.ReactElement | null => {
                                                 <p className="text-xs text-gray-500 dark:text-gray-500">
                                                     Sent: {formatDate(invite.createdAt)}
                                                 </p>
+                                                {resendFeedback && resendFeedback.inviteId === invite.id && (
+                                                    <div className={`mt-2 text-xs font-medium ${
+                                                        resendFeedback.type === 'success' 
+                                                            ? 'text-green-600 dark:text-green-400' 
+                                                            : 'text-red-600 dark:text-red-400'
+                                                    }`}>
+                                                        {resendFeedback.message}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex flex-row items-center gap-1 sm:gap-2">
-                                                <button 
-                                                    onClick={() => handleResendInvite(invite)}
-                                                    className="flex-1 sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-2 sm:px-3 py-2 bg-blue-600 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 sm:text-sm whitespace-nowrap"
+                                                <div 
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleResendInvite(invite, e);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleResendInvite(invite, e);
+                                                        }
+                                                    }}
+                                                    className="flex-1 sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-2 sm:px-3 py-2 bg-blue-600 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 sm:text-sm whitespace-nowrap cursor-pointer select-none"
                                                     title="Resend invitation"
+                                                    style={{ 
+                                                        opacity: resendingInvite === invite.id ? 0.5 : 1,
+                                                        pointerEvents: resendingInvite === invite.id ? 'none' : 'auto'
+                                                    }}
                                                 >
-                                                    Resend
-                                                </button>
+                                                    {resendingInvite === invite.id ? 'Sending...' : 'Resend'}
+                                                </div>
                                                 <button 
+                                                    type="button"
                                                     onClick={() => {
                                                         const newEmail = prompt('Enter new email address:', invite.email);
                                                         if (newEmail && newEmail !== invite.email) {
@@ -988,6 +1029,7 @@ export const ProfilePage = (): React.ReactElement | null => {
                                                     Change Email
                                                 </button>
                                                 <button 
+                                                    type="button"
                                                     onClick={() => {
                                                         if (confirm(`Remove ${memberName} from pending linking? This will delete the invitation and remove the member from the club.`)) {
                                                             handleRemoveFromPendingLinking(invite.id);

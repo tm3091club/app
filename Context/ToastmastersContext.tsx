@@ -39,7 +39,7 @@ interface ToastmastersState {
   updateClubProfile: (payload: { name: string; district: string; clubNumber: string; meetingDay?: number; autoNotificationDay?: number; timezone?: string; }) => Promise<void>;
   updateUserRole: (uid: string, newRole: UserRole) => Promise<void>;
   removeUser: (uid: string) => Promise<void>;
-  inviteUser: (payload: { email: string, name: string, memberId?: string }) => Promise<{ inviteId: string, joinUrl: string } | void>;
+  inviteUser: (payload: { email: string, name: string, memberId?: string, excludeInviteId?: string }) => Promise<{ inviteId: string, joinUrl: string } | void>;
   revokeInvite: (inviteId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   removeFromPendingLinking: (inviteId: string) => Promise<void>;
@@ -757,8 +757,8 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         await db.collection('users').doc(uid).delete();
     };
 
-    const inviteUser = async (payload: { email: string; name: string; memberId?: string }) => {
-        const { email, name, memberId } = payload;
+    const inviteUser = async (payload: { email: string; name: string; memberId?: string; excludeInviteId?: string }) => {
+        const { email, name, memberId, excludeInviteId } = payload;
         if (!dataOwnerId || !currentUser || !organization) {
           throw new Error("Cannot send invite: missing user or organization data.");
         }
@@ -776,7 +776,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (existingMember && existingMember.uid) {
           throw new Error("That email already belongs to a linked club member.");
         }
-        if (pendingInvites.some(inv => inv.email.toLowerCase() === emailLower)) {
+        if (pendingInvites.some(inv => inv.email.toLowerCase() === emailLower && inv.id !== excludeInviteId)) {
           throw new Error("You've already sent an invite to this email.");
         }
 

@@ -352,12 +352,12 @@ const MemberRow: React.FC<{
                                 className="w-full px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] dark:bg-gray-700 dark:text-white"
                                 autoFocus
                             />
-                            <button onClick={onSaveEdit} className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-gray-700 rounded-full" aria-label="Save name">
+                            <button type="button" onClick={onSaveEdit} className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-gray-700 rounded-full" aria-label="Save name">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
                             </button>
-                            <button onClick={onCancelEdit} className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-gray-700 rounded-full" aria-label="Cancel edit">
+                            <button type="button" onClick={onCancelEdit} className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-gray-700 rounded-full" aria-label="Cancel edit">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                 </svg>
@@ -369,7 +369,7 @@ const MemberRow: React.FC<{
                     <div className="flex items-center gap-2 w-full">
                         {linkedUser && isAdmin && (
                             <WithTooltip show={true} text="Unlink Account">
-                                <button onClick={onUnlink} className="flex-shrink-0 p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-full hover:bg-red-100 dark:hover:bg-gray-700" aria-label={`Unlink account for ${linkedUser.name}`}>
+                                <button type="button" onClick={onUnlink} className="flex-shrink-0 p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-full hover:bg-red-100 dark:hover:bg-gray-700" aria-label={`Unlink account for ${linkedUser.name}`}>
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                     </svg>
@@ -380,7 +380,7 @@ const MemberRow: React.FC<{
                             <div className="flex items-center gap-2 group">
                                 <span className="font-medium">{displayName}</span>
                                 {canEditRow && !linkedUser && (
-                                    <button onClick={onStartEdit} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 focus:opacity-100 focus:outline-none p-1 rounded-full" aria-label={`Edit name for ${displayName}`}>
+                                    <button type="button" onClick={onStartEdit} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 focus:opacity-100 focus:outline-none p-1 rounded-full" aria-label={`Edit name for ${displayName}`}>
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                             <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                                             <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
@@ -391,7 +391,7 @@ const MemberRow: React.FC<{
                             {linkedUser ? (
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{linkedUser.email}</p>
                             ) : isAdmin ? (
-                                <button onClick={onLink} className="mt-1 text-xs text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
+                                <button type="button" onClick={onLink} className="mt-1 text-xs text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
                                     Link Account...
                                 </button>
                             ) : null}
@@ -562,8 +562,8 @@ const MobileMemberCard: React.FC<{
                                     autoFocus
                                 />
                                 <div className="flex items-center gap-2">
-                                    <button onClick={onSaveEdit} className="flex-1 inline-flex justify-center items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700">Save</button>
-                                    <button onClick={onCancelEdit} className="flex-1 inline-flex justify-center items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Cancel</button>
+                                    <button type="button" onClick={onSaveEdit} className="flex-1 inline-flex justify-center items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700">Save</button>
+                                    <button type="button" onClick={onCancelEdit} className="flex-1 inline-flex justify-center items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Cancel</button>
                                 </div>
                                 {editError && <p className="text-red-500 text-xs mt-1">{editError}</p>}
                             </div>
@@ -571,7 +571,7 @@ const MobileMemberCard: React.FC<{
                             <div className="flex items-center gap-2 group">
                                 <p className="text-lg font-bold text-gray-900 dark:text-white">{displayName}</p>
                                 {canEditRow && !linkedUser && (
-                                <button onClick={onStartEdit} className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none p-1 rounded-full" aria-label={`Edit name for ${displayName}`}>
+                                <button type="button" onClick={onStartEdit} className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none p-1 rounded-full" aria-label={`Edit name for ${displayName}`}>
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                                     <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
@@ -674,7 +674,7 @@ const MobileMemberCard: React.FC<{
                                     </div>
                                 </div>
                                 <WithTooltip show={true} text="Unlink Account">
-                                    <button onClick={onUnlink} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-full hover:bg-red-100 dark:hover:bg-gray-700" aria-label={`Unlink account for ${linkedUser.name}`}>
+                                    <button type="button" onClick={onUnlink} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-full hover:bg-red-100 dark:hover:bg-gray-700" aria-label={`Unlink account for ${linkedUser.name}`}>
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                         </svg>
@@ -708,7 +708,7 @@ const MobileMemberCard: React.FC<{
                                 )}
                             </div>
                             {isAdmin ? (
-                                <button onClick={onLink} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
+                                <button type="button" onClick={onLink} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
                                     Link Account...
                                 </button>
                             ) : null}
@@ -847,7 +847,7 @@ const MembersTable: React.FC<{
                         <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 {isAdmin ? (
-                                    <button onClick={handleSortRequest} className="flex items-center gap-2 group focus:outline-none">
+                                    <button type="button" onClick={handleSortRequest} className="flex items-center gap-2 group focus:outline-none">
                                         <span>Name</span>
                                         {sortConfig && <SortIcon direction={sortConfig.direction} />}
                                     </button>
@@ -1212,13 +1212,15 @@ export const MemberManager: React.FC = () => {
 
     const handleResendInvite = async (invite: PendingInvite) => {
         try {
-            // First revoke the old invitation, then create a new one
-            await revokeInvite(invite.id);
+            // Create new invitation first, excluding current invitation from duplicate check
             await inviteUser({ 
                 email: invite.email, 
                 name: invite.invitedUserName, 
-                memberId: invite.memberId 
+                memberId: invite.memberId,
+                excludeInviteId: invite.id
             });
+            // Only delete the old invitation if the new one was created successfully
+            await revokeInvite(invite.id);
         } catch (error: any) {
             console.error("Failed to resend invitation", error);
         }
