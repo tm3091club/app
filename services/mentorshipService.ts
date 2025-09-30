@@ -8,8 +8,9 @@ export const mentorshipService = {
 
   async upsertPair(orgId: string, mentorId: string, menteeId: string) {
     const id = `${mentorId}_${menteeId}`;
-    const ref = db.collection('organizations').doc(orgId)
-      .collection('mentorshipPairs').doc(id);
+    const ref = db.collection('users').doc(orgId)
+      .collection('mentorship').doc('mentorshipPairs')
+      .collection('pairs').doc(id);
     await ref.set({
       id, mentorId, menteeId, active: true, createdAt: FieldValue.serverTimestamp()
     }, { merge: true });
@@ -17,20 +18,23 @@ export const mentorshipService = {
   },
 
   async getPair(orgId: string, pairId: string): Promise<MentorshipPair | null> {
-    const doc = await db.collection('organizations').doc(orgId)
-      .collection('mentorshipPairs').doc(pairId).get();
+    const doc = await db.collection('users').doc(orgId)
+      .collection('mentorship').doc('mentorshipPairs')
+      .collection('pairs').doc(pairId).get();
     return doc.exists ? doc.data() as MentorshipPair : null;
   },
 
   async getAllPairs(orgId: string): Promise<MentorshipPair[]> {
-    const snapshot = await db.collection('organizations').doc(orgId)
-      .collection('mentorshipPairs').get();
+    const snapshot = await db.collection('users').doc(orgId)
+      .collection('mentorship').doc('mentorshipPairs')
+      .collection('pairs').get();
     return snapshot.docs.map(doc => doc.data() as MentorshipPair);
   },
 
   async getPairsForMember(orgId: string, memberId: string): Promise<MentorshipPair[]> {
-    const snapshot = await db.collection('organizations').doc(orgId)
-      .collection('mentorshipPairs')
+    const snapshot = await db.collection('users').doc(orgId)
+      .collection('mentorship').doc('mentorshipPairs')
+      .collection('pairs')
       .where('active', '==', true)
       .get();
     
@@ -40,14 +44,16 @@ export const mentorshipService = {
   },
 
   async deactivatePair(orgId: string, pairId: string) {
-    await db.collection('organizations').doc(orgId)
-      .collection('mentorshipPairs').doc(pairId)
+    await db.collection('users').doc(orgId)
+      .collection('mentorship').doc('mentorshipPairs')
+      .collection('pairs').doc(pairId)
       .update({ active: false });
   },
 
   notesRef(orgId: string, pairId: string) {
-    return db.collection('organizations').doc(orgId)
-      .collection('mentorshipPairs').doc(pairId)
+    return db.collection('users').doc(orgId)
+      .collection('mentorship').doc('mentorshipPairs')
+      .collection('pairs').doc(pairId)
       .collection('notes');
   },
 

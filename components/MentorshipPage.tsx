@@ -178,7 +178,7 @@ export const MentorshipPage: React.FC = () => {
         setLoading(true);
 
         // Load policy
-        const policyDoc = await getDoc(doc(db, 'organizations', organization.ownerId, 'mentorshipPolicy', 'default'));
+        const policyDoc = await getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default'));
         if (policyDoc.exists()) {
           setPolicy(policyDoc.data() as MentorshipPolicy);
         }
@@ -197,8 +197,8 @@ export const MentorshipPage: React.FC = () => {
           
           // Load metrics and override in parallel
           const [metricsDoc, overrideDoc] = await Promise.all([
-            getDoc(doc(db, 'organizations', organization.ownerId, 'memberMetrics', member.id)),
-            getDoc(doc(db, 'organizations', organization.ownerId, 'mentorshipOverrides', member.id))
+            getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'memberMetrics', 'metrics', member.id)),
+            getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', member.id))
           ]);
 
           const metrics: MemberMetrics = metricsDoc.exists() 
@@ -256,7 +256,7 @@ export const MentorshipPage: React.FC = () => {
 
     try {
       // Load policy first
-      const policyDoc = await getDoc(doc(db, 'organizations', organization.ownerId, 'mentorshipPolicy', 'default'));
+      const policyDoc = await getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default'));
       let currentPolicy = policy;
       if (policyDoc.exists()) {
         currentPolicy = policyDoc.data() as MentorshipPolicy;
@@ -277,8 +277,8 @@ export const MentorshipPage: React.FC = () => {
         
         // Load metrics and override in parallel
         const [metricsDoc, overrideDoc] = await Promise.all([
-          getDoc(doc(db, 'organizations', organization.ownerId, 'memberMetrics', member.id)),
-          getDoc(doc(db, 'organizations', organization.ownerId, 'mentorshipOverrides', member.id))
+          getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'memberMetrics', 'metrics', member.id)),
+          getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', member.id))
         ]);
 
         const metrics: MemberMetrics = metricsDoc.exists() 

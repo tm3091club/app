@@ -98,35 +98,35 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // --- Organizations Collection (Club Data) ---
-    match /organizations/{orgId} {
-      // Allow authenticated users to read/write their own organization data
+    // --- Mentorship Subcollection under Users ---
+    match /users/{userId}/mentorship/{category} {
+      // Allow authenticated users to read/write mentorship data
       allow read, write: if isAuthenticated();
 
-      // --- Mentorship Policy Collection ---
-      match /mentorshipPolicy/{policyId} {
+      // --- Mentorship Policy ---
+      match /policies/{policyId} {
         // Anyone can read policy (not sensitive)
         allow read: if true;
         // Only authenticated users can write policy (will be filtered by app logic)
         allow write: if isAuthenticated();
       }
 
-      // --- Mentorship Overrides Collection ---
-      match /mentorshipOverrides/{memberId} {
+      // --- Mentorship Overrides ---
+      match /overrides/{memberId} {
         // Allow authenticated users to read/write overrides (will be filtered by app logic)
         allow read, write: if isAuthenticated();
       }
 
-      // --- Member Metrics Collection ---
-      match /memberMetrics/{memberId} {
+      // --- Member Metrics ---
+      match /metrics/{memberId} {
         // Anyone can read metrics (for eligibility display)
         allow read: if true;
         // Allow authenticated users to write metrics (will be filtered by app logic)
         allow write: if isAuthenticated();
       }
 
-      // --- Mentorship Pairs Collection ---
-      match /mentorshipPairs/{pairId} {
+      // --- Mentorship Pairs ---
+      match /pairs/{pairId} {
         // Allow read/write for club members
         allow read, write: if isAuthenticated();
 

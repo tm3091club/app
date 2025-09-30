@@ -376,8 +376,8 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
 
         // Load policy and pairings in parallel
         const [policyDoc, pairingsSnapshot] = await Promise.all([
-          getDoc(doc(db, 'organizations', organization.ownerId, 'mentorshipPolicy', 'default')),
-          getDocs(collection(db, 'organizations', organization.ownerId, 'mentorshipPairs'))
+          getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default')),
+          getDocs(collection(db, 'users', organization.ownerId, 'mentorship', 'mentorshipPairs', 'pairs'))
         ]);
         
         if (policyDoc.exists()) {
@@ -405,8 +405,8 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
           
           // Load metrics and override in parallel
           const [metricsDoc, overrideDoc] = await Promise.all([
-            getDoc(doc(db, 'organizations', organization.ownerId, 'memberMetrics', member.id)),
-            getDoc(doc(db, 'organizations', organization.ownerId, 'mentorshipOverrides', member.id))
+            getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'memberMetrics', 'metrics', member.id)),
+            getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', member.id))
           ]);
 
           const metrics: MemberMetrics = metricsDoc.exists() 
@@ -467,7 +467,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
         setByUid: currentUser?.uid || '',
       };
 
-      await setDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipOverrides', memberId), overrideData);
+      await setDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', memberId), overrideData);
       
       // Update metrics if provided
       if (metrics) {
@@ -479,7 +479,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
           lastUpdated: new Date(),
         };
         
-        await setDoc(doc(db, 'organizations', organization!.ownerId, 'memberMetrics', memberId), metricsData);
+        await setDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'memberMetrics', 'metrics', memberId), metricsData);
       }
       
       // Refresh the VPE center data first
@@ -488,7 +488,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
           setLoading(true);
 
           // Load policy
-          const policyDoc = await getDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipPolicy', 'default'));
+          const policyDoc = await getDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default'));
           if (policyDoc.exists()) {
             setPolicy(policyDoc.data() as MentorshipPolicy);
           }
@@ -507,8 +507,8 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
             
             // Load metrics and override in parallel
             const [metricsDoc, overrideDoc] = await Promise.all([
-              getDoc(doc(db, 'organizations', organization!.ownerId, 'memberMetrics', member.id)),
-              getDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipOverrides', member.id))
+              getDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'memberMetrics', 'metrics', member.id)),
+              getDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', member.id))
             ]);
 
             const metrics: MemberMetrics = metricsDoc.exists() 
@@ -571,7 +571,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
 
   const handlePolicySave = async (newPolicy: MentorshipPolicy) => {
     try {
-      await setDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipPolicy', 'default'), newPolicy);
+      await setDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default'), newPolicy);
       setPolicy(newPolicy);
     } catch (error) {
       console.error('Error saving policy:', error);
@@ -580,7 +580,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
 
   const handleRemoveOverride = async (memberId: string) => {
     try {
-      await deleteDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipOverrides', memberId));
+      await deleteDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', memberId));
       
       // Refresh the VPE center data first
       const loadData = async () => {
@@ -588,7 +588,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
           setLoading(true);
 
           // Load policy
-          const policyDoc = await getDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipPolicy', 'default'));
+          const policyDoc = await getDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default'));
           if (policyDoc.exists()) {
             setPolicy(policyDoc.data() as MentorshipPolicy);
           }
@@ -607,8 +607,8 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
             
             // Load metrics and override in parallel
             const [metricsDoc, overrideDoc] = await Promise.all([
-              getDoc(doc(db, 'organizations', organization!.ownerId, 'memberMetrics', member.id)),
-              getDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipOverrides', member.id))
+              getDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'memberMetrics', 'metrics', member.id)),
+              getDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', member.id))
             ]);
 
             const metrics: MemberMetrics = metricsDoc.exists() 
@@ -679,7 +679,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
         active: true,
       };
 
-      await setDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipPairs', pairingId), pairingData);
+      await setDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipPairs', 'pairs', pairingId), pairingData);
       
       // Update local state
       setPairings(prev => [...prev, { id: pairingId, ...pairingData }]);
@@ -695,7 +695,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
 
   const handleRemovePairing = async (pairingId: string) => {
     try {
-      await deleteDoc(doc(db, 'organizations', organization!.ownerId, 'mentorshipPairs', pairingId));
+      await deleteDoc(doc(db, 'users', organization!.ownerId, 'mentorship', 'mentorshipPairs', 'pairs', pairingId));
       
       // Update local state
       setPairings(prev => prev.filter(p => p.id !== pairingId));
