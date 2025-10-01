@@ -717,7 +717,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             <table className="w-full border-collapse text-xs md:text-base">
               <thead>
                 <tr className="border-b-2 border-gray-300 dark:border-gray-600">
-                  <th className="text-left py-0.5 px-1 md:py-1 md:px-2 w-16">Time</th>
+                  <th className="text-center py-0.5 px-1 md:py-1 md:px-2 w-16">Time</th>
                   <th className="text-left py-0.5 px-1 md:py-1 md:px-2 w-1/3">Program Event</th>
                   <th className="text-center py-0.5 px-1 md:py-1 md:px-2 hidden md:table-cell">Member</th>
                   <th className="text-center py-0.5 px-1 md:py-1 md:px-2 hidden md:table-cell">Description of Role or Task</th>
@@ -743,13 +743,13 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                   
                   return (
                     <tr key={item.id} className={`border-b border-gray-200 dark:border-gray-700 ${rowColorClass}`}>
-                      <td className="py-0.5 px-1 md:py-1 md:px-2 align-top" style={{ verticalAlign: 'top' }}>
+                      <td className="py-0.5 px-1 md:py-1 md:px-2 align-top text-center" style={{ verticalAlign: 'top' }}>
                       {isEditing ? (
                         <input
                           type="text"
                           value={item.time}
                           onChange={(e) => handleItemChange(item.id, 'time', e.target.value)}
-                          className="w-full px-1 py-0.5 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm"
+                          className="w-full px-1 py-0.5 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm text-center"
                           placeholder="7:00"
                         />
                       ) : (

@@ -102,11 +102,15 @@ export const exportWeeklyAgendaToPDF = (
         } else if (isSpace) {
           data.cell.styles.fillColor = [254, 226, 226]; // Light red (red-100)
           data.cell.styles.textColor = [220, 38, 38]; // Red text
-          data.cell.styles.halign = 'left'; // Left-align text for space rows
           
-          // For space rows, make the Program Event column span visually by making other columns empty
+          // For space rows, left-align Program Event column but keep time centered
           if (data.column.index === 1) { // Program Event column
+            data.cell.styles.halign = 'left';
             data.cell.styles.fontStyle = 'bold';
+          } else if (data.column.index === 0) { // Time column
+            data.cell.styles.halign = 'center'; // Keep time centered
+          } else {
+            data.cell.styles.halign = 'left';
           }
         }
       }

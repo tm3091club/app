@@ -121,7 +121,8 @@
     display: none !important;
   }
   
-  /* Center the person and description columns */
+  /* Center the time, person, and description columns */
+  th:nth-child(1), td:nth-child(1),
   th:nth-child(3), td:nth-child(3),
   th:nth-child(4), td:nth-child(4) {
     text-align: center !important;

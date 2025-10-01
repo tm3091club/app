@@ -1,71 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
-import { evaluateMentorEligibility, EligibilityResult } from '../services/mentorshipEligibility';
-import { mentorCopy, mentorGuideContent } from '../utils/mentorshipCopy';
-import { MentorshipPolicy, MentorshipOverride, MemberMetrics, MentorshipEligibilityStatus } from '../types';
+import { mentorGuideContent } from '../utils/mentorshipCopy';
+import { MentorshipPair } from '../types';
 import { db } from '../services/firebase';
-import { collection, doc, getDoc, getDocs, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { VPEMentorCenter } from './VPEMentorCenter';
-import { monthsSince } from '../services/mentorshipEligibility';
+import { MyMentorshipSection } from './mentorship/MyMentorshipSection';
 
-interface MemberWithEligibility {
+interface MemberWithMentorship {
   id: string;
   name: string;
-  eligibility: EligibilityResult;
-  metrics: MemberMetrics;
+  mentor: string | null;
+  mentees: string[];
+  notesCount: number;
 }
 
-const EligibilityBadge: React.FC<{ status: MentorshipEligibilityStatus; reasons: string[] }> = ({ status, reasons }) => {
-  const getBadgeClasses = (status: MentorshipEligibilityStatus) => {
-    switch (status) {
-      case 'eligible':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'needs_review':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'not_eligible':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'override_eligible':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'override_blocked':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getBadgeText = (status: MentorshipEligibilityStatus) => {
-    switch (status) {
-      case 'eligible':
-        return mentorCopy.badge.eligible;
-      case 'needs_review':
-        return mentorCopy.badge.needs_review;
-      case 'not_eligible':
-        return mentorCopy.badge.not_eligible;
-      case 'override_eligible':
-        return mentorCopy.badge.override_ok;
-      case 'override_blocked':
-        return mentorCopy.badge.override_blocked;
-      default:
-        return 'Unknown';
-    }
-  };
-
-  return (
-    <div className="relative group">
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getBadgeClasses(status)}`}>
-        {getBadgeText(status)}
-      </span>
-      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-xs">
-        <div className="space-y-1">
-          {reasons.map((reason, index) => (
-            <div key={index}>{reason}</div>
-          ))}
-        </div>
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-      </div>
-    </div>
-  );
-};
 
 const MentorGuideModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -159,13 +108,7 @@ const MentorGuideModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
 
 export const MentorshipPage: React.FC = () => {
   const { organization, currentUser, adminStatus } = useToastmasters();
-  const [members, setMembers] = useState<MemberWithEligibility[]>([]);
-  const [policy, setPolicy] = useState<MentorshipPolicy>({
-    minSpeeches: 3,
-    minMonths: 6,
-    minAttendancePct90: 50,
-    minRoles90: 2,
-  });
+  const [members, setMembers] = useState<MemberWithMentorship[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
   const [showVPECenter, setShowVPECenter] = useState(false);
@@ -177,69 +120,49 @@ export const MentorshipPage: React.FC = () => {
       try {
         setLoading(true);
 
-        // Load policy
-        const policyDoc = await getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default'));
-        if (policyDoc.exists()) {
-          setPolicy(policyDoc.data() as MentorshipPolicy);
-        }
-
-        // Process members from organization data
-        const membersWithEligibility: MemberWithEligibility[] = [];
-
-        // Load all metrics and overrides in parallel
-        const memberPromises = (organization.members || []).map(async (member) => {
-          // Calculate months since join from joinedDate
-          let monthsSinceJoin = 0;
-          if (member.joinedDate) {
-            const joinDate = new Date(member.joinedDate);
-            monthsSinceJoin = monthsSince(joinDate);
+        // Load all active pairings
+        const pairingsSnapshot = await getDocs(
+          collection(db, 'users', organization.ownerId, 'mentorship', 'mentorshipPairs', 'pairs')
+        );
+        
+        const pairings: MentorshipPair[] = [];
+        pairingsSnapshot.forEach(doc => {
+          const data = doc.data() as MentorshipPair;
+          if (data.active) {
+            pairings.push({ id: doc.id, ...data });
           }
-          
-          // Load metrics and override in parallel
-          const [metricsDoc, overrideDoc] = await Promise.all([
-            getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'memberMetrics', 'metrics', member.id)),
-            getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', member.id))
-          ]);
+        });
 
-          const metrics: MemberMetrics = metricsDoc.exists() 
-            ? {
-                ...metricsDoc.data() as MemberMetrics,
-                monthsSinceJoin, // Override with calculated value
-              }
-            : {
-                speechesCompleted: 0,
-                monthsSinceJoin,
-                attendancePct90: 0,
-                rolesIn90: 0,
-                lastUpdated: new Date(),
-              };
-
-          const override: MentorshipOverride | null = overrideDoc.exists() 
-            ? overrideDoc.data() as MentorshipOverride
+        // Process each member
+        const membersWithMentorship: MemberWithMentorship[] = organization.members.map(member => {
+          // Find mentor (where member is mentee)
+          const mentorPairing = pairings.find(p => p.menteeId === member.id);
+          const mentorMember = mentorPairing 
+            ? organization.members.find(m => m.id === mentorPairing.mentorId)
             : null;
-
-          // Calculate eligibility
-          const eligibility = evaluateMentorEligibility({
-            speechesCompleted: metrics.speechesCompleted,
-            monthsSinceJoin: metrics.monthsSinceJoin,
-            attendancePct90: metrics.attendancePct90,
-            rolesIn90: metrics.rolesIn90,
-            policy,
-            override,
-          });
+          
+          // Find mentees (where member is mentor)
+          const menteePairings = pairings.filter(p => p.mentorId === member.id);
+          const menteeNames = menteePairings
+            .map(p => {
+              const menteeMember = organization.members.find(m => m.id === p.menteeId);
+              return menteeMember?.name || null;
+            })
+            .filter(Boolean) as string[];
+          
+          // Count notes
+          const notesCount = member.mentorshipNotes?.length || 0;
 
           return {
             id: member.id,
             name: member.name,
-            eligibility,
-            metrics,
+            mentor: mentorMember?.name || null,
+            mentees: menteeNames,
+            notesCount,
           };
         });
 
-        const results = await Promise.all(memberPromises);
-        membersWithEligibility.push(...results);
-
-        setMembers(membersWithEligibility);
+        setMembers(membersWithMentorship);
         setLoading(false);
       } catch (error) {
         console.error('Error loading mentorship data:', error);
@@ -248,90 +171,8 @@ export const MentorshipPage: React.FC = () => {
     };
 
     loadMentorshipData();
-  }, [organization, policy]);
-
-  // Add a refresh function that can be called from VPE center
-  const refreshMentorshipData = useCallback(async () => {
-    if (!organization) return;
-
-    try {
-      // Load policy first
-      const policyDoc = await getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipPolicy', 'policies', 'default'));
-      let currentPolicy = policy;
-      if (policyDoc.exists()) {
-        currentPolicy = policyDoc.data() as MentorshipPolicy;
-        setPolicy(currentPolicy);
-      }
-
-      // Process members from organization data
-      const membersWithEligibility: MemberWithEligibility[] = [];
-
-      // Load all metrics and overrides in parallel
-      const memberPromises = (organization.members || []).map(async (member) => {
-        // Calculate months since join from joinedDate
-        let monthsSinceJoin = 0;
-        if (member.joinedDate) {
-          const joinDate = new Date(member.joinedDate);
-          monthsSinceJoin = monthsSince(joinDate);
-        }
-        
-        // Load metrics and override in parallel
-        const [metricsDoc, overrideDoc] = await Promise.all([
-          getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'memberMetrics', 'metrics', member.id)),
-          getDoc(doc(db, 'users', organization.ownerId, 'mentorship', 'mentorshipOverrides', 'overrides', member.id))
-        ]);
-
-        const metrics: MemberMetrics = metricsDoc.exists() 
-          ? {
-              ...metricsDoc.data() as MemberMetrics,
-              monthsSinceJoin, // Override with calculated value
-            }
-          : {
-              speechesCompleted: 0,
-              monthsSinceJoin,
-              attendancePct90: 0,
-              rolesIn90: 0,
-              lastUpdated: new Date(),
-            };
-
-        const override: MentorshipOverride | null = overrideDoc.exists() 
-          ? overrideDoc.data() as MentorshipOverride
-          : null;
-
-        // Calculate eligibility using the current policy
-        const eligibility = evaluateMentorEligibility({
-          speechesCompleted: metrics.speechesCompleted,
-          monthsSinceJoin: metrics.monthsSinceJoin,
-          attendancePct90: metrics.attendancePct90,
-          rolesIn90: metrics.rolesIn90,
-          policy: currentPolicy,
-          override,
-        });
-
-        return {
-          id: member.id,
-          name: member.name,
-          eligibility,
-          metrics,
-        };
-      });
-
-      const results = await Promise.all(memberPromises);
-      membersWithEligibility.push(...results);
-
-      setMembers(membersWithEligibility);
-    } catch (error) {
-      console.error('Error refreshing mentorship data:', error);
-    }
   }, [organization]);
 
-  // Expose refresh function globally so VPE center can call it
-  useEffect(() => {
-    (window as any).refreshMentorshipData = refreshMentorshipData;
-    return () => {
-      delete (window as any).refreshMentorshipData;
-    };
-  }, [organization, refreshMentorshipData]);
 
   if (loading) {
     return (
@@ -345,13 +186,15 @@ export const MentorshipPage: React.FC = () => {
     return <VPEMentorCenter onBack={() => setShowVPECenter(false)} />;
   }
 
-  const eligibleMembers = members.filter(m => 
-    m.eligibility.status === 'eligible' || m.eligibility.status === 'override_eligible'
-  );
-  const needsReviewMembers = members.filter(m => m.eligibility.status === 'needs_review');
-  const notEligibleMembers = members.filter(m => 
-    m.eligibility.status === 'not_eligible' || m.eligibility.status === 'override_blocked'
-  );
+  // Calculate statistics
+  const membersWithMentor = members.filter(m => m.mentor !== null).length;
+  const membersWithoutMentor = members.filter(m => m.mentor === null).length;
+  const activeMentors = members.filter(m => m.mentees.length > 0).length;
+
+  // Get current user's member profile
+  const currentMember = currentUser?.uid 
+    ? organization?.members.find(m => m.uid === currentUser.uid)
+    : null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -376,9 +219,17 @@ export const MentorshipPage: React.FC = () => {
           </div>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
-          Track mentor eligibility and manage mentorship relationships in your club.
+          Track who needs a mentor and who is mentoring who.
         </p>
       </div>
+
+      {/* My Mentorship Section - Shows for logged-in users with member profiles */}
+      {currentMember && currentUser && (
+        <MyMentorshipSection 
+          currentUserId={currentUser.uid} 
+          currentMemberId={currentMember.id} 
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -392,8 +243,8 @@ export const MentorshipPage: React.FC = () => {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Eligible</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{eligibleMembers.length}</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Has Mentor</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{membersWithMentor}</p>
             </div>
           </div>
         </div>
@@ -408,8 +259,8 @@ export const MentorshipPage: React.FC = () => {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Needs Review</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{needsReviewMembers.length}</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Needs Mentor</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{membersWithoutMentor}</p>
             </div>
           </div>
         </div>
@@ -417,15 +268,15 @@ export const MentorshipPage: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                 </svg>
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Not Eligible</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{notEligibleMembers.length}</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Mentors</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{activeMentors}</p>
             </div>
           </div>
         </div>
@@ -434,7 +285,10 @@ export const MentorshipPage: React.FC = () => {
       {/* Members List */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Member Eligibility</h2>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Club Mentorship Relationships</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            See who is mentoring who in your club. Admin and VPE manage all pairings through the VPE Mentor Center.
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -444,19 +298,13 @@ export const MentorshipPage: React.FC = () => {
                   Member
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Eligibility
+                  Mentor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Speeches
+                  Mentees
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Months
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Attendance (90d)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Roles (90d)
+                  Notes
                 </th>
               </tr>
             </thead>
@@ -466,29 +314,50 @@ export const MentorshipPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {member.name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <EligibilityBadge 
-                      status={member.eligibility.status as MentorshipEligibilityStatus} 
-                      reasons={member.eligibility.reasons} 
-                    />
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {member.mentor || (
+                      <span className="text-yellow-600 dark:text-yellow-400">No Mentor</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {member.mentees.length > 0 ? (
+                      <div className="space-y-1">
+                        {member.mentees.map((mentee, index) => (
+                          <div key={index} className="text-sm">{mentee}</div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">No Mentees</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {member.metrics.speechesCompleted}/{policy.minSpeeches}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {Math.min(member.metrics.monthsSinceJoin, policy.minMonths)}/{policy.minMonths}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {member.metrics.attendancePct90}%
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {member.metrics.rolesIn90}/{policy.minRoles90}
+                    {member.notesCount > 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                        {member.notesCount} note{member.notesCount > 1 ? 's' : ''}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">No notes</span>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Info Panel */}
+      <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+        <h3 className="text-lg font-medium text-blue-900 dark:text-blue-200 mb-3">
+          How Mentorship Works
+        </h3>
+        <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
+          <li>• <strong>View Relationships:</strong> See who is mentoring who in your club</li>
+          <li>• <strong>Request Support:</strong> Contact Admin or VPE to request a mentor or to mentor someone</li>
+          <li>• <strong>Track Progress:</strong> Use the Mentorship Notes feature in "My Mentorship" section to track your journey</li>
+          <li>• <strong>Admin/VPE Control:</strong> All mentorship pairings are managed through the VPE Mentor Center</li>
+          <li>• <strong>Flexible System:</strong> Members can have multiple mentors or be both a mentor and mentee</li>
+        </ul>
       </div>
 
       <MentorGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
