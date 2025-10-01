@@ -15,12 +15,105 @@ import { PublicAgendaPage } from './components/PublicAgendaPage';
 import { UnsubscribePage } from './components/UnsubscribePage';
 import { MentorshipPage } from './components/MentorshipPage';
 import { APP_VERSION } from './utils/version';
+import { db } from './services/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { BUG_REPORT_EMAIL } from './Constants';
 
 type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda' | 'mentorship';
+
+const BugReportModal: React.FC<{ isOpen: boolean; onClose: () => void; userEmail: string }> = ({ isOpen, onClose, userEmail }) => {
+  const [bugReport, setBugReport] = useState('');
+  const [sending, setSending] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async () => {
+    if (!bugReport.trim()) return;
+    
+    setSending(true);
+    try {
+      await addDoc(collection(db, 'mail'), {
+        to: [BUG_REPORT_EMAIL],
+        replyTo: userEmail,
+        message: {
+          subject: `Bug Report from ${userEmail}`,
+          text: bugReport,
+          html: `
+            <h3>Bug Report</h3>
+            <p><strong>From:</strong> ${userEmail}</p>
+            <p><strong>Version:</strong> ${APP_VERSION}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+            <hr>
+            <p><strong>Report:</strong></p>
+            <p>${bugReport.replace(/\n/g, '<br>')}</p>
+          `
+        }
+      });
+      
+      alert('Bug report sent successfully! Thank you for your feedback.');
+      setBugReport('');
+      onClose();
+    } catch (error) {
+      console.error('Error sending bug report:', error);
+      alert('Failed to send bug report. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Report a Bug</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Describe the issue you encountered. We'll get back to you as soon as possible.
+          </p>
+          
+          <textarea
+            value={bugReport}
+            onChange={(e) => setBugReport(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
+            rows={6}
+            placeholder="Describe the bug..."
+          />
+          
+          <div className="flex justify-end space-x-3 mt-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={sending || !bugReport.trim()}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:bg-gray-400"
+            >
+              {sending ? 'Sending...' : 'Send Report'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   const { user, loading, logOut, verifyEmailWithToken } = useAuth();
   const [currentView, setCurrentView] = useState<View>('schedule');
+  const [showBugReport, setShowBugReport] = useState(false);
 
   // --- Top-level Routing Logic ---
   const hash = window.location.hash.substring(1); // Remove the leading '#'
@@ -116,10 +209,23 @@ function App() {
             </main>
             {/* Version Footer */}
             <footer className="text-center py-2 px-4">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Version: {APP_VERSION}
-              </span>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Version: {APP_VERSION}
+                </span>
+                <button
+                  onClick={() => setShowBugReport(true)}
+                  className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+                >
+                  Report a Bug
+                </button>
+              </div>
             </footer>
+            <BugReportModal 
+              isOpen={showBugReport} 
+              onClose={() => setShowBugReport(false)} 
+              userEmail={user!.email || 'unknown@example.com'}
+            />
           </div>
         </NotificationProvider>
       </ToastmastersProvider>

@@ -4,7 +4,6 @@ import { MemberStatus, Member, AvailabilityStatus, AppUser, UserRole, Organizati
 import { getMeetingDatesForMonth } from '../services/scheduleLogic';
 import { WithTooltip } from './common/WithTooltip';
 import { getCurrentMonthInfo, getNextMonthInfo, getRelevantMonthsForAvailability, getNextScheduleMonth, getAppropriateAvailabilityMonth } from '../utils/monthUtils';
-import MentorshipPanel from './mentorship/MentorshipPanel';
 
 const LinkAccountModal: React.FC<{
     isOpen: boolean;
@@ -450,9 +449,6 @@ const MemberRow: React.FC<{
                     ))}
                 </select>
             </td>
-            <td className="px-6 py-4 text-sm">
-                <MentorshipPanel memberId={member.id} memberName={displayName} />
-            </td>
             <td className="px-6 py-4 whitespace-normal text-sm">
                  <div className="flex flex-wrap gap-x-4 gap-y-2">
                     {meetingDates.length > 0 ? (
@@ -603,11 +599,6 @@ const MobileMemberCard: React.FC<{
                                 <option key={status} value={status}>{status}</option>
                             ))}
                         </select>
-                    </div>
-                    
-                    {/* Mentorship Section */}
-                    <div>
-                        <MentorshipPanel memberId={member.id} memberName={displayName} />
                     </div>
                 </div>
 
@@ -858,7 +849,6 @@ const MembersTable: React.FC<{
                             <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined</th>
                             <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Qualifications</th>
                             <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                            <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Mentor</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Availability ({monthName})</th>
                         </tr>
                     </thead>
@@ -1474,7 +1464,7 @@ export const MemberManager: React.FC = () => {
                 {isAdmin ? (
                     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Members</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Members ({activeMembers.length})</h2>
                         </div>
                         <MembersTable memberList={sortedMembersForAdmin} isAdmin={true} {...commonTableProps} handleSortRequest={handleSortRequest} sortConfig={sortConfig} />
                     </div>

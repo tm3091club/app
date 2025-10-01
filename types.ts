@@ -98,6 +98,7 @@ export enum NotificationType {
   AvailabilityRequest = 'AvailabilityRequest',
   RoleChanged = 'RoleChanged',
   RoleUnassigned = 'RoleUnassigned',
+  MentorshipNote = 'MentorshipNote',
   MeetingBlackout = 'MeetingBlackout',
   SpeakerUnassigned = 'SpeakerUnassigned',
 }

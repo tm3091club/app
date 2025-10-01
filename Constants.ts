@@ -58,3 +58,9 @@ export const MAJOR_ROLES = [
   'Speaker 3',
 ];
 
+/**
+ * Support email address for bug reports
+ * TODO: Change this to your actual support email address
+ */
+export const BUG_REPORT_EMAIL = 'tmprofessionallyspeaking@gmail.com';
+
