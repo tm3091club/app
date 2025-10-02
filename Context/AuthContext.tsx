@@ -120,68 +120,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const sendCustomEmailVerification = async (email: string, userId: string) => {
-        const verificationToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-        const verificationUrl = `${window.location.origin}/?verify=${verificationToken}`;
-        
-        await db.collection('users').doc(userId).set({
-            emailVerificationToken: verificationToken,
-            emailVerificationSent: new Date().toISOString(),
-            emailVerificationUrl: verificationUrl,
-            emailVerificationQueued: true
-        }, { merge: true });
-
-        try {
-            await db.collection("mail").add({
-                to: [email],
-                message: {
-                    subject: `Verify your email for Toastmasters Monthly Scheduler`,
-                    html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <div style="background: #004165; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                                <h1 style="margin: 0; font-size: 24px;">Toastmasters Monthly Scheduler</h1>
-                            </div>
-                            <div style="padding: 30px; background: white; border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
-                                <h2 style="color: #004165; margin-top: 0;">Email Verification Required</h2>
-                                <p>Hello!</p>
-                                <p>Thank you for creating your Toastmasters club account. To complete your registration and access your club management features, please verify your email address.</p>
-                                <div style="text-align: center; margin: 30px 0;">
-                                    <a href="${verificationUrl}" 
-                                       style="display: inline-block; padding: 15px 30px; background: #004165; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
-                                        Verify My Email Address
-                                    </a>
-                                </div>
-                                <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-                                <p style="word-break: break-all; color: #666; background: #f7fafc; padding: 10px; border-radius: 4px; font-family: monospace;">
-                                    ${verificationUrl}
-                                </p>
-                                <p><strong>Important:</strong> This verification link will expire in 24 hours.</p>
-                                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-                                <p style="font-size: 12px; color: #718096;">
-                                    If you didn't create this account, please ignore this email or contact us at 
-                                    <a href="mailto:tmprofessionallyspeaking@gmail.com">tmprofessionallyspeaking@gmail.com</a>
-                                </p>
-                            </div>
-                        </div>
-                    `,
-                    text: `Toastmasters Monthly Scheduler - Email Verification Required
-
-Hello!
-
-Thank you for creating your Toastmasters club account. To complete your registration and access your club management features, please verify your email address.
-
-Click this link to verify your email:
-${verificationUrl}
-
-Important: This verification link will expire in 24 hours.
-
-If you didn't create this account, please ignore this email or contact us at tmprofessionallyspeaking@gmail.com
-
----
-Toastmasters Monthly Scheduler`
-                }
-            });
-        } catch (emailError) {
-            throw emailError;
+        // Use Firebase's built-in email verification instead of custom implementation
+        const user = auth.currentUser;
+        if (user && user.email === email) {
+            try {
+                await user.sendEmailVerification({
+                    url: `${window.location.origin}/#/`,
+                    handleCodeInApp: false
+                });
+            } catch (emailError) {
+                console.warn('Email verification failed:', emailError);
+                // Don't throw error - let user proceed
+            }
         }
     };
 
@@ -195,22 +145,21 @@ Toastmasters Monthly Scheduler`
 
     const verifyEmailWithToken = async (token: string) => {
         try {
-            // Verify the token and update the user's email verification status
-            const userDoc = await db.collection('users').where('emailVerificationToken', '==', token).get();
-            
-            if (userDoc.empty) {
-                throw new Error('Invalid or expired verification token.');
+            // Use Firebase's built-in email verification
+            const user = auth.currentUser;
+            if (user) {
+                await user.reload(); // Refresh user data
+                if (user.emailVerified) {
+                    // Update the user's email verification status in Firestore
+                    await db.collection('users').doc(user.uid).update({
+                        emailVerified: true
+                    });
+                } else {
+                    throw new Error('Email not verified. Please check your email and click the verification link.');
+                }
+            } else {
+                throw new Error('No user is currently signed in.');
             }
-
-            const userData = userDoc.docs[0];
-            const userId = userData.id;
-            
-            // Update the email verification status
-            await db.collection('users').doc(userId).update({
-                emailVerified: true,
-                emailVerificationToken: null // Clear the token
-            });
-
         } catch (error) {
             throw error;
         }
