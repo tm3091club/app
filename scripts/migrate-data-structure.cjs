@@ -6,7 +6,7 @@ const { getFirestore, doc, getDoc, updateDoc } = require('firebase/firestore');
 
 // Get Firebase config from environment or use the current one
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyDVzvpEo8utvAoGjJcbyO2KRjFvfHVDqvY",
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyDLAtXZAhHImTNQI9zv4VtijJil44GdGzc",
   authDomain: process.env.FIREBASE_AUTH_DOMAIN || "toastmasters-monthly-schedule.firebaseapp.com",
   projectId: process.env.FIREBASE_PROJECT_ID || "toastmasters-monthly-schedule",
   storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "toastmasters-monthly-schedule.firebasestorage.app",
