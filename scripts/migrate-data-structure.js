@@ -6,13 +6,12 @@ const { getFirestore, doc, getDoc, updateDoc } = require('firebase/firestore');
 
 // Get Firebase config from environment or use the current one
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyDLAtXZAhHImTNQI9zv4VtijJil44GdGzc",
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "toastmasters-monthly-schedule.firebaseapp.com",
-  projectId: process.env.FIREBASE_PROJECT_ID || "toastmasters-monthly-schedule",
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "toastmasters-monthly-schedule.firebasestorage.app",
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "565975073483",
-  appId: process.env.FIREBASE_APP_ID || "1:565975073483:web:c63a09f3e8119d50bad14e",
-  measurementId: process.env.FIREBASE_MEASUREMENT_ID || "G-TKR2N8DQDK"
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyCS-f09qszpZlJQw_9DUd_YTE1X9-0kXiE",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "toastmasters-monthly-scheduler.firebaseapp.com",
+  projectId: process.env.FIREBASE_PROJECT_ID || "toastmasters-monthly-scheduler",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "toastmasters-monthly-scheduler.firebasestorage.app",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "160223318967",
+  appId: process.env.FIREBASE_APP_ID || "1:160223318967:web:6c515b28398ab6c5f90e32"
 };
 
 // Initialize Firebase

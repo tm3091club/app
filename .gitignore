@@ -44,3 +44,8 @@ debug*.html
 # Firebase secrets (these should be in environment variables)
 *firebase*config*.js
 *firebase*config*.ts
+
+# Service account keys and sensitive files
+*service-account*.json
+firestore-export.json
+users-backup.json
