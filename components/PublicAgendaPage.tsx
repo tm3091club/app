@@ -224,7 +224,7 @@ export const PublicAgendaPage: React.FC<{ clubNumber: string; shareId: string }>
                             </p>
                         )}
                         <div className="text-sm text-gray-600 dark:text-gray-400 print:text-xs print:text-black print:leading-tight print:mb-0">
-                            Website: <span className="ml-1">{agendaData.websiteUrl || `${window.location.origin} tmapp.club`}</span>
+                            Website: <span className="ml-1">{agendaData.websiteUrl || 'https://tmapp.club'}</span>
                         </div>
                     </div>
                 </div>

@@ -46,7 +46,7 @@ export default function MyMentorshipNotes({
     const q = query(
       notificationsRef,
       where('type', '==', NotificationType.MentorshipNote),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'asc')
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -71,6 +71,7 @@ export default function MyMentorshipNotes({
             readAt: data.readAt?.toDate(),
             isDismissed: data.isDismissed,
             dismissedAt: data.dismissedAt?.toDate(),
+            metadata: data.metadata,
           });
         }
       });
@@ -155,19 +156,19 @@ export default function MyMentorshipNotes({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Notes with your {isRecipientMentor ? 'Mentor' : 'Mentee'} ({recipientName})
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+            Notes with your {isRecipientMentor ? 'Mentor' : 'Mentee'}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Only you and your {isRecipientMentor ? 'Mentor' : 'Mentee'} can read these
+            <span className="font-medium">{recipientName}</span> • Only you and your {isRecipientMentor ? 'Mentor' : 'Mentee'} can read these
           </p>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -237,30 +238,60 @@ export default function MyMentorshipNotes({
       {/* Notes List */}
       <div className="space-y-3 max-h-96 overflow-y-auto">
         {notes.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
+          <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-8">
             No notes yet. Add your first note above.
           </p>
         ) : (
-          notes.map(note => {
+          notes.map((note, index) => {
             // Extract subject from title (format: "Subject - Note from/to Name")
             const subjectMatch = note.title.match(/^(.+?)\s*-\s*/);
             const subject = subjectMatch ? subjectMatch[1] : note.title;
             
+            // Extract sender name from metadata or title
+            const senderName = note.metadata?.senderName || 'Unknown';
+            
+            // Check if this is the current user's note
+            const isCurrentUser = note.metadata?.senderUid === currentUser?.uid;
+            
             return (
-              <div key={note.id} className="bg-white dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {subject}
+              <div key={note.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] p-4 rounded-lg ${
+                  isCurrentUser 
+                    ? 'bg-blue-600 text-white ml-8' 
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white mr-8'
+                }`}>
+                  {/* Header with sender name, subject, and timestamp */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-semibold text-sm ${
+                        isCurrentUser ? 'text-blue-100' : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {senderName}
+                      </span>
+                      <span className={`text-xs ${
+                        isCurrentUser ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        •
+                      </span>
+                      <span className={`text-xs font-medium ${
+                        isCurrentUser ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {subject}
+                      </span>
                     </div>
+                    <span className={`text-xs ${
+                      isCurrentUser ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'
+                    } ml-3 flex-shrink-0`}>
+                      {formatDate(note.createdAt)}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                    {formatDate(note.createdAt)}
-                  </span>
-                </div>
-                
-                <div className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 mt-2">
-                  {note.message}
+                  
+                  {/* Message content */}
+                  <div className={`whitespace-pre-wrap text-sm leading-relaxed ${
+                    isCurrentUser ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {note.message}
+                  </div>
                 </div>
               </div>
             );

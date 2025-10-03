@@ -121,6 +121,14 @@ export interface Notification {
     previousAssignee?: string;
     newAssignee?: string;
     evaluatorId?: string;
+    // Mentorship note metadata
+    mentorId?: string;
+    menteeId?: string;
+    senderUid?: string;
+    senderName?: string;
+    recipientUid?: string;
+    recipientName?: string;
+    subject?: string;
   };
 }
 

@@ -191,7 +191,31 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     const existingAgenda = Array.isArray(weeklyAgendas) ? weeklyAgendas.find(a => a.id === agendaId) : null;
     
     if (existingAgenda && !forceReload) {
-      setAgenda(existingAgenda);
+      // Reset speaker descriptions to template defaults even when loading existing agenda
+      const speakerCount = countSpeakers(meeting);
+      const template = speakerCount === 2 ? TWO_SPEAKER_TEMPLATE : DEFAULT_AGENDA_TEMPLATE;
+      
+      const resetAgenda = {
+        ...existingAgenda,
+        items: existingAgenda.items.map(item => {
+          // Find matching template item to get default description
+          const templateItem = template.items.find(
+            templateItem => templateItem.programEvent === item.programEvent
+          );
+          
+          // For speaker items, reset description to template default
+          const isSpeakerItem = item.roleKey && item.roleKey.startsWith('Speaker');
+          
+          return {
+            ...item,
+            description: isSpeakerItem && templateItem ? templateItem.description : item.description,
+            // Also reset time to template default for speakers
+            time: isSpeakerItem && templateItem ? templateItem.time : item.time,
+          };
+        }),
+      };
+      
+      setAgenda(resetAgenda);
     } else {
       // Create new agenda from template
       const speakerCount = countSpeakers(meeting);
@@ -208,7 +232,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
         meetingDate: meeting.date,
         theme: meeting.theme || '',
         items: template.items.map(item => {
-          // Find matching item in previous agenda by programEvent to copy color
+          // Find matching item in previous agenda by programEvent to copy color only
           const matchingPreviousItem = previousAgenda?.items?.find(
             prevItem => prevItem.programEvent === item.programEvent
           );
@@ -218,6 +242,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             id: uuidv4(),
             person: getPersonForRole(item.roleKey || '', meeting),
             rowColor: matchingPreviousItem?.rowColor || item.rowColor || 'normal', // Copy color from previous agenda, then template, then default to normal
+            // All other fields (description, time, etc.) reset to template defaults
           };
         }),
         ownerId: user?.uid,
@@ -939,13 +964,13 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
               {isEditing ? (
                 <input
                   type="text"
-                  value={agenda.websiteUrl || `${window.location.origin} tmapp.club`}
+                  value={agenda.websiteUrl || 'https://tmapp.club'}
                   onChange={(e) => setAgenda({ ...agenda, websiteUrl: e.target.value })}
                   className="ml-2 px-2 py-0.5 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm"
                   placeholder="Enter website URL"
                 />
               ) : (
-                <span className="ml-1">{agenda.websiteUrl || `${window.location.origin} tmapp.club`}</span>
+                <span className="ml-1">{agenda.websiteUrl || 'https://tmapp.club'}</span>
               )}
             </div>
           </div>
