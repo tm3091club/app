@@ -5,14 +5,25 @@ const { initializeApp } = require('firebase/app');
 const { getFirestore, doc, getDoc, updateDoc } = require('firebase/firestore');
 
 // Get Firebase config from environment or use the current one
+// Get Firebase config from environment variables only
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyCS-f09qszpZlJQw_9DUd_YTE1X9-0kXiE",
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "toastmasters-monthly-scheduler.firebaseapp.com",
-  projectId: process.env.FIREBASE_PROJECT_ID || "toastmasters-monthly-scheduler",
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "toastmasters-monthly-scheduler.firebasestorage.app",
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "160223318967",
-  appId: process.env.FIREBASE_APP_ID || "1:160223318967:web:6c515b28398ab6c5f90e32"
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID
 };
+
+// Validate that all required environment variables are set
+const requiredVars = ['FIREBASE_API_KEY', 'FIREBASE_AUTH_DOMAIN', 'FIREBASE_PROJECT_ID', 'FIREBASE_STORAGE_BUCKET', 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_APP_ID'];
+const missingVars = requiredVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  console.error('Please set these environment variables before running the migration script.');
+  process.exit(1);
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
