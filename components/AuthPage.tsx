@@ -385,7 +385,26 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
             )}
         </div>
       </div>
+      
+      {/* Terms of Service and Privacy Policy Links */}
       <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex justify-center space-x-4">
+          <button 
+            onClick={() => window.location.hash = '#/terms-of-service'}
+            className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 underline bg-transparent border-none cursor-pointer"
+          >
+            Terms of Service
+          </button>
+          <button 
+            onClick={() => window.location.hash = '#/privacy-policy'}
+            className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 underline bg-transparent border-none cursor-pointer"
+          >
+            Privacy Policy
+          </button>
+        </div>
+      </div>
+      
+      <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
         Version: {APP_VERSION}
       </div>
     </div>

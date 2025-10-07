@@ -14,6 +14,8 @@ import { PublicSchedulePage } from './components/PublicSchedulePage';
 import { PublicAgendaPage } from './components/PublicAgendaPage';
 import { UnsubscribePage } from './components/UnsubscribePage';
 import { MentorshipPage } from './components/MentorshipPage';
+import { TermsOfServicePage } from './components/TermsOfServicePage';
+import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
 import { APP_VERSION } from './utils/version';
 import { db } from './services/firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -114,15 +116,20 @@ function App() {
   const { user, loading, logOut, verifyEmailWithToken } = useAuth();
   const [currentView, setCurrentView] = useState<View>('schedule');
   const [showBugReport, setShowBugReport] = useState(false);
+  const [currentHash, setCurrentHash] = useState(window.location.hash);
 
   // --- Top-level Routing Logic ---
-  const hash = window.location.hash.substring(1); // Remove the leading '#'
+  const hash = currentHash.substring(1); // Remove the leading '#'
   const publicShareMatch = hash.match(/^\/(\d+)\/share\/([a-zA-Z0-9-]+)/);
   const agendaShareMatch = hash.match(/^\/(\d+)\/agenda\/([a-zA-Z0-9-]+)/);
   // Matches /<club-number>/join or just /join
   const joinMatch = hash.match(/^\/(?:[^/]+\/)?join/);
   // Matches /unsubscribe
   const unsubscribeMatch = hash.match(/^\/unsubscribe/);
+  // Matches /terms-of-service
+  const termsMatch = hash.match(/^\/terms-of-service/);
+  // Matches /privacy-policy
+  const privacyMatch = hash.match(/^\/privacy-policy/);
   const urlParams = new URLSearchParams(hash.split('?')[1] || '');
   const inviteToken = urlParams.get('token');
   
@@ -153,6 +160,20 @@ function App() {
     if (window.location.hash === '#') {
       window.history.replaceState(null, '', window.location.pathname);
     }
+    // Also clean up if hash is empty but URL has #
+    if (window.location.hash === '' && window.location.href.includes('#')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  // Add hash change listener to make routing reactive
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
   // --- End Routing Logic ---
   
@@ -235,6 +256,16 @@ function App() {
   // Handle unsubscribe route (no authentication required)
   if (unsubscribeMatch) {
     return <UnsubscribePage />;
+  }
+
+  // Handle Terms of Service route (no authentication required)
+  if (termsMatch) {
+    return <TermsOfServicePage />;
+  }
+
+  // Handle Privacy Policy route (no authentication required)
+  if (privacyMatch) {
+    return <PrivacyPolicyPage />;
   }
 
   // Agenda Share Route - Show shared agenda
