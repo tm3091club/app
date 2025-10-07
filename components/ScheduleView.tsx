@@ -729,6 +729,18 @@ export const ScheduleView: React.FC = () => {
                 }
             }
         }
+        
+        // Evaluator logic: A member cannot be assigned to multiple evaluator roles
+        if (newMemberId && role.startsWith('Evaluator')) {
+            // Check if member is already assigned to another evaluator role
+            const currentEvaluatorRole = Object.keys(assignments).find(r =>
+                assignments[r] === newMemberId && r.startsWith('Evaluator') && r !== role
+            );
+            if (currentEvaluatorRole) {
+                assignments[currentEvaluatorRole] = null;
+            }
+        }
+        
         assignments[role] = newMemberId;
 
         // Send notifications for role changes
