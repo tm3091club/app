@@ -86,7 +86,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6 no-print">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div className="flex items-center gap-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Schedule Manager</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Monthly Scheduler</h2>
         </div>
         <div className="flex items-center gap-2">
           <select

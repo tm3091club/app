@@ -20,6 +20,7 @@ import { APP_VERSION } from './utils/version';
 import { db } from './services/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { BUG_REPORT_EMAIL } from './Constants';
+import { MobileBottomNav } from './components/common/MobileBottomNav';
 
 type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda' | 'mentorship';
 
@@ -214,9 +215,9 @@ function App() {
     };
 
     return (
-      <ToastmastersProvider>
-        <NotificationProvider>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
+        <ToastmastersProvider>
+          <NotificationProvider>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans pb-16 md:pb-0">
             <Header 
                 currentView={currentView} 
                 setCurrentView={setCurrentView} 
@@ -247,6 +248,7 @@ function App() {
               onClose={() => setShowBugReport(false)} 
               userEmail={user!.email || 'unknown@example.com'}
             />
+            <MobileBottomNav currentView={currentView} setCurrentView={setCurrentView} />
           </div>
         </NotificationProvider>
       </ToastmastersProvider>

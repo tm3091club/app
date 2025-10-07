@@ -754,7 +754,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (!memberToRemove) return;
         
         await docRef.update({ 'organization.members': FieldValue.arrayRemove(memberToRemove) });
-        await db.collection('users').doc(uid).delete();
+        
+        // Only delete user document if it's not the club admin's document
+        // Club admin documents should never be deleted
+        if (uid !== dataOwnerId) {
+            await db.collection('users').doc(uid).delete();
+        }
     };
 
     const inviteUser = async (payload: { email: string; name: string; memberId?: string; excludeInviteId?: string }) => {

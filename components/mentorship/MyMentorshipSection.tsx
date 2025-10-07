@@ -116,20 +116,20 @@ export const MyMentorshipSection: React.FC<MyMentorshipSectionProps> = ({
   return (
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden mb-8">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Mentorship</h2>
+        <div className="flex flex-col">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">My Mentorship</h2>
           {showButtons && (
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
                 onClick={onShowGuide}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Learn about Mentoring
               </button>
               {(adminStatus?.hasAdminRights && (currentUser?.role === 'Admin' || currentUser?.officerRole === 'Vice President Education')) && (
                 <button 
                   onClick={onShowVPECenter}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  className="px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
                   {showVPECenter ? 'Back to Mentorship' : 'VPE Mentor Center'}
                 </button>

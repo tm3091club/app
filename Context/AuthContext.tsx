@@ -52,6 +52,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Create club data but mark as unverified
+        // IMPORTANT: This is the ONLY place where user documents should be created
+        // User documents are only created when club admins sign up, not for regular members
         const dataDocRef = db.collection('users').doc(newUser.uid);
         
         // Create club admin user - separate from regular members
