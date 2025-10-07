@@ -279,6 +279,70 @@ exports.cleanupOldData = functions.https.onRequest(async (req, res) => {
 });
 
 /**
+ * Custom password reset function - sends branded emails via Firebase email extension
+ */
+exports.sendCustomPasswordReset = functions.https.onCall(async (data, context) => {
+  const { email } = data;
+  
+  if (!email) {
+    throw new functions.https.HttpsError('invalid-argument', 'Email is required');
+  }
+  
+  try {
+    // Generate password reset link using Firebase Admin
+    const actionCodeSettings = {
+      url: 'https://tmapp.club/#/reset-password',
+      handleCodeInApp: false,
+    };
+    
+    const resetLink = await admin.auth().generatePasswordResetLink(email, actionCodeSettings);
+    
+    // Send via Firebase email extension (writes to 'mail' collection)
+    await db.collection('mail').add({
+      to: [email],
+      from: 'tmprofessionallyspeaking@gmail.com',
+      replyTo: 'tmprofessionallyspeaking@gmail.com',
+      message: {
+        subject: 'Reset Your Toastmasters App Password',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <img src="https://www.toastmasters.org/content/images/globals/toastmasters-logo@2x.png" 
+                   alt="Toastmasters International" style="height: 60px;">
+            </div>
+            <h2 style="color: #004165; text-align: center;">Password Reset Request</h2>
+            <p>Hello,</p>
+            <p>You requested to reset your password for the <strong>Toastmasters Monthly Scheduler</strong> app.</p>
+            <p>Click the button below to reset your password:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" 
+                 style="background-color: #004165; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+                Reset Password
+              </a>
+            </div>
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #666; background: #f5f5f5; padding: 10px; border-radius: 4px;">${resetLink}</p>
+            <p><strong>This link will expire in 1 hour.</strong></p>
+            <p>If you didn't request this password reset, please ignore this email.</p>
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            <p style="font-size: 12px; color: #666; text-align: center;">
+              Toastmasters Monthly Scheduler<br>
+              <a href="https://tmapp.club" style="color: #004165;">tmapp.club</a>
+            </p>
+          </div>
+        `
+      }
+    });
+    
+    console.log(`Custom password reset email queued for: ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending custom password reset:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to send password reset email');
+  }
+});
+
+/**
  * Scheduled cleanup function (runs daily at 2 AM UTC)
  * To enable this, deploy the function and create a Cloud Scheduler job
  */

@@ -61,7 +61,7 @@ export const exportWeeklyAgendaToPDF = (
     body: tableData,
     startY: agenda.theme ? 20 : 14,
     styles: {
-      fontSize: 8.5,
+      fontSize: 10,
       cellPadding: 1.5,
       lineColor: [128, 128, 128],
       lineWidth: 0.5,
@@ -71,7 +71,7 @@ export const exportWeeklyAgendaToPDF = (
       fillColor: [59, 130, 246], // Blue-500 for color
       textColor: [255, 255, 255], // White text
       fontStyle: 'bold',
-      fontSize: 9,
+      fontSize: 11,
       halign: 'center',
       cellPadding: 2,
     },

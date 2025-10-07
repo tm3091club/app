@@ -23,7 +23,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingInvite, setIsLoadingInvite] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
-  const { logIn, signUpAndCreateClub, sendPasswordReset, signUpInvitedUser } = useAuth();
+  const { logIn, signUpAndCreateClub, sendPasswordReset, sendCustomPasswordReset, signUpInvitedUser } = useAuth();
 
   useEffect(() => {
     if (isJoinFlow && inviteToken) {
@@ -83,7 +83,7 @@ export const AuthPage: React.FC<{ isJoinFlow?: boolean; inviteToken?: string }> 
           return;
         }
       } else if (view === 'reset') {
-        await sendPasswordReset(email);
+        await sendCustomPasswordReset(email);
         setMessage('If an account with that email exists, a password reset link has been sent.');
       }
     } catch (err: any) {

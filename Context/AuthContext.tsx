@@ -109,16 +109,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
 
-    const logIn = (email: string, password: string) => {
-        return auth.signInWithEmailAndPassword(email, password);
+    const logIn = async (email: string, password: string) => {
+        try {
+            return await auth.signInWithEmailAndPassword(email, password);
+        } catch (error: any) {
+            // Provide more helpful error messages
+            if (error.code === 'auth/user-not-found') {
+                throw new Error('No account found with this email address. Please check your email or create a new account.');
+            } else if (error.code === 'auth/wrong-password') {
+                throw new Error('Incorrect password. Please try again or use "Forgot Password" to reset.');
+            } else if (error.code === 'auth/invalid-email') {
+                throw new Error('Please enter a valid email address.');
+            } else if (error.code === 'auth/too-many-requests') {
+                throw new Error('Too many failed attempts. Please try again later or reset your password.');
+            }
+            throw error;
+        }
     };
 
     const logOut = () => {
         return auth.signOut();
     };
 
-    const sendPasswordReset = (email: string) => {
-        return auth.sendPasswordResetEmail(email);
+    const sendPasswordReset = async (email: string) => {
+        try {
+            // Use Firebase's default password reset but with custom action code settings
+            const actionCodeSettings = {
+                url: 'https://tmapp.club/#/reset-password',
+                handleCodeInApp: false,
+            };
+            
+            return auth.sendPasswordResetEmail(email, actionCodeSettings);
+        } catch (error) {
+            console.error('Password reset error:', error);
+            throw error;
+        }
+    };
+
+    const sendCustomPasswordReset = async (email: string) => {
+        try {
+            // Call the Firebase Function for custom password reset
+            const { getFunctions, httpsCallable } = await import('firebase/functions');
+            const functions = getFunctions();
+            const sendCustomPasswordReset = httpsCallable(functions, 'sendCustomPasswordReset');
+            
+            const result = await sendCustomPasswordReset({ email });
+            return result.data;
+        } catch (error) {
+            console.error('Custom password reset error:', error);
+            // Fallback to default Firebase password reset
+            const actionCodeSettings = {
+                url: 'https://tmapp.club/#/reset-password',
+                handleCodeInApp: false,
+            };
+            return auth.sendPasswordResetEmail(email, actionCodeSettings);
+        }
     };
 
     const sendCustomEmailVerification = async (email: string, userId: string) => {
@@ -210,6 +255,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logIn,
         logOut,
         sendPasswordReset,
+        sendCustomPasswordReset,
         sendEmailVerification,
         updatePassword,
         updateUserEmail,
