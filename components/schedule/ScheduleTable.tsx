@@ -3,7 +3,7 @@
 import React, { JSX, useRef, useEffect } from 'react';
 import { MonthlySchedule, Meeting, Member, AvailabilityStatus, MemberAvailability } from '../../types';
 // TOASTMASTERS_ROLES: All roles that appear on the monthly schedule. See Constants.ts for major/minor role definitions.
-import { TOASTMASTERS_ROLES } from '../../Constants';
+import { TOASTMASTERS_ROLES, ROLE_HIGHLIGHT_COLORS } from '../../Constants';
 import { RoleAssignmentCell } from './RoleAssignmentCell';
 import { getCurrentWeekIndex, getNextWeekIndex } from '../../utils/adminTransitionUtils';
 
@@ -156,45 +156,55 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-          {TOASTMASTERS_ROLES.map(role => (
-            <tr key={role}>
-              <td className="sticky left-0 bg-white dark:bg-gray-800 p-2 sm:p-4 text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-200 min-w-[130px] max-w-[300px] z-10">{role}</td>
-              {previousScheduleToShow?.map((meeting, index) => (
-                <td key={`prev-role-${index}`} className="p-2 align-top bg-blue-50 dark:bg-blue-900/20 min-w-[130px] max-w-[250px]">
-                    <ReadOnlyRoleCell name={getMemberName(meeting.assignments[role])} />
+          {TOASTMASTERS_ROLES.map(role => {
+            // Determine highlight color for this role
+            const highlightColor = ROLE_HIGHLIGHT_COLORS[role] || undefined;
+            return (
+              <tr key={role}>
+                <td
+                  className="sticky left-0 bg-white dark:bg-gray-800 p-2 sm:p-4 text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-200 min-w-[130px] max-w-[300px] z-10"
+                  style={highlightColor ? { backgroundColor: highlightColor, transition: 'background 0.3s' } : undefined}
+                >
+                  {role}
                 </td>
-              ))}
-              {activeSchedule.meetings.map((meeting, index) => {
-                  const membersAvailableForMeeting = activeMembers.filter(member => {
-                      const dateKey = meeting.date.split('T')[0];
-                      const memberAvailability = availability[member.id]?.[dateKey];
-                      return memberAvailability !== AvailabilityStatus.Unavailable && memberAvailability !== AvailabilityStatus.Possible;
-                  });
-
-                  return (
-                    <td key={index} className={`p-1 sm:p-2 align-top hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 min-w-[130px] max-w-[250px] ${meeting.isBlackout ? 'bg-gray-100 dark:bg-gray-900/50' : ''}`}>
-                      {meeting.isBlackout ? (
-                        <div className="w-full text-center py-1.5 px-2 text-sm text-gray-500 dark:text-gray-400 font-semibold italic h-[39px] flex items-center justify-center">
-                          BLACKOUT
-                        </div>
-                      ) : (
-                          <RoleAssignmentCell
-                            meetingIndex={index}
-                            role={role}
-                            assignedMemberId={meeting.assignments[role]}
-                            availableMembers={membersAvailableForMeeting}
-                            onAssignmentChange={onAssignmentChange}
-                            allAssignmentsForMeeting={meeting.assignments}
-                            disabled={!canEditRoleAssignment(index, role)}
-                            meetingDate={meeting.date}
-                            availability={availability}
-                          />
-                      )}
-                    </td>
-                  )
-              })}
-            </tr>
-          ))}
+                {previousScheduleToShow?.map((meeting, index) => (
+                  <td key={`prev-role-${index}`} className="p-2 align-top bg-blue-50 dark:bg-blue-900/20 min-w-[130px] max-w-[250px]">
+                      <ReadOnlyRoleCell name={getMemberName(meeting.assignments[role])} />
+                  </td>
+                ))}
+                {activeSchedule.meetings.map((meeting, index) => {
+                    const membersAvailableForMeeting = activeMembers.filter(member => {
+                        const dateKey = meeting.date.split('T')[0];
+                        const memberAvailability = availability[member.id]?.[dateKey];
+                        return memberAvailability !== AvailabilityStatus.Unavailable && memberAvailability !== AvailabilityStatus.Possible;
+                    });
+                    // Highlight the cell if this is a key role
+                    const cellStyle = highlightColor && !meeting.isBlackout ? { backgroundColor: highlightColor, transition: 'background 0.3s' } : undefined;
+                    return (
+                      <td key={index} className={`p-1 sm:p-2 align-top hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 min-w-[130px] max-w-[250px] ${meeting.isBlackout ? 'bg-gray-100 dark:bg-gray-900/50' : ''}`} style={cellStyle}>
+                        {meeting.isBlackout ? (
+                          <div className="w-full text-center py-1.5 px-2 text-sm text-gray-500 dark:text-gray-400 font-semibold italic h-[39px] flex items-center justify-center">
+                            BLACKOUT
+                          </div>
+                        ) : (
+                            <RoleAssignmentCell
+                              meetingIndex={index}
+                              role={role}
+                              assignedMemberId={meeting.assignments[role]}
+                              availableMembers={membersAvailableForMeeting}
+                              onAssignmentChange={onAssignmentChange}
+                              allAssignmentsForMeeting={meeting.assignments}
+                              disabled={!canEditRoleAssignment(index, role)}
+                              meetingDate={meeting.date}
+                              availability={availability}
+                            />
+                        )}
+                      </td>
+                    )
+                })}
+              </tr>
+            );
+          })}
           <tr className="bg-gray-50 dark:bg-gray-900/50 print-hide">
             <td className="sticky left-0 bg-gray-50 dark:bg-gray-900/50 p-2 sm:p-4 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white min-w-[130px] max-w-[300px] z-10">Availability</td>
             {previousScheduleToShow?.map((_, index) => (

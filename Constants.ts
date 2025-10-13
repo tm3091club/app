@@ -1,3 +1,18 @@
+/**
+ * Color mapping for key roles for schedule highlighting (light, accessible, print-friendly)
+ */
+export const ROLE_HIGHLIGHT_COLORS: { [role: string]: string } = {
+  'Toastmaster': '#dbeafe', // Light Blue
+  'Table Topics Master': '#d1fae5', // Light Green
+  'Speaker 1': '#fef9c3', // Light Yellow
+  'Speaker 2': '#fef9c3',
+  'Speaker 3': '#fef9c3',
+  'General Evaluator': '#ede9fe', // Light Purple
+  'Evaluator 1': '#ffedd5', // Light Orange
+  'Evaluator 2': '#ffedd5',
+  'Evaluator 3': '#ffedd5',
+  'Inspiration Award': '#fce7f3', // Light Pink
+};
 
 
 
@@ -15,13 +30,13 @@ export const TOASTMASTERS_ROLES = [
   'Ah-Counter',
   'Ballot Counter',
   'Table Topics Master',
-  'Evaluator 1',
   'Speaker 1',
-  'Evaluator 2',
   'Speaker 2',
-  'Evaluator 3',
   'Speaker 3',
   'General Evaluator',
+  'Evaluator 1',
+  'Evaluator 2',
+  'Evaluator 3',
   'Inspiration Award',
 ];
 
