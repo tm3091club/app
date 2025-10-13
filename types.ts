@@ -98,6 +98,7 @@ export enum NotificationType {
   AvailabilityRequest = 'AvailabilityRequest',
   RoleChanged = 'RoleChanged',
   RoleUnassigned = 'RoleUnassigned',
+  MentorshipNote = 'MentorshipNote',
   MeetingBlackout = 'MeetingBlackout',
   SpeakerUnassigned = 'SpeakerUnassigned',
 }
@@ -120,6 +121,14 @@ export interface Notification {
     previousAssignee?: string;
     newAssignee?: string;
     evaluatorId?: string;
+    // Mentorship note metadata
+    mentorId?: string;
+    menteeId?: string;
+    senderUid?: string;
+    senderName?: string;
+    recipientUid?: string;
+    recipientName?: string;
+    subject?: string;
   };
 }
 

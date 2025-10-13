@@ -34,6 +34,35 @@ service cloud.firestore {
 
       // UPDATE: Allow any authenticated user to update (app logic will handle permissions)
       allow update: if isAuthenticated();
+
+      // --- User Notifications Subcollection ---
+      match /notifications/{notificationId} {
+        // Users can read their own notifications, or admins can read all
+        allow get: if isAuthenticated() && (
+          userId == getUserId() ||
+          // Check if user has admin role (you may need to check a user document)
+          get(/databases/$(database)/documents/users/$(getUserId())).data.role == 'Admin'
+        );
+        
+        // Users can list their own notifications
+        allow list: if isAuthenticated() && userId == getUserId();
+        
+        // Allow authenticated users to create notifications in other users' collections
+        // This enables mentorship notes to be sent to mentors/mentees
+        allow create: if isAuthenticated() && (
+          // User can create notification in their own collection
+          userId == getUserId() ||
+          // User can create notification in another user's collection (for mentorship notes)
+          // The app will validate the mentor-mentee relationship
+          request.resource.data.type == 'MentorshipNote'
+        );
+        
+        // Users can update their own notifications (mark as read/dismissed)
+        allow update: if isAuthenticated() && userId == getUserId();
+        
+        // Users can delete their own notifications
+        allow delete: if isAuthenticated() && userId == getUserId();
+      }
     }
 
     // --- Invitations Collection (token-based) ---

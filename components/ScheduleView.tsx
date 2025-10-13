@@ -516,9 +516,12 @@ export const ScheduleView: React.FC = () => {
 
                 hydratedMembers.forEach(member => {
                     if (assignedMemberIds.has(member.id)) return;
+                    // Skip archived members entirely - they should not appear in any availability lists
+                    if (member.status === MemberStatus.Archived) return;
+                    
                     let finalStatus: AvailabilityStatus;
                     const dateKey = meeting.date.split('T')[0];
-                    if (member.status === MemberStatus.Unavailable || member.status === MemberStatus.Archived) {
+                    if (member.status === MemberStatus.Unavailable) {
                         finalStatus = AvailabilityStatus.Unavailable;
                     } else if (member.status === MemberStatus.Possible) {
                         finalStatus = AvailabilityStatus.Possible;
@@ -729,6 +732,18 @@ export const ScheduleView: React.FC = () => {
                 }
             }
         }
+        
+        // Evaluator logic: A member cannot be assigned to multiple evaluator roles
+        if (newMemberId && role.startsWith('Evaluator')) {
+            // Check if member is already assigned to another evaluator role
+            const currentEvaluatorRole = Object.keys(assignments).find(r =>
+                assignments[r] === newMemberId && r.startsWith('Evaluator') && r !== role
+            );
+            if (currentEvaluatorRole) {
+                assignments[currentEvaluatorRole] = null;
+            }
+        }
+        
         assignments[role] = newMemberId;
 
         // Send notifications for role changes
@@ -827,8 +842,11 @@ export const ScheduleView: React.FC = () => {
 
         hydratedMembers.forEach(member => {
             if (assignedMemberIds.has(member.id)) return;
+            // Skip archived members entirely - they should not appear in any availability lists
+            if (member.status === MemberStatus.Archived) return;
+            
             let finalStatus: AvailabilityStatus;
-            if (member.status === MemberStatus.Unavailable || member.status === MemberStatus.Archived) finalStatus = AvailabilityStatus.Unavailable;
+            if (member.status === MemberStatus.Unavailable) finalStatus = AvailabilityStatus.Unavailable;
             else if (member.status === MemberStatus.Possible) finalStatus = AvailabilityStatus.Possible;
             else finalStatus = availability[member.id]?.[dateKey] || AvailabilityStatus.Available;
             

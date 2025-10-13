@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import NotificationBell from './NotificationBell';
 import AdminStatusIndicator from './AdminStatusIndicator';
+import { useNotifications } from '../Context/NotificationContext';
 
 type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda' | 'mentorship';
 
@@ -33,6 +34,7 @@ const NavLink: React.FC<{
 export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, logOut, userEmail }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { organization, currentUser, adminStatus } = useToastmasters();
+    const { unreadCount } = useNotifications();
 
     const handleNavClick = (view: View) => {
         setCurrentView(view);
@@ -50,7 +52,9 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                         <div className="flex-shrink-0">
                              <img src="https://www.toastmasters.org/content/images/globals/toastmasters-logo@2x.png" alt="Toastmasters International Logo" className="h-10 w-auto" />
                         </div>
-                        <h1 className="text-xl font-bold text-gray-800 dark:text-white ml-3">Toastmasters Monthly Scheduler</h1>
+                        <h1 className="text-xl font-bold text-gray-800 dark:text-white ml-3">
+                            {organization?.name || 'Toastmasters App'}
+                        </h1>
                     </div>
                     
                     {/* Right side: Desktop Nav & Mobile menu button */}
@@ -78,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                                     className="text-base font-semibold text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                     title={displayName || 'View Profile'}
                                 >
-                                    {displayName}
+                                    {adminStatus?.hasAdminRights ? 'Club Profile' : 'Profile'}
                                 </button>
                                 <button
                                     onClick={logOut}
@@ -100,24 +104,30 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                                     officerRole={currentUser?.officerRole}
                                 />
                             </div>
-                            <button
-                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                type="button"
-                                className="ml-2 inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-200 hover:text-gray-500 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 focus:ring-indigo-500"
-                                aria-controls="mobile-menu"
-                                aria-expanded={isMobileMenuOpen}
-                            >
-                                <span className="sr-only">Open main menu</span>
-                                {isMobileMenuOpen ? (
-                                     <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                ) : (
-                                    <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                                    </svg>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                    type="button"
+                                    className="ml-2 inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-200 hover:text-gray-500 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 focus:ring-indigo-500"
+                                    aria-controls="mobile-menu"
+                                    aria-expanded={isMobileMenuOpen}
+                                >
+                                    <span className="sr-only">Open main menu</span>
+                                    {isMobileMenuOpen ? (
+                                         <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                                        </svg>
+                                    )}
+                                </button>
+                                {/* Notification indicator */}
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
                                 )}
-                            </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -127,23 +137,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
             {isMobileMenuOpen && (
                 <div className="lg:hidden" id="mobile-menu">
                     <div className="px-2 pt-2 pb-2 space-y-0.5 sm:px-3">
-                        {/* Club Name with Profile */}
-                        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-md mb-2">
-                            <button
-                                onClick={() => handleNavClick('profile')}
-                                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-2 py-1 rounded border border-blue-200 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex-shrink-0"
-                            >
-                                Profile
-                            </button>
-                            <button
-                                onClick={() => handleNavClick('profile')}
-                                className="text-base font-semibold text-gray-900 dark:text-white truncate text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer flex-grow"
-                                title="Go to Profile"
-                            >
-                                {displayName}
-                            </button>
-                        </div>
-                        
                         {/* Admin Status */}
                         <div className="px-3 py-1">
                             <AdminStatusIndicator 
@@ -159,14 +152,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                             <span className="text-base font-semibold text-gray-700 dark:text-gray-300">Notifications</span>
                             <NotificationBell onNavigateToAvailability={() => setCurrentView('members')} />
                         </div>
-                        
-                        {/* Navigation Links */}
-                        <NavLink isActive={currentView === 'schedule'} onClick={() => handleNavClick('schedule')}>Monthly Schedule</NavLink>
-                        <NavLink isActive={currentView === 'weekly-agenda'} onClick={() => handleNavClick('weekly-agenda')}>Weekly Agenda</NavLink>
-                        <NavLink isActive={currentView === 'members'} onClick={() => handleNavClick('members')}>
-                            {adminStatus?.hasAdminRights ? 'Manage Members' : 'My Availability'}
-                        </NavLink>
-                        <NavLink isActive={currentView === 'mentorship'} onClick={() => handleNavClick('mentorship')}>Mentorship</NavLink>
                         
                         <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                         

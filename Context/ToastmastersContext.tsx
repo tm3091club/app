@@ -641,8 +641,96 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                             }
                         }
                         
+                        // If still not found by UID, try searching by email as fallback
+                        if (!ownerIdToUse && user.email) {
+                            console.log('UID search failed, trying email-based lookup for:', user.email);
+                            console.log('Searching through', usersSnapshot.docs.length, 'club documents...');
+                            
+                            for (const doc of usersSnapshot.docs) {
+                                const data = doc.data();
+                                console.log('Checking club document:', doc.id);
+                                
+                                // Check if user is the club admin by email
+                                if (data.admin) {
+                                    console.log('Club admin email:', data.admin.email);
+                                    if (data.admin.email === user.email || data.admin.email?.toLowerCase() === user.email.toLowerCase()) {
+                                        console.log('Found club admin by email, updating UID');
+                                        ownerIdToUse = doc.id;
+                                        
+                                        // Update the admin record with the current UID
+                                        try {
+                                            await doc.ref.update({
+                                                'admin.uid': user.uid,
+                                                'admin.email': user.email
+                                            });
+                                            console.log('Successfully updated admin UID');
+                                        } catch (updateError) {
+                                            console.warn('Failed to update admin UID:', updateError);
+                                        }
+                                        break;
+                                    }
+                                }
+                                
+                                // Check if user is a regular member by email
+                                if (data.organization?.members) {
+                                    console.log('Checking', data.organization.members.length, 'members');
+                                    for (const member of data.organization.members) {
+                                        console.log('Member email:', member.email);
+                                        if (member.email === user.email || member.email?.toLowerCase() === user.email.toLowerCase()) {
+                                            console.log('Found member by email, updating UID');
+                                            ownerIdToUse = doc.id;
+                                            
+                                            // Update the member record with the current UID
+                                            try {
+                                                const updatedMembers = data.organization.members.map((m: any) => 
+                                                    (m.email === user.email || m.email?.toLowerCase() === user.email.toLowerCase()) 
+                                                        ? { ...m, uid: user.uid, email: user.email }
+                                                        : m
+                                                );
+                                                await doc.ref.update({ 'organization.members': updatedMembers });
+                                                console.log('Successfully updated member UID');
+                                            } catch (updateError) {
+                                                console.warn('Failed to update member UID:', updateError);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                    if (ownerIdToUse) break;
+                                }
+                            }
+                            
+                            if (!ownerIdToUse) {
+                                console.log('Email-based lookup failed. User email not found in any club.');
+                                console.log('Available clubs and their emails:');
+                                usersSnapshot.docs.forEach(doc => {
+                                    const data = doc.data();
+                                    console.log(`Club ${doc.id}:`, {
+                                        adminEmail: data.admin?.email,
+                                        memberEmails: data.organization?.members?.map((m: any) => m.email) || []
+                                    });
+                                });
+                            }
+                        }
+                        
+                        // Last resort: check if this user might be the club owner by checking the document ID
                         if (!ownerIdToUse) {
-                            throw new Error("You are not authorized to access this application. Please contact your club administrator for a proper invitation.");
+                            console.log('Checking if user might be a club owner...');
+                            const potentialClubDoc = await db.collection('users').doc(user.uid).get();
+                            if (potentialClubDoc.exists) {
+                                const clubData = potentialClubDoc.data();
+                                if (clubData?.organization || clubData?.admin) {
+                                    console.log('Found user as club owner, setting up access');
+                                    ownerIdToUse = user.uid;
+                                }
+                            }
+                        }
+                        
+                        if (!ownerIdToUse) {
+                            // Provide more specific error message based on what we found
+                            const errorMessage = user.email 
+                                ? `No club association found for ${user.email}. Please contact your club administrator to verify your membership or request a new invitation.`
+                                : "You are not authorized to access this application. Please contact your club administrator for a proper invitation.";
+                            throw new Error(errorMessage);
                         }
                     }
                 }
@@ -754,7 +842,12 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (!memberToRemove) return;
         
         await docRef.update({ 'organization.members': FieldValue.arrayRemove(memberToRemove) });
-        await db.collection('users').doc(uid).delete();
+        
+        // Only delete user document if it's not the club admin's document
+        // Club admin documents should never be deleted
+        if (uid !== dataOwnerId) {
+            await db.collection('users').doc(uid).delete();
+        }
     };
 
     const inviteUser = async (payload: { email: string; name: string; memberId?: string; excludeInviteId?: string }) => {
@@ -1692,12 +1785,64 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         sendPasswordResetEmail, removeFromPendingLinking, linkMemberToAccount, linkCurrentUserToMember, linkMemberByEmail, findAndLinkExistingUser, checkMemberLinkingStatus, getAllUnlinkedUsers, linkMemberToUid, linkMemberToFirebaseAuthUser, saveWeeklyAgenda, deleteWeeklyAgenda
     };
 
+    // Manual recovery function for debugging
+    const recoverUserAccess = async (email: string, uid: string) => {
+        try {
+            console.log(`Attempting to recover access for ${email} (${uid})`);
+            
+            // Search all clubs for this email
+            const usersSnapshot = await db.collection('users').get();
+            let found = false;
+            
+            for (const doc of usersSnapshot.docs) {
+                const data = doc.data();
+                
+                // Check admin
+                if (data.admin?.email === email) {
+                    console.log(`Found as admin in club ${doc.id}`);
+                    await doc.ref.update({
+                        'admin.uid': uid,
+                        'admin.email': email
+                    });
+                    found = true;
+                    break;
+                }
+                
+                // Check members
+                if (data.organization?.members) {
+                    const member = data.organization.members.find((m: any) => m.email === email);
+                    if (member) {
+                        console.log(`Found as member in club ${doc.id}`);
+                        const updatedMembers = data.organization.members.map((m: any) => 
+                            m.email === email ? { ...m, uid, email } : m
+                        );
+                        await doc.ref.update({ 'organization.members': updatedMembers });
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (found) {
+                console.log('Recovery successful! Please refresh the page.');
+                return { success: true, message: 'Account recovered. Please refresh the page.' };
+            } else {
+                console.log('No club found for this email.');
+                return { success: false, message: 'No club found for this email address.' };
+            }
+        } catch (error) {
+            console.error('Recovery failed:', error);
+            return { success: false, message: `Recovery failed: ${error}` };
+        }
+    };
+
     // Expose functions to window for debugging
     if (typeof window !== 'undefined') {
         (window as any).linkMemberByEmail = linkMemberByEmail;
         (window as any).getAllUnlinkedUsers = getAllUnlinkedUsers;
         (window as any).linkMemberToUid = linkMemberToUid;
         (window as any).linkMemberToFirebaseAuthUser = linkMemberToFirebaseAuthUser;
+        (window as any).recoverUserAccess = recoverUserAccess;
         
     }
 
@@ -1784,21 +1929,41 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                 </div>
             ) : error ? (
                 <div className="min-h-screen flex items-center justify-center bg-red-50 dark:bg-red-900/10 p-4">
-                    <div className="text-center bg-white dark:bg-red-900/20 p-8 rounded-lg shadow-lg border border-red-200 dark:border-red-800">
+                    <div className="text-center bg-white dark:bg-red-900/20 p-8 rounded-lg shadow-lg border border-red-200 dark:border-red-800 max-w-md">
                        <h2 className="text-2xl font-bold text-red-800 dark:text-red-200">Access Denied</h2>
-                       <p className="text-red-600 dark:text-red-300 mt-2 max-w-md">
-                           {error.includes("Could not determine your club association") 
-                               ? "You are not authorized to access this application. Please contact your club administrator for an invitation."
-                               : error
-                           }
+                       <p className="text-red-600 dark:text-red-300 mt-2 mb-4">
+                           You are not authorized to access this application. Please contact your club administrator for a proper invitation.
                        </p>
-                       <div className="mt-4">
+                       
+                       {/* Additional help text */}
+                       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4 text-left">
+                           <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                               Troubleshooting Tips:
+                           </h3>
+                           <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                               <li>• Make sure you're signing in with the correct email address</li>
+                               <li>• If you cleared your browser data, try signing in again</li>
+                               <li>• Contact your club administrator to verify your membership</li>
+                               <li>• You may need to request a new invitation link</li>
+                           </ul>
+                       </div>
+                       
+                       <div className="space-y-2">
+                           <button
+                               onClick={() => {
+                                   setError(null);
+                                   window.location.hash = '#/';
+                               }}
+                               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                           >
+                               Try Again
+                           </button>
                            <button
                                onClick={() => {
                                    logOut();
                                    setError(null);
                                }}
-                               className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                               className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
                            >
                                Sign Out
                            </button>

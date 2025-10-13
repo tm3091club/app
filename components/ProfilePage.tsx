@@ -8,7 +8,6 @@ import NotificationScheduler from './NotificationScheduler';
 import { EmailTestComponent } from './EmailTestComponent';
 import AdminStatusIndicator from './AdminStatusIndicator';
 import { db, FieldValue } from '../services/firebase';
-import MentorshipPanel from './mentorship/MentorshipPanel';
 
 const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U']);
 
@@ -847,15 +846,6 @@ export const ProfilePage = (): React.ReactElement | null => {
                      )}
                  </div>
                  <EditableUser user={currentUser} isCurrentUser={true} onSaveName={handleSaveUserName} />
-                 
-                 {/* Mentorship Panel */}
-                 {(() => {
-                     const currentMember = organization?.members?.find(m => m.uid === currentUser?.uid);
-                     if (currentMember) {
-                         return <MentorshipPanel memberId={currentMember.id} memberName={currentMember.name} />;
-                     }
-                     return null;
-                 })()}
             </div>
 
             <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">

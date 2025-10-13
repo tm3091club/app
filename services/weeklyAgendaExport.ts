@@ -13,12 +13,12 @@ export const exportWeeklyAgendaToPDF = (
   // Very compact header - pushed higher
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
-  const headerText = `${organization?.name || 'Toastmasters Club'} TM-${organization?.clubNumber || 'XXXXX'} Meeting Agenda for ${format(meetingDate, 'MMMM d, yyyy')}`;
+  const headerText = `${organization?.name || 'Toastmasters Club'} Meeting Agenda for ${format(meetingDate, 'MMMM d, yyyy')}`;
   doc.text(headerText, 105, 10, { align: 'center' });
   
   // Theme line - compact
   if (agenda.theme) {
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(185, 28, 28); // Red color for theme
     doc.text(`Theme: "${agenda.theme}"`, 105, 16, { align: 'center' });
@@ -61,7 +61,7 @@ export const exportWeeklyAgendaToPDF = (
     body: tableData,
     startY: agenda.theme ? 20 : 14,
     styles: {
-      fontSize: 8.5,
+      fontSize: 10,
       cellPadding: 1.5,
       lineColor: [128, 128, 128],
       lineWidth: 0.5,
@@ -71,7 +71,7 @@ export const exportWeeklyAgendaToPDF = (
       fillColor: [59, 130, 246], // Blue-500 for color
       textColor: [255, 255, 255], // White text
       fontStyle: 'bold',
-      fontSize: 9,
+      fontSize: 11,
       halign: 'center',
       cellPadding: 2,
     },
@@ -127,14 +127,38 @@ export const exportWeeklyAgendaToPDF = (
   if (agenda.nextMeetingInfo) {
     doc.setFontSize(9);
     doc.setFont(undefined, 'bold');
-    doc.text('Next Meeting:', 20, finalY + 12);
+    doc.text('Next Meeting: ', 20, finalY + 12);
+    
+    // Calculate the width of "Next Meeting: " to position the rest of the text
+    const nextMeetingLabelWidth = doc.getTextWidth('Next Meeting: ');
+    
+    // Build the text with bold labels
+    doc.setFont(undefined, 'bold');
+    doc.text('TM: ', 20 + nextMeetingLabelWidth, finalY + 12);
+    const tmWidth = doc.getTextWidth('TM: ');
+    
     doc.setFont(undefined, 'normal');
-    const nextMeetingText = `TM: ${agenda.nextMeetingInfo.toastmaster}, Speakers: ${agenda.nextMeetingInfo.speakers.filter(s => s).join(', ')}, TT: ${agenda.nextMeetingInfo.tableTopicsMaster}`;
-    doc.text(nextMeetingText, 50, finalY + 12);
+    doc.text(`${agenda.nextMeetingInfo.toastmaster}, `, 20 + nextMeetingLabelWidth + tmWidth, finalY + 12);
+    const tmNameWidth = doc.getTextWidth(`${agenda.nextMeetingInfo.toastmaster}, `);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Speakers: ', 20 + nextMeetingLabelWidth + tmWidth + tmNameWidth, finalY + 12);
+    const speakersLabelWidth = doc.getTextWidth('Speakers: ');
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`${agenda.nextMeetingInfo.speakers.filter(s => s).join(', ')}, `, 20 + nextMeetingLabelWidth + tmWidth + tmNameWidth + speakersLabelWidth, finalY + 12);
+    const speakersWidth = doc.getTextWidth(`${agenda.nextMeetingInfo.speakers.filter(s => s).join(', ')}, `);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('TT: ', 20 + nextMeetingLabelWidth + tmWidth + tmNameWidth + speakersLabelWidth + speakersWidth, finalY + 12);
+    const ttLabelWidth = doc.getTextWidth('TT: ');
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(agenda.nextMeetingInfo.tableTopicsMaster, 20 + nextMeetingLabelWidth + tmWidth + tmNameWidth + speakersLabelWidth + speakersWidth + ttLabelWidth, finalY + 12);
   }
   
   doc.setFontSize(8);
-  doc.text(`Website: ${agenda.websiteUrl || `${window.location.origin} tmapp.club`}`, 20, finalY + 18);
+  doc.text(`Website: ${agenda.websiteUrl || 'https://tmapp.club'}`, 20, finalY + 18);
   
   // Save the PDF with proper naming: TM - Club Name - Theme - Month Day - Agenda
   const monthDay = format(meetingDate, 'MMMM d');
@@ -155,7 +179,7 @@ export const exportWeeklyAgendaToTSV = (
   const dateStr = format(meetingDate, 'MMMM d, yyyy');
   
   // Header row - spans all columns
-  dataGrid.push([`${clubName} TM-${clubNumber} Meeting Agenda for ${dateStr}`, '', '', '']);
+  dataGrid.push([`${clubName} Meeting Agenda for ${dateStr}`, '', '', '']);
   
   // Theme row - spans all columns
   if (agenda.theme) {
@@ -195,7 +219,7 @@ export const exportWeeklyAgendaToTSV = (
   if (agenda.nextMeetingInfo) {
     dataGrid.push([`Next Meeting – TM: ${agenda.nextMeetingInfo.toastmaster}, Speakers: ${agenda.nextMeetingInfo.speakers.filter(s => s).join(', ')}, TT: ${agenda.nextMeetingInfo.tableTopicsMaster}`, '', '', '']);
   }
-  dataGrid.push([agenda.websiteUrl || `${window.location.origin} tmapp.club`, '', '', '']);
+  dataGrid.push([agenda.websiteUrl || 'https://tmapp.club', '', '', '']);
   
   // Convert 2D array to TSV string
   return dataGrid.map(row => row.join('\t')).join('\n');

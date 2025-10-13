@@ -133,8 +133,10 @@ export const MentorshipPage: React.FC = () => {
           }
         });
 
-        // Process each member
-        const membersWithMentorship: MemberWithMentorship[] = organization.members.map(member => {
+        // Process each member (exclude archived members)
+        const membersWithMentorship: MemberWithMentorship[] = organization.members
+          .filter(member => member.status !== 'Archived')
+          .map(member => {
           // Find mentor (where member is mentee)
           const mentorPairing = pairings.find(p => p.menteeId === member.id);
           const mentorMember = mentorPairing 
@@ -198,36 +200,17 @@ export const MentorshipPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mentorship</h1>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => setShowGuide(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Learn about Mentoring
-            </button>
-            {(adminStatus?.hasAdminRights && (currentUser?.role === 'Admin' || currentUser?.officerRole === 'Vice President Education')) && (
-              <button 
-                onClick={() => setShowVPECenter(!showVPECenter)}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              >
-                {showVPECenter ? 'Back to Mentorship' : 'VPE Mentor Center'}
-              </button>
-            )}
-          </div>
-        </div>
-        <p className="text-gray-600 dark:text-gray-400">
-          Track who needs a mentor and who is mentoring who.
-        </p>
-      </div>
-
       {/* My Mentorship Section - Shows for logged-in users with member profiles */}
       {currentMember && currentUser && (
         <MyMentorshipSection 
           currentUserId={currentUser.uid} 
           currentMemberId={currentMember.id} 
+          showButtons={true}
+          onShowGuide={() => setShowGuide(true)}
+          onShowVPECenter={() => setShowVPECenter(!showVPECenter)}
+          showVPECenter={showVPECenter}
+          adminStatus={adminStatus}
+          currentUser={currentUser}
         />
       )}
 
@@ -344,20 +327,6 @@ export const MentorshipPage: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Info Panel */}
-      <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-blue-900 dark:text-blue-200 mb-3">
-          How Mentorship Works
-        </h3>
-        <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
-          <li>• <strong>View Relationships:</strong> See who is mentoring who in your club</li>
-          <li>• <strong>Request Support:</strong> Contact Admin or VPE to request a mentor or to mentor someone</li>
-          <li>• <strong>Track Progress:</strong> Use the Mentorship Notes feature in "My Mentorship" section to track your journey</li>
-          <li>• <strong>Admin/VPE Control:</strong> All mentorship pairings are managed through the VPE Mentor Center</li>
-          <li>• <strong>Flexible System:</strong> Members can have multiple mentors or be both a mentor and mentee</li>
-        </ul>
       </div>
 
       <MentorGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />

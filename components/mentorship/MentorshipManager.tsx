@@ -36,6 +36,7 @@ export default function MentorshipManager() {
     if (!organization) return [];
     
     return organization.members.filter(member => 
+      member.status !== 'Archived' &&
       member.status === 'Active' && 
       (member.isPastPresident || member.isToastmaster || member.isGeneralEvaluator)
     );
@@ -48,6 +49,7 @@ export default function MentorshipManager() {
     const menteeIds = pairs.map(pair => pair.menteeId);
     
     return organization.members.filter(member => 
+      member.status !== 'Archived' &&
       member.status === 'Active' && 
       !mentorIds.includes(member.id) && 
       !menteeIds.includes(member.id)

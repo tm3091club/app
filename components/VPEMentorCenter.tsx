@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { evaluateMentorEligibility, EligibilityResult, monthsSince } from '../services/mentorshipEligibility';
 import { mentorCopy } from '../utils/mentorshipCopy';
-import { MentorshipPolicy, MentorshipOverride, MemberMetrics, MentorshipEligibilityStatus, MentorshipPair } from '../types';
+import { MentorshipPolicy, MentorshipOverride, MemberMetrics, MentorshipEligibilityStatus, MentorshipPair, MemberStatus } from '../types';
 import { db } from '../services/firebase';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
@@ -13,6 +13,17 @@ interface MemberWithEligibility {
   metrics: MemberMetrics;
   override?: MentorshipOverride | null;
 }
+
+const SortIcon: React.FC<{ direction: 'ascending' | 'descending' | 'blocked-first' }> = ({ direction }) => (
+  <div className="flex flex-col -space-y-1.5 opacity-50 group-hover:opacity-100 transition-opacity">
+    <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 ${direction === 'ascending' ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 15l7-7 7 7" />
+    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 ${direction === 'descending' || direction === 'blocked-first' ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+);
 
 const OverrideModal: React.FC<{
   isOpen: boolean;
@@ -366,6 +377,13 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
   const [showPairingModal, setShowPairingModal] = useState(false);
   const [selectedMentor, setSelectedMentor] = useState<MemberWithEligibility | null>(null);
   const [selectedMentee, setSelectedMentee] = useState<MemberWithEligibility | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ 
+    key: 'name' | 'status' | 'metrics'; 
+    direction: 'ascending' | 'descending' | 'blocked-first'
+  }>({ key: 'status', direction: 'ascending' });
+  const [mentorSortDirection, setMentorSortDirection] = useState<'ascending' | 'descending'>('ascending');
+  const [menteeSortDirection, setMenteeSortDirection] = useState<'ascending' | 'descending'>('ascending');
+  const [hasAutoSwitched, setHasAutoSwitched] = useState(false);
 
   useEffect(() => {
     if (!organization) return;
@@ -395,7 +413,10 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
         const membersWithEligibility: MemberWithEligibility[] = [];
 
         // Load all metrics and overrides in parallel
-        const memberPromises = (organization.members || []).map(async (member) => {
+        // Filter out archived members from mentorship consideration
+        const memberPromises = (organization.members || [])
+          .filter(member => member.status !== MemberStatus.Archived)
+          .map(async (member) => {
           // Calculate months since join from joinedDate
           let monthsSinceJoin = 0;
           if (member.joinedDate) {
@@ -497,7 +518,9 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
           const membersWithEligibility: MemberWithEligibility[] = [];
 
           // Load all metrics and overrides in parallel
-          const memberPromises = (organization!.members || []).map(async (member) => {
+          const memberPromises = (organization!.members || [])
+            .filter(member => member.status !== MemberStatus.Archived)
+            .map(async (member) => {
             // Calculate months since join from joinedDate
             let monthsSinceJoin = 0;
             if (member.joinedDate) {
@@ -597,7 +620,9 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
           const membersWithEligibility: MemberWithEligibility[] = [];
 
           // Load all metrics and overrides in parallel
-          const memberPromises = (organization!.members || []).map(async (member) => {
+          const memberPromises = (organization!.members || [])
+            .filter(member => member.status !== MemberStatus.Archived)
+            .map(async (member) => {
             // Calculate months since join from joinedDate
             let monthsSinceJoin = 0;
             if (member.joinedDate) {
@@ -704,6 +729,178 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
     }
   };
 
+  // Sorting logic
+  const handleSortRequest = (key: 'name' | 'status' | 'metrics') => {
+    setSortConfig(currentConfig => {
+      if (currentConfig.key === key) {
+        // Special cycling for status column: ascending -> blocked-first -> ascending
+        if (key === 'status') {
+          if (currentConfig.direction === 'ascending') {
+            return { key, direction: 'blocked-first' };
+          } else {
+            return { key, direction: 'ascending' };
+          }
+        }
+        // Normal toggle for other columns
+        return {
+          key,
+          direction: currentConfig.direction === 'ascending' ? 'descending' : 'ascending',
+        };
+      } else {
+        return { key, direction: 'ascending' };
+      }
+    });
+  };
+
+  // All hooks and calculations must be before any early returns
+  const eligibleMembers = useMemo(() => 
+    members.filter(m => m.eligibility.status === 'eligible' || m.eligibility.status === 'override_eligible'),
+    [members]
+  );
+  const needsReviewMembers = useMemo(() => 
+    members.filter(m => m.eligibility.status === 'needs_review'),
+    [members]
+  );
+  const notEligibleMembers = useMemo(() => 
+    members.filter(m => m.eligibility.status === 'not_eligible' || m.eligibility.status === 'override_blocked'),
+    [members]
+  );
+  const overrideMembers = useMemo(() => 
+    members.filter(m => m.override),
+    [members]
+  );
+
+  // Calculate mentor-mentee ratio
+  const mentorMenteeRatio = useMemo(() => {
+    const totalActiveMembers = members.length; // members already filtered to exclude archived
+    const totalActivePairs = pairings.filter(p => p.active).length;
+    return totalActiveMembers > 0 ? Math.round((totalActivePairs / totalActiveMembers) * 100) : 0;
+  }, [members, pairings]);
+
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      switch (sortConfig.key) {
+        case 'name':
+          const nameA1 = a.name.toLowerCase();
+          const nameB1 = b.name.toLowerCase();
+          if (nameA1 < nameB1) return sortConfig.direction === 'ascending' ? -1 : 1;
+          if (nameA1 > nameB1) return sortConfig.direction === 'ascending' ? 1 : -1;
+          return 0;
+        
+        case 'status':
+          // Custom status order based on sort direction
+          const getStatusOrder = (status: string) => {
+            if (sortConfig.direction === 'blocked-first') {
+              // blocked -> approved -> not_eligible -> needs_review
+              if (status === 'override_blocked') return 0;
+              if (status === 'eligible' || status === 'override_eligible') return 1;
+              if (status === 'not_eligible') return 2;
+              if (status === 'needs_review') return 3;
+              return 4;
+            } else {
+              // Default ascending: not_eligible -> blocked -> needs_review -> approved
+              if (status === 'not_eligible') return 0;
+              if (status === 'override_blocked') return 1;
+              if (status === 'needs_review') return 2;
+              if (status === 'eligible' || status === 'override_eligible') return 3;
+              return 4;
+            }
+          };
+          const statusOrderA = getStatusOrder(a.eligibility.status);
+          const statusOrderB = getStatusOrder(b.eligibility.status);
+          if (statusOrderA !== statusOrderB) {
+            return statusOrderA - statusOrderB;
+          }
+          // If same status, sort by name
+          const nameA2 = a.name.toLowerCase();
+          const nameB2 = b.name.toLowerCase();
+          return nameA2.localeCompare(nameB2);
+        
+        case 'metrics':
+          // Sort by attendance percentage (lowest to highest by default)
+          const attendanceA = a.metrics.attendancePct90;
+          const attendanceB = b.metrics.attendancePct90;
+          if (attendanceA !== attendanceB) {
+            return sortConfig.direction === 'ascending' ? attendanceA - attendanceB : attendanceB - attendanceA;
+          }
+          // If same attendance, sort by speeches completed
+          const speechesA = a.metrics.speechesCompleted;
+          const speechesB = b.metrics.speechesCompleted;
+          if (speechesA !== speechesB) {
+            return sortConfig.direction === 'ascending' ? speechesA - speechesB : speechesB - speechesA;
+          }
+          // If same speeches, sort by name
+          const nameA3 = a.name.toLowerCase();
+          const nameB3 = b.name.toLowerCase();
+          return nameA3.localeCompare(nameB3);
+        
+        default:
+          return 0;
+      }
+    });
+  }, [members, sortConfig]);
+
+  const sortedEligibleMembers = useMemo(() => {
+    return [...eligibleMembers].sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      if (mentorSortDirection === 'ascending') {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
+  }, [eligibleMembers, mentorSortDirection]);
+
+  const sortedAllMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      if (menteeSortDirection === 'ascending') {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
+  }, [members, menteeSortDirection]);
+
+  // Auto-switch tab logic: Pairing when all members have status, Candidates when all are paired
+  const shouldShowPairingTab = useMemo(() => {
+    if (members.length === 0) return false;
+    
+    // Check if all members have been assigned a status (not needs_review)
+    const allMembersHaveStatus = members.every(member => member.eligibility.status !== 'needs_review');
+    
+    // Check if all eligible members are paired
+    const eligibleMembers = members.filter(m => 
+      m.eligibility.status === 'eligible' || m.eligibility.status === 'override_eligible'
+    );
+    const activePairings = pairings.filter(p => p.active);
+    const pairedMemberIds = new Set([
+      ...activePairings.map(p => p.mentorId),
+      ...activePairings.map(p => p.menteeId)
+    ]);
+    const allEligibleMembersPaired = eligibleMembers.every(member => pairedMemberIds.has(member.id));
+    
+    // Show pairing tab if all members have status but not all eligible members are paired
+    return allMembersHaveStatus && !allEligibleMembersPaired;
+  }, [members, pairings]);
+
+  // Auto-switch to appropriate tab ONLY on initial load
+  useEffect(() => {
+    if (!hasAutoSwitched && !loading) {
+      if (shouldShowPairingTab && activeTab === 'candidates') {
+        setActiveTab('pairing');
+        setHasAutoSwitched(true);
+      } else if (!shouldShowPairingTab && activeTab === 'pairing') {
+        setActiveTab('candidates');
+        setHasAutoSwitched(true);
+      } else {
+        setHasAutoSwitched(true);
+      }
+    }
+  }, [shouldShowPairingTab, loading, hasAutoSwitched, activeTab]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -711,15 +908,6 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
       </div>
     );
   }
-
-  const eligibleMembers = members.filter(m => 
-    m.eligibility.status === 'eligible' || m.eligibility.status === 'override_eligible'
-  );
-  const needsReviewMembers = members.filter(m => m.eligibility.status === 'needs_review');
-  const notEligibleMembers = members.filter(m => 
-    m.eligibility.status === 'not_eligible' || m.eligibility.status === 'override_blocked'
-  );
-  const overrideMembers = members.filter(m => m.override);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -757,6 +945,16 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
             Candidates ({members.length})
           </button>
           <button
+            onClick={() => setActiveTab('pairing')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'pairing'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Pairing
+          </button>
+          <button
             onClick={() => setActiveTab('overrides')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'overrides'
@@ -775,16 +973,6 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
             }`}
           >
             Policy
-          </button>
-          <button
-            onClick={() => setActiveTab('pairing')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'pairing'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Pairing
           </button>
         </nav>
       </div>
@@ -816,13 +1004,34 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Member
+                      <button
+                        type="button"
+                        onClick={() => handleSortRequest('name')}
+                        className="flex items-center gap-2 group focus:outline-none hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        <span>Member</span>
+                        <SortIcon direction={sortConfig.key === 'name' ? sortConfig.direction : 'ascending'} />
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Status
+                      <button
+                        type="button"
+                        onClick={() => handleSortRequest('status')}
+                        className="flex items-center gap-2 group focus:outline-none hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        <span>Status</span>
+                        <SortIcon direction={sortConfig.key === 'status' ? sortConfig.direction : 'ascending'} />
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Metrics
+                      <button
+                        type="button"
+                        onClick={() => handleSortRequest('metrics')}
+                        className="flex items-center gap-2 group focus:outline-none hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        <span>Metrics</span>
+                        <SortIcon direction={sortConfig.key === 'metrics' ? sortConfig.direction : 'ascending'} />
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Actions
@@ -830,7 +1039,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {members.map((member) => (
+                  {sortedMembers.map((member) => (
                     <tr key={member.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {member.name}
@@ -977,23 +1186,23 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Active Mentor-Mentee Pairings</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Current mentorship relationships in your club.
+                Current Mentor to Mentee Ratio = {mentorMenteeRatio}%
               </p>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                       Mentor
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                       Mentee
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                       Actions
                     </th>
                   </tr>
@@ -1060,18 +1269,28 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Create New Pairing</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Connect mentors with mentees to establish mentorship relationships.
+                Under "Available Mentors" click "Select as Mentor", then choose a mentee.
               </p>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Available Mentors */}
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Available Mentors</h3>
+                  <button
+                    onClick={() => setMentorSortDirection(prev => prev === 'ascending' ? 'descending' : 'ascending')}
+                    className="flex items-center gap-2 mb-3 text-base font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+                  >
+                    <span>Available Mentors</span>
+                    <SortIcon direction={mentorSortDirection} />
+                  </button>
                   <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {eligibleMembers.map((member) => {
+                    {sortedEligibleMembers
+                      .filter(member => !selectedMentee || member.id !== selectedMentee.id)
+                      .map((member) => {
                       const mentorPairings = pairings.filter(p => p.mentorId === member.id && p.active);
                       const isSelected = selectedMentor?.id === member.id;
+                      const orgMember = organization?.members?.find(m => m.id === member.id);
+                      const joinDate = orgMember?.joinedDate ? new Date(orgMember.joinedDate).toLocaleDateString() : 'Unknown';
                       return (
                         <div key={member.id} className={`p-3 border rounded-lg ${
                           isSelected ? 'border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600'
@@ -1080,9 +1299,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
                             <div>
                               <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Speeches: {member.metrics.speechesCompleted} • 
-                                Months: {Math.min(member.metrics.monthsSinceJoin, policy.minMonths)} • 
-                                Attendance: {member.metrics.attendancePct90}%
+                                Joined: {joinDate}
                               </p>
                               {mentorPairings.length > 0 && (
                                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
@@ -1112,7 +1329,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
                         </div>
                       );
                     })}
-                    {eligibleMembers.length === 0 && (
+                    {sortedEligibleMembers.length === 0 && (
                       <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                         No eligible mentors available
                       </p>
@@ -1122,19 +1339,27 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
 
                 {/* All Members (Potential Mentees) */}
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
-                    {selectedMentor ? `Select Mentee for ${selectedMentor.name}` : 'All Members (Potential Mentees)'}
-                  </h3>
+                  <button
+                    onClick={() => setMenteeSortDirection(prev => prev === 'ascending' ? 'descending' : 'ascending')}
+                    className="flex items-center gap-2 mb-3 text-base font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+                  >
+                    <span>{selectedMentor ? `Select Mentee for ${selectedMentor.name}` : 'All Members (Potential Mentees)'}</span>
+                    <SortIcon direction={menteeSortDirection} />
+                  </button>
                   {selectedMentor && (
                     <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-800 dark:text-blue-300">
                       Mentor selected: <strong>{selectedMentor.name}</strong>
                     </div>
                   )}
                   <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {members.map((member) => {
+                    {sortedAllMembers
+                      .filter(member => !selectedMentor || member.id !== selectedMentor.id)
+                      .map((member) => {
                       const menteePairings = pairings.filter(p => p.menteeId === member.id && p.active);
                       const isSelected = selectedMentee?.id === member.id;
                       const isEligible = member.eligibility.status === 'eligible' || member.eligibility.status === 'override_eligible';
+                      const orgMember = organization?.members?.find(m => m.id === member.id);
+                      const joinDate = orgMember?.joinedDate ? new Date(orgMember.joinedDate).toLocaleDateString() : 'Unknown';
                       
                       return (
                         <div key={member.id} className={`p-3 border rounded-lg ${
@@ -1145,9 +1370,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
                             <div>
                               <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Speeches: {member.metrics.speechesCompleted} • 
-                                Months: {Math.min(member.metrics.monthsSinceJoin, policy.minMonths)} • 
-                                Attendance: {member.metrics.attendancePct90}%
+                                Joined: {joinDate}
                               </p>
                               {menteePairings.length > 0 && (
                                 <p className="text-xs text-green-600 dark:text-green-400 mt-1">
@@ -1187,7 +1410,7 @@ export const VPEMentorCenter: React.FC<VPEMentorCenterProps> = ({ onBack }) => {
                         </div>
                       );
                     })}
-                    {members.length === 0 && (
+                    {sortedAllMembers.length === 0 && (
                       <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                         No members available
                       </p>
