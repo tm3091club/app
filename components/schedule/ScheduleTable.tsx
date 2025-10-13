@@ -159,11 +159,14 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
           {TOASTMASTERS_ROLES.map(role => {
             // Determine highlight color for this role
             const highlightColor = ROLE_HIGHLIGHT_COLORS[role] || undefined;
+            // For dark mode, use a darker text color for contrast if highlight is present
+            const isDarkMode = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const textColor = highlightColor && isDarkMode ? '#22223b' : undefined;
             return (
               <tr key={role}>
                 <td
                   className="sticky left-0 bg-white dark:bg-gray-800 p-2 sm:p-4 text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-200 min-w-[130px] max-w-[300px] z-10"
-                  style={highlightColor ? { backgroundColor: highlightColor, transition: 'background 0.3s' } : undefined}
+                  style={highlightColor ? { backgroundColor: highlightColor, color: textColor, transition: 'background 0.3s, color 0.3s' } : undefined}
                 >
                   {role}
                 </td>
@@ -179,7 +182,8 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                         return memberAvailability !== AvailabilityStatus.Unavailable && memberAvailability !== AvailabilityStatus.Possible;
                     });
                     // Highlight the cell if this is a key role
-                    const cellStyle = highlightColor && !meeting.isBlackout ? { backgroundColor: highlightColor, transition: 'background 0.3s' } : undefined;
+                    const cellTextColor = highlightColor && isDarkMode ? '#22223b' : undefined;
+                    const cellStyle = highlightColor && !meeting.isBlackout ? { backgroundColor: highlightColor, color: cellTextColor, transition: 'background 0.3s, color 0.3s' } : undefined;
                     return (
                       <td key={index} className={`p-1 sm:p-2 align-top hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 min-w-[130px] max-w-[250px] ${meeting.isBlackout ? 'bg-gray-100 dark:bg-gray-900/50' : ''}`} style={cellStyle}>
                         {meeting.isBlackout ? (
