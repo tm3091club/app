@@ -18,7 +18,8 @@ export const RoleAssignmentCell: React.FC<{
   disabled: boolean;
   meetingDate: string;
   availability: { [memberId: string]: any };
-}> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled, meetingDate, availability }) => {
+  highlightColor?: string;
+}> = ({ meetingIndex, role, assignedMemberId, availableMembers, onAssignmentChange, allAssignmentsForMeeting, disabled, meetingDate, availability, highlightColor }) => {
     const { currentUser, ownerId, organization, schedules, selectedScheduleId, adminStatus } = useToastmasters();
     
     const isAdmin = adminStatus?.hasAdminRights || false;
@@ -199,7 +200,9 @@ export const RoleAssignmentCell: React.FC<{
                          textAlign: 'center',
                          WebkitTextAlign: 'center'
                      }}>
-                    {isUnassigned ? '-- Unassigned --' : displayName}
+                    <span className="dark:text-[inherit]" style={{ color: undefined }} data-dark-color={highlightColor}>
+                        {isUnassigned ? '-- Unassigned --' : displayName}
+                    </span>
                 </div>
             </div>
         );

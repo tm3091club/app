@@ -6,6 +6,7 @@ import { MonthlySchedule, Meeting, Member, AvailabilityStatus, MemberAvailabilit
 import { TOASTMASTERS_ROLES, ROLE_HIGHLIGHT_COLORS } from '../../Constants';
 import { RoleAssignmentCell } from './RoleAssignmentCell';
 import { getCurrentWeekIndex, getNextWeekIndex } from '../../utils/adminTransitionUtils';
+import '../../styles/ScheduleHighlights.css';
 
 interface ScheduleTableProps {
   activeSchedule: MonthlySchedule;
@@ -26,9 +27,11 @@ interface ScheduleTableProps {
   organization: { meetingDay: number; timezone: string };
 }
 
-const ReadOnlyRoleCell: React.FC<{ name: string | null }> = ({ name }) => (
-    <div className="w-full text-center py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 h-[39px] flex items-center justify-center truncate">
-        {name || <span className="italic">Unassigned</span>}
+const ReadOnlyRoleCell: React.FC<{ name: string | null; highlightColor?: string }> = ({ name, highlightColor }) => (
+    <div className="w-full text-center py-1.5 px-1 sm:px-2 text-xs sm:text-sm h-[39px] flex items-center justify-center truncate">
+        <span className="text-gray-500 dark:text-gray-400" data-dark-color={highlightColor}>
+            {name || <span className="italic">Unassigned</span>}
+        </span>
     </div>
 );
 
@@ -159,20 +162,20 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
           {TOASTMASTERS_ROLES.map(role => {
             // Determine highlight color for this role
             const highlightColor = ROLE_HIGHLIGHT_COLORS[role] || undefined;
-            // For dark mode, use a darker text color for contrast if highlight is present
-            const isDarkMode = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const textColor = highlightColor && isDarkMode ? '#22223b' : undefined;
             return (
-              <tr key={role}>
+              <tr key={role} className="role-row" data-highlight-color={highlightColor}>
                 <td
-                  className="sticky left-0 bg-white dark:bg-gray-800 p-2 sm:p-4 text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-200 min-w-[130px] max-w-[300px] z-10"
-                  style={highlightColor ? { backgroundColor: highlightColor, color: textColor, transition: 'background 0.3s, color 0.3s' } : undefined}
+                  className="sticky left-0 bg-white dark:bg-gray-800 p-2 sm:p-4 text-xs sm:text-sm font-medium text-gray-900 min-w-[130px] max-w-[300px] z-10 role-cell"
+                  style={highlightColor ? { '--highlight-color': highlightColor } as React.CSSProperties : undefined}
+                  data-role-highlight={highlightColor}
                 >
-                  {role}
+                  <span className="dark:text-gray-200" data-dark-color={highlightColor}>
+                    {role}
+                  </span>
                 </td>
                 {previousScheduleToShow?.map((meeting, index) => (
                   <td key={`prev-role-${index}`} className="p-2 align-top bg-blue-50 dark:bg-blue-900/20 min-w-[130px] max-w-[250px]">
-                      <ReadOnlyRoleCell name={getMemberName(meeting.assignments[role])} />
+                      <ReadOnlyRoleCell name={getMemberName(meeting.assignments[role])} highlightColor={highlightColor} />
                   </td>
                 ))}
                 {activeSchedule.meetings.map((meeting, index) => {
@@ -181,11 +184,13 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                         const memberAvailability = availability[member.id]?.[dateKey];
                         return memberAvailability !== AvailabilityStatus.Unavailable && memberAvailability !== AvailabilityStatus.Possible;
                     });
-                    // Highlight the cell if this is a key role
-                    const cellTextColor = highlightColor && isDarkMode ? '#22223b' : undefined;
-                    const cellStyle = highlightColor && !meeting.isBlackout ? { backgroundColor: highlightColor, color: cellTextColor, transition: 'background 0.3s, color 0.3s' } : undefined;
                     return (
-                      <td key={index} className={`p-1 sm:p-2 align-top hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 min-w-[130px] max-w-[250px] ${meeting.isBlackout ? 'bg-gray-100 dark:bg-gray-900/50' : ''}`} style={cellStyle}>
+                      <td 
+                        key={index} 
+                        className={`p-1 sm:p-2 align-top hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 min-w-[130px] max-w-[250px] member-cell ${meeting.isBlackout ? 'bg-gray-100 dark:bg-gray-900/50' : ''}`} 
+                        style={!meeting.isBlackout && highlightColor ? { '--highlight-color': highlightColor } as React.CSSProperties : undefined}
+                        data-cell-highlight={highlightColor}
+                      >
                         {meeting.isBlackout ? (
                           <div className="w-full text-center py-1.5 px-2 text-sm text-gray-500 dark:text-gray-400 font-semibold italic h-[39px] flex items-center justify-center">
                             BLACKOUT
@@ -201,6 +206,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                               disabled={!canEditRoleAssignment(index, role)}
                               meetingDate={meeting.date}
                               availability={availability}
+                              highlightColor={highlightColor}
                             />
                         )}
                       </td>

@@ -1,0 +1,119 @@
+/* 
+ * Schedule role highlighting styles
+ * Light mode: background color on cells
+ * Dark mode: text color only, normal dark backgrounds
+ */
+
+/* Light mode: apply background color to cells with highlight color */
+.role-cell[data-role-highlight]:not([data-role-highlight=""]) {
+  background-color: var(--highlight-color) !important;
+}
+
+.member-cell[data-cell-highlight]:not([data-cell-highlight=""]) {
+  background-color: var(--highlight-color) !important;
+}
+
+/* Dark mode: remove inline background colors but keep Tailwind backgrounds, color text only */
+@media (prefers-color-scheme: dark) {
+  /* Remove the light mode background color so Tailwind dark backgrounds show */
+  .role-cell[data-role-highlight]:not([data-role-highlight=""]) {
+    background-color: rgb(31 41 55) !important; /* dark:bg-gray-800 equivalent */
+  }
+  
+  .member-cell[data-cell-highlight]:not([data-cell-highlight=""]) {
+    background-color: transparent !important;
+  }
+  
+  /* Light Blue for Toastmaster - text only */
+  [data-role-highlight="#dbeafe"] span,
+  [data-cell-highlight="#dbeafe"] *,
+  [data-dark-color="#dbeafe"] {
+    color: #dbeafe !important;
+  }
+  
+  /* Light Green for Table Topics Master - text only */
+  [data-role-highlight="#d1fae5"] span,
+  [data-cell-highlight="#d1fae5"] *,
+  [data-dark-color="#d1fae5"] {
+    color: #d1fae5 !important;
+  }
+  
+  /* Light Yellow for Speakers - text only */
+  [data-role-highlight="#fef9c3"] span,
+  [data-cell-highlight="#fef9c3"] *,
+  [data-dark-color="#fef9c3"] {
+    color: #fef9c3 !important;
+  }
+  
+  /* Light Purple for General Evaluator - text only */
+  [data-role-highlight="#ede9fe"] span,
+  [data-cell-highlight="#ede9fe"] *,
+  [data-dark-color="#ede9fe"] {
+    color: #ede9fe !important;
+  }
+  
+  /* Light Orange for Evaluators - text only */
+  [data-role-highlight="#ffedd5"] span,
+  [data-cell-highlight="#ffedd5"] *,
+  [data-dark-color="#ffedd5"] {
+    color: #ffedd5 !important;
+  }
+  
+  /* Light Pink for Inspiration Award - text only */
+  [data-role-highlight="#fce7f3"] span,
+  [data-cell-highlight="#fce7f3"] *,
+  [data-dark-color="#fce7f3"] {
+    color: #fce7f3 !important;
+  }
+}
+
+/* Tailwind's dark mode class variant */
+.dark .role-cell[data-role-highlight]:not([data-role-highlight=""]) {
+  background-color: rgb(31 41 55) !important; /* dark:bg-gray-800 equivalent */
+}
+
+.dark .member-cell[data-cell-highlight]:not([data-cell-highlight=""]) {
+  background-color: transparent !important;
+}
+
+/* Light Blue for Toastmaster - text only */
+.dark [data-role-highlight="#dbeafe"] span,
+.dark [data-cell-highlight="#dbeafe"] *,
+.dark [data-dark-color="#dbeafe"] {
+  color: #dbeafe !important;
+}
+
+/* Light Green for Table Topics Master - text only */
+.dark [data-role-highlight="#d1fae5"] span,
+.dark [data-cell-highlight="#d1fae5"] *,
+.dark [data-dark-color="#d1fae5"] {
+  color: #d1fae5 !important;
+}
+
+/* Light Yellow for Speakers - text only */
+.dark [data-role-highlight="#fef9c3"] span,
+.dark [data-cell-highlight="#fef9c3"] *,
+.dark [data-dark-color="#fef9c3"] {
+  color: #fef9c3 !important;
+}
+
+/* Light Purple for General Evaluator - text only */
+.dark [data-role-highlight="#ede9fe"] span,
+.dark [data-cell-highlight="#ede9fe"] *,
+.dark [data-dark-color="#ede9fe"] {
+  color: #ede9fe !important;
+}
+
+/* Light Orange for Evaluators - text only */
+.dark [data-role-highlight="#ffedd5"] span,
+.dark [data-cell-highlight="#ffedd5"] *,
+.dark [data-dark-color="#ffedd5"] {
+  color: #ffedd5 !important;
+}
+
+/* Light Pink for Inspiration Award - text only */
+.dark [data-role-highlight="#fce7f3"] span,
+.dark [data-cell-highlight="#fce7f3"] *,
+.dark [data-dark-color="#fce7f3"] {
+  color: #fce7f3 !important;
+}
