@@ -161,6 +161,7 @@ export interface WeeklyAgenda {
   ownerId?: string;
   shareId?: string;
   isShared?: boolean;
+  lastUserEdit?: string; // ISO string for last user edit timestamp
 }
 
 export interface AgendaTemplate {

@@ -37,6 +37,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const justSavedRef = useRef(false);
 
   const schedule = monthlySchedules.find(s => s.id === scheduleId);
   
@@ -95,23 +96,38 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   }, [schedule?.id]); // When schedule ID changes
 
   useEffect(() => {
-    if (schedule && schedule.meetings.length > 0) {
-      loadOrCreateAgenda();
+    if (schedule && schedule.meetings.length > 0 && !justSavedRef.current) {
+      const agendaId = `${scheduleId}-week${selectedWeek + 1}`;
+      const existingAgendaFromDB = Array.isArray(weeklyAgendas) ? weeklyAgendas.find(a => a.id === agendaId) : null;
+      
+      // Load if:
+      // 1. No agenda in state, OR
+      // 2. Agenda in state is for different week, OR
+      // 3. Agenda exists in DB but not loaded in state yet
+      if (!agenda || agenda.id !== agendaId || (existingAgendaFromDB && !agenda)) {
+        loadOrCreateAgenda();
+      }
     }
-  }, [selectedWeek, schedule?.id]); // Removed weeklyAgendas dependency to prevent unwanted reloads
+  }, [selectedWeek, schedule?.id, weeklyAgendas]); // ADD weeklyAgendas to reload when DB data changes
 
   // Auto-sync when schedule changes (real-time)
   useEffect(() => {
-    if (agenda && schedule && !isEditing) {
+    if (agenda && schedule && agenda.meetingDate) {
       const meeting = schedule.meetings[selectedWeek];
       if (meeting) {
-        // Auto-update person assignments for role-bound items
+        // Check if meeting has passed
+        const meetingDate = new Date(meeting.date + 'T00:00:00');
+        const now = new Date();
+        const meetingEndTime = new Date(meetingDate);
+        meetingEndTime.setDate(meetingEndTime.getDate() + 1); // 24 hours after meeting
+        const meetingHasPassed = now > meetingEndTime;
+        
+        // Auto-update person assignments for role-bound items (always update, not just when changed)
         const updatedItems = agenda.items.map(item => {
           if (item.roleKey && !item.isManualOverride) {
             const newPerson = getPersonForRole(item.roleKey, meeting);
-            if (newPerson !== item.person) {
-              return { ...item, person: newPerson };
-            }
+            // Always update person from schedule, even if it's the same
+            return { ...item, person: newPerson };
           }
           return item;
         });
@@ -151,13 +167,15 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
           };
         }
         
-        // Update theme and meeting date if changed
-        const shouldUpdate = updatedItems.some((item, index) => item !== agenda.items[index]) || 
-                           (meeting.theme && meeting.theme !== agenda.theme) ||
-                           JSON.stringify(newNextMeetingInfo) !== JSON.stringify(agenda.nextMeetingInfo) ||
-                           (meeting.date && meeting.date !== agenda.meetingDate);
+        // Only update if meeting has passed OR if member assignments/theme/date changed
+        // Don't reset agenda content (descriptions, times) if meeting hasn't passed
+        const hasChanges = 
+          updatedItems.some((item, index) => item.person !== agenda.items[index]?.person) ||
+          (meeting.theme && meeting.theme !== agenda.theme) ||
+          JSON.stringify(newNextMeetingInfo) !== JSON.stringify(agenda.nextMeetingInfo) ||
+          (meeting.date && meeting.date !== agenda.meetingDate);
         
-        if (shouldUpdate) {
+        if (hasChanges) {
           setAgenda({
             ...agenda,
             theme: meeting.theme || agenda.theme,
@@ -182,40 +200,60 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   const loadOrCreateAgenda = (forceReload = false) => {
     if (!schedule || selectedWeek >= schedule.meetings.length) return;
-    
     const meeting = schedule.meetings[selectedWeek];
     if (!meeting || !meeting.date) return; // Skip if meeting data is invalid
     const agendaId = `${scheduleId}-week${selectedWeek + 1}`;
-    
     // Check if agenda exists
     const existingAgenda = Array.isArray(weeklyAgendas) ? weeklyAgendas.find(a => a.id === agendaId) : null;
-    
+    // Check if meeting date has passed (24 hours after meeting date)
+    const meetingDate = new Date(meeting.date + 'T00:00:00');
+    const now = new Date();
+    const meetingEndTime = new Date(meetingDate);
+    meetingEndTime.setDate(meetingEndTime.getDate() + 1); // 24 hours after meeting
+    const meetingHasPassed = now > meetingEndTime;
+    // Only auto-reset if lastUserEdit is before meetingEndTime (i.e., no user edits after meeting)
+    const lastUserEdit = existingAgenda?.lastUserEdit ? new Date(existingAgenda.lastUserEdit) : null;
+    const shouldAutoReset = meetingHasPassed && (!lastUserEdit || lastUserEdit < meetingEndTime);
     if (existingAgenda && !forceReload) {
-      // Reset speaker descriptions to template defaults even when loading existing agenda
       const speakerCount = countSpeakers(meeting);
       const template = speakerCount === 2 ? TWO_SPEAKER_TEMPLATE : DEFAULT_AGENDA_TEMPLATE;
-      
-      const resetAgenda = {
-        ...existingAgenda,
-        items: existingAgenda.items.map(item => {
-          // Find matching template item to get default description
-          const templateItem = template.items.find(
-            templateItem => templateItem.programEvent === item.programEvent
+      if (shouldAutoReset) {
+        // Meeting has passed and no user edits after meeting - reset to template defaults but keep member assignments
+        const rebuiltItems = template.items.map(templateItem => {
+          // Find matching existing item to preserve row color
+          const existingItem = existingAgenda.items.find(
+            item => item.programEvent === templateItem.programEvent
           );
-          
-          // For speaker items, reset description to template default
-          const isSpeakerItem = item.roleKey && item.roleKey.startsWith('Speaker');
-          
+          // Get person from current meeting schedule
+          const currentPerson = templateItem.roleKey ? getPersonForRole(templateItem.roleKey, meeting) : '';
           return {
-            ...item,
-            description: isSpeakerItem && templateItem ? templateItem.description : item.description,
-            // Also reset time to template default for speakers
-            time: isSpeakerItem && templateItem ? templateItem.time : item.time,
+            ...templateItem,
+            id: existingItem?.id || uuidv4(),
+            person: currentPerson,
+            rowColor: existingItem?.rowColor || templateItem.rowColor || 'normal',
           };
-        }),
-      };
-      
-      setAgenda(resetAgenda);
+        });
+        const resetAgenda = {
+          ...existingAgenda,
+          items: rebuiltItems,
+        };
+        setAgenda(resetAgenda);
+      } else {
+        // Meeting hasn't passed or user edited after meeting - load saved agenda as-is and only update member assignments
+        const updatedItems = existingAgenda.items.map(item => {
+          if (item.roleKey) {
+            const currentPerson = getPersonForRole(item.roleKey, meeting);
+            // Only update person if it changed, keep everything else (description, time, etc.)
+            return { ...item, person: currentPerson };
+          }
+          return item;
+        });
+        const updatedAgenda = {
+          ...existingAgenda,
+          items: updatedItems,
+        };
+        setAgenda(updatedAgenda);
+      }
     } else {
       // Create new agenda from template
       const speakerCount = countSpeakers(meeting);
@@ -324,13 +362,22 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   const handleSave = async () => {
     if (!agenda || !saveWeeklyAgenda) return;
-    
     setIsSaving(true);
     try {
-      await saveWeeklyAgenda(agenda);
+      justSavedRef.current = true;
+      // Add or update lastUserEdit timestamp
+      const agendaWithEdit = {
+        ...agenda,
+        lastUserEdit: new Date().toISOString(),
+      };
+      await saveWeeklyAgenda(agendaWithEdit);
       setIsEditing(false);
+      setTimeout(() => {
+        justSavedRef.current = false;
+      }, 100);
     } catch (error) {
       console.error('Error saving agenda:', error);
+      justSavedRef.current = false;
     } finally {
       setIsSaving(false);
     }
