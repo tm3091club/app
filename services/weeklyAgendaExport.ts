@@ -11,18 +11,23 @@ export const exportWeeklyAgendaToPDF = (
   const doc = new jsPDF();
   
   // Very compact header - pushed higher
-  doc.setFontSize(10);
+  doc.setFontSize(12); // Larger header
   doc.setFont(undefined, 'bold');
   const headerText = `${organization?.name || 'Toastmasters Club'} Meeting Agenda for ${format(meetingDate, 'MMMM d, yyyy')}`;
-  doc.text(headerText, 105, 10, { align: 'center' });
-  
+  doc.text(headerText, 105, 8, { align: 'center' }); // Move header up
+
+  // Add a larger space between title and theme
+  let themeY = 8 + 10; // 10 units below the title for more visible gap
+  let tableStartY = themeY;
+
   // Theme line - compact
   if (agenda.theme) {
-    doc.setFontSize(10);
+    doc.setFontSize(13); // Larger theme font
     doc.setFont(undefined, 'bold');
     doc.setTextColor(185, 28, 28); // Red color for theme
-    doc.text(`Theme: "${agenda.theme}"`, 105, 16, { align: 'center' });
+    doc.text(`Theme: "${agenda.theme}"`, 105, themeY, { align: 'center' });
     doc.setTextColor(0, 0, 0); // Reset to black
+    tableStartY = themeY + 6; // Add extra space below theme
   }
   
   // Determine which rows should be highlighted and which should be red
@@ -59,10 +64,10 @@ export const exportWeeklyAgendaToPDF = (
   (autoTable as any)(doc, {
     head: [['Time', 'Program Event', 'Member', 'Description of Role or Task']],
     body: tableData,
-    startY: agenda.theme ? 20 : 14,
+  startY: tableStartY, // Dynamically set table start position below theme
     styles: {
       fontSize: 10,
-      cellPadding: 1.5,
+      cellPadding: 1,
       lineColor: [128, 128, 128],
       lineWidth: 0.5,
       valign: 'top',
@@ -73,13 +78,15 @@ export const exportWeeklyAgendaToPDF = (
       fontStyle: 'bold',
       fontSize: 11,
       halign: 'center',
-      cellPadding: 2,
+      cellPadding: 1.5,
     },
-    columnStyles: {
-      0: { cellWidth: 18, halign: 'center' },
-      1: { cellWidth: 65, halign: 'left', fontStyle: 'bold' },
-      2: { cellWidth: 35, halign: 'center' },
-      3: { cellWidth: 70, halign: 'center' },
+  margin: { left: 10 },
+  startY: tableStartY,
+  columnStyles: {
+      0: { cellWidth: 13, halign: 'center' }, // Time (thinner)
+      1: { cellWidth: 72, halign: 'left', fontStyle: 'bold' }, // Program Event (wider)
+      2: { cellWidth: 38, halign: 'center' }, // Member (slightly wider)
+      3: { cellWidth: 67, halign: 'center' }, // Description (slightly wider)
     },
     bodyStyles: {
       textColor: [0, 0, 0],

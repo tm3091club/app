@@ -80,7 +80,21 @@
   }
   
   /* Reduce margins in print */
-  h1, h2, p {
+  h1 {
+    font-size: 12pt !important;
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.25rem !important; /* More space below header */
+    font-weight: bold !important;
+    text-align: center !important;
+  }
+  h2 {
+    font-size: 17pt !important; /* Larger theme font */
+    margin-bottom: 0.12rem !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    color: #b91c1c !important; /* Red for theme */
+  }
+  p {
     margin: 0.1rem 0 !important;
   }
   
@@ -101,6 +115,11 @@
     vertical-align: top;
     word-wrap: break-word;
     overflow-wrap: break-word;
+  }
+  th:nth-child(1), td:nth-child(1) {
+    width: 7%;
+    min-width: 32px;
+    max-width: 40px;
   }
   
   th {

@@ -127,11 +127,11 @@ export const PublicAgendaPage: React.FC<{ clubNumber: string; shareId: string }>
                 {/* Header */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg print:shadow-none print:rounded-none mb-6 print:mb-0 agenda-container">
                     <div className="p-6 print:pt-0 print:pb-0 print:px-0 text-center border-b dark:border-gray-700 print:border-0">
-                        <h1 className="text-2xl font-bold mb-2 print:text-xs print:mb-0 print:font-bold print:leading-tight">
+                        <h1 className="text-2xl font-bold mb-2 print:text-base print:mb-2 print:font-bold print:leading-tight">
                             {agendaData.clubName} TM-{agendaData.clubNumber} Meeting Agenda for {format(meetingDate, 'MMMM d, yyyy')}
                         </h1>
                         {agendaData.theme && (
-                            <p className="text-lg mt-2 font-medium text-red-600 dark:text-red-400 print:text-xs print:mt-0 print:font-bold print:text-red-600">
+                            <p className="text-lg mt-2 font-medium text-red-600 dark:text-red-400 print:text-xl print:mt-1 print:font-bold print:text-red-600">
                                 Theme: "{agendaData.theme}"
                             </p>
                         )}
