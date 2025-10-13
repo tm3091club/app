@@ -58,8 +58,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
     const scrollToRelevantWeek = () => {
       if (!scrollContainerRef.current || !activeSchedule?.meetings) return;
       
-      // Only auto-scroll on mobile (screen width < 768px)
-      if (window.innerWidth >= 768) return;
+  // Auto-scroll now works on all devices, including all mobile devices
       
       const currentWeekIndex = getCurrentWeekIndex(activeSchedule, organization.meetingDay, organization.timezone);
       const nextWeekIndex = getNextWeekIndex(activeSchedule, currentWeekIndex);
@@ -87,7 +86,9 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
       // Each column is approximately 130-250px wide (min-w-[130px] max-w-[250px])
       const columnWidth = 180; // Average width
       const previousMonthColumns = previousScheduleToShow?.length || 0;
-      const scrollPosition = (previousMonthColumns + targetWeekIndex) * columnWidth;
+  // Center the current week in the visible area
+  const containerWidth = scrollContainerRef.current.offsetWidth || 0;
+  const scrollPosition = (previousMonthColumns + targetWeekIndex) * columnWidth - (containerWidth / 2) + (columnWidth / 2);
       
       // Scroll to the target week with smooth animation
       scrollContainerRef.current.scrollTo({
