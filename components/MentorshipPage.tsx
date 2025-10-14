@@ -134,35 +134,36 @@ export const MentorshipPage: React.FC = () => {
         });
 
         // Process each member (exclude archived members)
+        const archivedIds = new Set(organization.members.filter(m => m.status === 'Archived').map(m => m.id));
         const membersWithMentorship: MemberWithMentorship[] = organization.members
           .filter(member => member.status !== 'Archived')
           .map(member => {
-          // Find mentor (where member is mentee)
-          const mentorPairing = pairings.find(p => p.menteeId === member.id);
-          const mentorMember = mentorPairing 
-            ? organization.members.find(m => m.id === mentorPairing.mentorId)
-            : null;
-          
-          // Find mentees (where member is mentor)
-          const menteePairings = pairings.filter(p => p.mentorId === member.id);
-          const menteeNames = menteePairings
-            .map(p => {
-              const menteeMember = organization.members.find(m => m.id === p.menteeId);
-              return menteeMember?.name || null;
-            })
-            .filter(Boolean) as string[];
-          
-          // Count notes
-          const notesCount = member.mentorshipNotes?.length || 0;
+            // Find mentor (where member is mentee)
+            const mentorPairing = pairings.find(p => p.menteeId === member.id);
+            const mentorMember = mentorPairing 
+              ? organization.members.find(m => m.id === mentorPairing.mentorId)
+              : null;
 
-          return {
-            id: member.id,
-            name: member.name,
-            mentor: mentorMember?.name || null,
-            mentees: menteeNames,
-            notesCount,
-          };
-        });
+            // Find mentees (where member is mentor), but exclude archived mentees
+            const menteePairings = pairings.filter(p => p.mentorId === member.id && !archivedIds.has(p.menteeId));
+            const menteeNames = menteePairings
+              .map(p => {
+                const menteeMember = organization.members.find(m => m.id === p.menteeId);
+                return menteeMember?.name || null;
+              })
+              .filter(Boolean) as string[];
+
+            // Count notes
+            const notesCount = member.mentorshipNotes?.length || 0;
+
+            return {
+              id: member.id,
+              name: member.name,
+              mentor: mentorMember?.name || null,
+              mentees: menteeNames,
+              notesCount,
+            };
+          });
 
         setMembers(membersWithMentorship);
         setLoading(false);

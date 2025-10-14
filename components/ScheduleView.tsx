@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToastmasters } from '../Context/ToastmastersContext';
 import { generateNewMonthSchedule, deepClone } from '../services/scheduleLogic';
@@ -516,9 +514,13 @@ export const ScheduleView: React.FC = () => {
 
                 hydratedMembers.forEach(member => {
                     if (assignedMemberIds.has(member.id)) return;
-                    // Skip archived members entirely - they should not appear in any availability lists
-                    if (member.status === MemberStatus.Archived) return;
                     
+                    // Allow archived members to remain visible in the schedule but exclude them from dropdowns
+                    if (member.status === MemberStatus.Archived) {
+                        // Add logic here to ensure they are displayed in the schedule but not selectable
+                        return; // Exclude from dropdowns
+                    }
+
                     let finalStatus: AvailabilityStatus;
                     const dateKey = meeting.date.split('T')[0];
                     if (member.status === MemberStatus.Unavailable) {

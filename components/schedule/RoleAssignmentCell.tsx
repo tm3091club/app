@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Member, RoleAssignment, AvailabilityStatus } from '../../types';
 // TOASTMASTERS_ROLES: All roles that appear on the monthly schedule.
@@ -33,16 +32,21 @@ export const RoleAssignmentCell: React.FC<{
             'Inspiration Award': 'isPastPresident'
         }[role] as keyof Member;
 
-        // Get qualified members for this role, excluding only the club admin (owner)
+        // Exclude archived members from dropdown selection, but allow currently assigned archived member to remain selectable
+        const filterOutArchived = (m: Member) => m.status !== 'Archived';
+
+        // Get qualified members for this role, excluding only the club admin (owner) and archived
         const qualifiedMembers = requiredQualificationKey 
             ? availableMembers.filter(m => 
                 m[requiredQualificationKey] && 
                 m.uid !== ownerId && 
-                (!organization || !m.name.includes(organization.name))
+                (!organization || !m.name.includes(organization.name)) &&
+                filterOutArchived(m)
               )
             : availableMembers.filter(m => 
                 m.uid !== ownerId && 
-                (!organization || !m.name.includes(organization.name))
+                (!organization || !m.name.includes(organization.name)) &&
+                filterOutArchived(m)
               );
 
         // For members (non-admins), only show themselves and currently assigned member
@@ -76,14 +80,15 @@ export const RoleAssignmentCell: React.FC<{
         // then members with no role; among no-role members, place "available" at the bottom
         const dateKey = meetingDate.split('T')[0];
 
-        // For roles requiring qualifications, only show qualified members (excluding club admin)
-        // For other roles, show all available members (excluding club admin)
+        // For roles requiring qualifications, only show qualified members (excluding club admin and archived)
+        // For other roles, show all available members (excluding club admin and archived)
         let allMembers = requiredQualificationKey ? [...qualifiedMembers] : [...availableMembers.filter(m => 
             m.uid !== ownerId && 
-            (!organization || !m.name.includes(organization.name))
+            (!organization || !m.name.includes(organization.name)) &&
+            filterOutArchived(m)
         )];
         
-        // For qualified roles, still include currently assigned member even if unqualified (so they can see/remove the assignment)
+        // For qualified roles, still include currently assigned member even if unqualified or archived (so they can see/remove the assignment)
         // But don't include club admin even if they're currently assigned
         if (requiredQualificationKey) {
             const currentlyAssignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId || m.uid === assignedMemberId) : null;
@@ -91,6 +96,15 @@ export const RoleAssignmentCell: React.FC<{
                 currentlyAssignedMember.uid !== ownerId && 
                 (!organization || !currentlyAssignedMember.name.includes(organization.name)) &&
                 !qualifiedMembers.some(m => m.id === currentlyAssignedMember.id)) {
+                allMembers.unshift(currentlyAssignedMember);
+            }
+        } else {
+            // For non-qualified roles, also include currently assigned member if archived
+            const currentlyAssignedMember = assignedMemberId ? availableMembers.find(m => m.id === assignedMemberId || m.uid === assignedMemberId) : null;
+            if (currentlyAssignedMember &&
+                currentlyAssignedMember.uid !== ownerId &&
+                (!organization || !currentlyAssignedMember.name.includes(organization.name)) &&
+                !allMembers.some(m => m.id === currentlyAssignedMember.id)) {
                 allMembers.unshift(currentlyAssignedMember);
             }
         }
@@ -221,10 +235,14 @@ export const RoleAssignmentCell: React.FC<{
     // Get display text for currently assigned member
     const getAssignedMemberDisplayText = () => {
         if (!assignedMemberId) return '';
-        
-        const assignedMember = availableMembers.find(m => m.id === assignedMemberId);
+
+        // Find the assigned member in the available list, or fallback to all members if not found
+        let assignedMember = availableMembers.find(m => m.id === assignedMemberId);
+        if (!assignedMember && organization && Array.isArray(organization.members)) {
+            assignedMember = organization.members.find(m => m.id === assignedMemberId);
+        }
         if (!assignedMember) return '-- Unknown --';
-        
+        // Always return just the name for the schedule cell
         return assignedMember.name;
     };
 
@@ -249,77 +267,97 @@ export const RoleAssignmentCell: React.FC<{
                     WebkitTextAlign: 'center'
                 }}
             >
-            <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">-- Unassigned --</option>
-            {/* Custom option for currently assigned member with mentorship icon */}
-            {assignedMemberId && !membersForThisRole.some(m => m.id === assignedMemberId) && (
-                <option value={assignedMemberId} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">
-                    {getAssignedMemberDisplayText()}
-                </option>
-            )}
-            {membersForThisRole.map(member => {
-                const dateKey = meetingDate.split('T')[0];
-                const memberAvailability = availability[member.id]?.[dateKey];
-                const isAvailable = memberAvailability === AvailabilityStatus.Available || 
+                <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-normal">-- Unassigned --</option>
+                {/* Custom option for currently assigned member if archived, shown at the bottom, red, with (Archived) */}
+                {membersForThisRole.map(member => {
+                    const dateKey = meetingDate.split('T')[0];
+                    const memberAvailability = availability[member.id]?.[dateKey];
+                    const isAvailable = memberAvailability === AvailabilityStatus.Available || 
                                   memberAvailability === undefined; // Default to available if not set
                 
-                // Get current roles for this member (excluding the current role being assigned)
-                const assignedRolesForMember = Object.keys(allAssignmentsForMeeting).filter(
-                    r => (allAssignmentsForMeeting[r] === member.id || allAssignmentsForMeeting[r] === member.uid) && r !== role
-                );
+                    // Get current roles for this member (excluding the current role being assigned)
+                    const assignedRolesForMember = Object.keys(allAssignmentsForMeeting).filter(
+                        r => (allAssignmentsForMeeting[r] === member.id || allAssignmentsForMeeting[r] === member.uid) && r !== role
+                    );
                 
-                // New format: "Name (Role)" instead of "Name (as Role)"
-                let displayText = member.name;
-                if (assignedRolesForMember.length > 0 && member.id !== assignedMemberId && member.uid !== assignedMemberId) {
-                    // Truncate long role lists for better mobile display
-                    const rolesText = assignedRolesForMember.length > 2
-                        ? `${assignedRolesForMember.slice(0, 2).join(', ')}...`
-                        : assignedRolesForMember.join(', ');
-                    displayText = `${member.name} (${rolesText})`;
-                }
+                    // New format: "Name (Role)" instead of "Name (as Role)"
+                    let displayText = member.name;
+                    if (assignedRolesForMember.length > 0 && member.id !== assignedMemberId && member.uid !== assignedMemberId) {
+                        // Truncate long role lists for better mobile display
+                        const rolesText = assignedRolesForMember.length > 2
+                            ? `${assignedRolesForMember.slice(0, 2).join(', ')}...`
+                            : assignedRolesForMember.join(', ');
+                        displayText = `${member.name} (${rolesText})`;
+                    }
                 
-                // Note: Green styling will be applied via CSS for available members without roles
+                    // Note: Green styling will be applied via CSS for available members without roles
 
-                // Check if this is the current user and account is linked
-                const isCurrentUserAssignedInRole = currentUser?.uid && member.uid === currentUser.uid;
-                const isAccountLinked = currentUser?.uid && member.uid === currentUser.uid;
+                    // Check if this is the current user and account is linked
+                    const isCurrentUserAssignedInRole = currentUser?.uid && member.uid === currentUser.uid;
+                    const isAccountLinked = currentUser?.uid && member.uid === currentUser.uid;
                 
-                // For members (non-admins), only allow them to select themselves, unassign, or if role is unassigned
-                const isRoleUnassigned = !assignedMemberId;
-                const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
-                const isCurrentUserAssignedToThisRole = assignedMemberId === currentMember?.id || assignedMemberId === currentMember?.uid;
-                const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUserAssignedInRole && !isRoleUnassigned && !isCurrentUserAssignedToThisRole;
+                    // For members (non-admins), only allow them to select themselves, unassign, or if role is unassigned
+                    const isRoleUnassigned = !assignedMemberId;
+                    const currentMember = currentUser?.uid ? availableMembers.find(m => m.uid === currentUser.uid) : null;
+                    const isCurrentUserAssignedToThisRole = assignedMemberId === currentMember?.id || assignedMemberId === currentMember?.uid;
+                    const isDisabled = currentUser?.role !== 'Admin' && !isCurrentUserAssignedInRole && !isRoleUnassigned && !isCurrentUserAssignedToThisRole;
 
-                // Enhanced display text for current user when account is linked
-                let finalDisplayText = displayText;
-                // Remove the "(You)" suffix - just show the name normally
-                if (isAccountLinked && member.id === assignedMemberId) {
-                    finalDisplayText = `👤 ${member.name}`;
-                }
+                    // Enhanced display text for current user when account is linked
+                    let finalDisplayText = displayText;
+                    // Remove the "(You)" suffix - just show the name normally
+                    if (isAccountLinked && member.id === assignedMemberId) {
+                        finalDisplayText = `👤 ${member.name}`;
+                    }
                 
-                // Mentorship icons removed from schedule display - mentorship system is separate
+                    // Mentorship icons removed from schedule display - mentorship system is separate
 
-                return (
-                    <option
-                        key={member.id}
-                        value={member.id}
-                        disabled={isDisabled}
-                        className={`font-normal text-[12px] sm:text-sm py-1 ${
-                            isAccountLinked
-                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 font-bold border-l-4 border-blue-500'
-                                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                        } ${isDisabled ? 'opacity-50' : ''}`}
-                        style={{
-                            ...(isAvailable && assignedRolesForMember.length === 0 && !isAccountLinked && {
-                                color: 'rgb(22, 163, 74)', // Darker green for available members (green-600)
-                                fontWeight: '500' // Medium weight for better visibility
+                    return (
+                        <option
+                            key={member.id}
+                            value={member.id}
+                            disabled={isDisabled}
+                            className={`font-normal text-[12px] sm:text-sm py-1 ${
+                                isAccountLinked
+                                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 font-bold border-l-4 border-blue-500'
+                                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                            } ${isDisabled ? 'opacity-50' : ''}`}
+                            style={{
+                                ...(isAvailable && assignedRolesForMember.length === 0 && !isAccountLinked && {
+                                    color: 'rgb(22, 163, 74)', // Darker green for available members (green-600)
+                                    fontWeight: '500' // Medium weight for better visibility
                             })
-                        }}
-                        title={finalDisplayText} // Show full text on hover for truncated items
-                    >
-                        {finalDisplayText}
-                    </option>
-                );
-            })}
+                            }}
+                            title={finalDisplayText} // Show full text on hover for truncated items
+                        >
+                            {finalDisplayText}
+                        </option>
+                    );
+                })}
+                {(() => {
+                    // If the currently assigned member is archived, show at the bottom, red, with (Archived)
+                    let assignedMember = availableMembers.find(m => m.id === assignedMemberId);
+                    if (!assignedMember && organization && Array.isArray(organization.members)) {
+                        assignedMember = organization.members.find(m => m.id === assignedMemberId);
+                    }
+                    if (
+                        assignedMember &&
+                        assignedMember.status === 'Archived' &&
+                        !membersForThisRole.some(m => m.id === assignedMemberId)
+                    ) {
+                        return (
+                            <option
+                                key={assignedMember.id}
+                                value={assignedMember.id}
+                                className="font-normal text-[12px] sm:text-sm py-1 text-red-700 bg-white dark:bg-gray-800 font-bold"
+                                style={{ fontWeight: 700 }}
+                                title={`${assignedMember.name} (Archived)`}
+                            >
+                                {assignedMember.name} (Archived)
+                            </option>
+                        );
+                    }
+                    return null;
+                })()}
             </select>
         </div>
     );
