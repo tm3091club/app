@@ -28,11 +28,11 @@ interface ScheduleTableProps {
 }
 
 const ReadOnlyRoleCell: React.FC<{ name: string | null; highlightColor?: string }> = ({ name, highlightColor }) => (
-    <div className="w-full text-center py-1.5 px-1 sm:px-2 text-xs sm:text-sm h-[39px] flex items-center justify-center truncate">
-        <span className="text-gray-500 dark:text-gray-400" data-dark-color={highlightColor}>
-            {name || <span className="italic">Unassigned</span>}
-        </span>
-    </div>
+  <div className="w-full text-center py-1.5 px-1 sm:px-2 text-xs sm:text-sm h-[39px] flex items-center justify-center truncate">
+    <span className="text-gray-600 dark:text-gray-200" data-dark-color={highlightColor}>
+      {name || <span className="italic">Unassigned</span>}
+    </span>
+  </div>
 );
 
 export const ScheduleTable: React.FC<ScheduleTableProps> = ({

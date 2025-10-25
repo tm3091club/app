@@ -81,7 +81,6 @@ export const exportWeeklyAgendaToPDF = (
       cellPadding: 1.5,
     },
   margin: { left: 10 },
-  startY: tableStartY,
   columnStyles: {
       0: { cellWidth: 13, halign: 'center' }, // Time (thinner)
       1: { cellWidth: 72, halign: 'left', fontStyle: 'bold' }, // Program Event (wider)

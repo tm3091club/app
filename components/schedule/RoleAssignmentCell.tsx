@@ -246,7 +246,7 @@ export const RoleAssignmentCell: React.FC<{
     const unassignedClasses = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 font-semibold !border-red-300 dark:!border-red-700";
     const assignedClasses = "bg-white dark:bg-gray-700 !border-gray-300 dark:!border-gray-600";
     // When the current user is assigned, keep the highlight box but ensure dark-mode text is dark for readability
-    const currentUserAssignedClasses = "bg-blue-50 dark:!bg-transparent text-blue-900 dark:!text-gray-900 font-semibold !border-blue-400 dark:!border-blue-500 shadow-md hover:shadow-lg transition-shadow duration-200";
+    const currentUserAssignedClasses = "bg-blue-50 dark:!bg-transparent text-blue-900 dark:!text-gray-100 font-semibold !border-blue-400 dark:!border-blue-500 shadow-md hover:shadow-lg transition-shadow duration-200";
     const readOnlyClasses = "bg-gray-100 dark:bg-gray-600 !border-gray-300 dark:!border-gray-500 text-gray-700 dark:text-gray-300";
 
     // If disabled and has no edit permissions, show read-only display
