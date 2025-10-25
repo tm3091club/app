@@ -207,11 +207,27 @@ Additional constraints:
 - Calendar sync (optional, opt-in).
 
 ---
+
 ## UX & Theming Guidelines
+
 - **Cross-Platform Parity:**
   - Any change to the webapp must be verified for both desktop and mobile (especially mobile Safari as a PWA). Do not assume desktop changes will work on mobile without testing.
+
 - **Light/Dark Mode:**
   - Always keep light mode and dark mode color logic separate. Do not mix or override colors/styles between modes; use Tailwind or CSS variables as appropriate to ensure both themes remain visually distinct and accessible.
+  - **Dropdowns & Option Styling:**
+    - In light mode, dropdown options use filled backgrounds for highlights and selections (e.g., blue for current user, gray for others), with dark text for readability.
+    - In dark mode, dropdown options use text-only color highlights (no filled backgrounds), ensuring high contrast and avoiding washed-out or tinted backgrounds. Highlighted options (such as the current user) use a blue text color, not a filled background, and always ensure readable text.
+    - Theming logic for dropdowns is handled via a reactive dark-mode detector hook and Tailwind's `dark:` classes. Do not override colors/styles between modes; keep logic explicit and separate.
+  - **Mentorship Page Cards:**
+    - In dark mode, mentorship cards and info boxes use neutral dark backgrounds (e.g., `bg-gray-800`) with light text (`text-gray-100` or `text-white`). Do not use light blue or green backgrounds in dark mode. Use `!important` overrides if needed to prevent bleed-through from previous styles.
+    - In light mode, cards retain their original light blue/green backgrounds and dark text for contrast.
+  - **Notification Bell:**
+    - The notification bell icon in the header uses a lighter color in dark mode (`dark:text-gray-300`, `dark:hover:text-white`) to match other menu items, with smooth hover and focus transitions. In light mode, it uses the standard gray and hover colors. Do not mix icon color logic between modes.
+  - **General Theme-Aware UI:**
+    - All theme-aware UI elements (dropdowns, cards, icons, highlights) must use Tailwind's `dark:` classes or a theme detector hook. Never apply a style in one mode that affects the other. Always test for adequate contrast and accessibility in both modes.
+  - **Accessibility:**
+    - Maintain semantic headings, focus rings, and adequate contrast for all actionable elements. Icons must have text or a title for screen readers.
 
 ## Copilot Instructions for Toastmasters Monthly Scheduler
 ### Project Overview

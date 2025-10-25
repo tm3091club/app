@@ -1920,7 +1920,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                     logOut();
                                     setNeedsEmailVerification(false);
                                 }}
-                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 dark:hover:bg-gray-400 transition-colors"
                             >
                                 Sign Out
                             </button>
@@ -1963,7 +1963,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                    logOut();
                                    setError(null);
                                }}
-                               className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                               className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 dark:hover:bg-gray-400 transition-colors"
                            >
                                Sign Out
                            </button>

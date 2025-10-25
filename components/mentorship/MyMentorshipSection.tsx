@@ -151,10 +151,10 @@ export const MyMentorshipSection: React.FC<MyMentorshipSectionProps> = ({
                 {myMentors.map((mentor, index) => (
                   <div 
                     key={index} 
-                    className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
+                    className="p-3 bg-blue-50 dark:!bg-gray-700 rounded-lg"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <p className="font-medium text-blue-900 dark:text-blue-200">{mentor.name}</p>
+                      <p className="font-medium text-blue-900 dark:!text-gray-200">{mentor.name}</p>
                       <button
                         onClick={() => {
                           setNotesRecipient(mentor);
@@ -190,10 +190,10 @@ export const MyMentorshipSection: React.FC<MyMentorshipSectionProps> = ({
                 {myMentees.map((mentee, index) => (
                   <div 
                     key={index} 
-                    className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg"
+                    className="p-3 bg-green-50 dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <p className="font-medium text-green-900 dark:text-green-200">{mentee.name}</p>
+                      <p className="font-medium text-green-900 dark:text-gray-200">{mentee.name}</p>
                       <button
                         onClick={() => {
                           setNotesRecipient(mentee);
@@ -221,11 +221,11 @@ export const MyMentorshipSection: React.FC<MyMentorshipSectionProps> = ({
         </div>
 
         {/* Info Box */}
-        <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
+        <div className="mt-6 p-3 bg-blue-50 dark:!bg-gray-700 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 dark:!text-gray-200 mb-2">
             Mentorship
           </h4>
-          <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
+          <ul className="text-sm text-blue-800 dark:!text-gray-300 space-y-1">
             <li>• View all mentor/mentee relationships below</li>
             <li>• Contact the VPE to assign you a Mentor or Mentee.</li>
             <li>• Use the "Notes" button to keep private notes with each mentor/mentee.</li>

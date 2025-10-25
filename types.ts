@@ -101,6 +101,7 @@ export enum NotificationType {
   MentorshipNote = 'MentorshipNote',
   MeetingBlackout = 'MeetingBlackout',
   SpeakerUnassigned = 'SpeakerUnassigned',
+  NewMemberAdded = 'NewMemberAdded',
 }
 
 export interface Notification {

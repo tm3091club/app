@@ -3,8 +3,32 @@
   background-color: #e0f2fe;
 }
 
+/* Force transparent background for highlighted rows in dark mode */
+.dark tr.bg-blue-50,
+.dark tr.bg-blue-50 td,
+.dark tr.bg-blue-50 input,
+.dark tr.bg-blue-50 select,
+.dark .bg-blue-50 {
+  background-color: transparent !important;
+}
+
 .dark .bg-blue-900\/20 {
-  background-color: rgba(30, 58, 138, 0.2);
+  background-color: transparent !important;
+}
+
+/* Also force transparent for prefers-color-scheme dark */
+@media (prefers-color-scheme: dark) {
+  tr.bg-blue-50,
+  tr.bg-blue-50 td,
+  tr.bg-blue-50 input,
+  tr.bg-blue-50 select,
+  .bg-blue-50 {
+    background-color: transparent !important;
+  }
+
+  .bg-blue-900\/20 {
+    background-color: transparent !important;
+  }
 }
 
 /* Red background for voting rows */
@@ -12,8 +36,17 @@
   background-color: #fee2e2;
 }
 
+/* Force transparent background for space/voting rows in dark mode */
+.dark tr.bg-red-50,
+.dark tr.bg-red-50 td,
+.dark tr.bg-red-50 input,
+.dark tr.bg-red-50 select,
+.dark .bg-red-50 {
+  background-color: transparent !important;
+}
+
 .dark .bg-red-900\/20 {
-  background-color: rgba(127, 29, 29, 0.2);
+  background-color: transparent !important;
 }
 
 .text-red-600 {

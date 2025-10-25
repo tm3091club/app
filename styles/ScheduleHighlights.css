@@ -117,3 +117,65 @@
 .dark [data-dark-color="#fce7f3"] {
   color: #fce7f3 !important;
 }
+
+/* Make dropdown options transparent in dark mode */
+@media (prefers-color-scheme: dark) {
+  select option {
+    background-color: transparent !important;
+  }
+}
+
+.dark select option {
+  background-color: transparent !important;
+}
+
+/* Dropdown options styling for dark mode - keep dark bg but allow colored text for availability */
+/* Only apply to selects in RoleAssignmentCell (schedule page), not MemberManager */
+@media (prefers-color-scheme: dark) {
+  .role-cell select option,
+  .member-cell select option {
+    background-color: rgb(17 24 39) !important; /* gray-900 */
+  }
+  
+  /* Don't override text color - let the inline styles from the component show through for availability colors */
+}
+
+.dark .role-cell select option,
+.dark .member-cell select option {
+  background-color: rgb(17 24 39) !important; /* gray-900 */
+}
+
+/* MemberManager status dropdown: ensure dark popup background so transparent option backgrounds don't show white (Windows/Chromium native select) */
+@media (prefers-color-scheme: dark) {
+  .status-select option {
+    background-color: rgb(17 24 39) !important; /* gray-900 */
+  }
+}
+
+.dark .status-select option {
+  background-color: rgb(17 24 39) !important; /* gray-900 */
+}
+
+/* Force readable colored text for schedule dropdown options in dark mode */
+@media (prefers-color-scheme: dark) {
+  .role-cell select option[data-status="available"]:not([data-hasrole="true"]),
+  .member-cell select option[data-status="available"]:not([data-hasrole="true"]) {
+    color: #86EFAC !important; /* green-300 */
+    font-weight: 500 !important;
+  }
+  .role-cell select option[data-status="possible"]:not([data-hasrole="true"]),
+  .member-cell select option[data-status="possible"]:not([data-hasrole="true"]) {
+    color: #FDE047 !important; /* yellow-300 */
+    font-weight: 500 !important;
+  }
+  .role-cell select option[data-status="unavailable"]:not([data-hasrole="true"]),
+  .member-cell select option[data-status="unavailable"]:not([data-hasrole="true"]) {
+    color: #FCA5A5 !important; /* red-300 */
+  }
+  /* Keep current user blue highlight overriding status color */
+  .role-cell select option.current-user,
+  .member-cell select option.current-user {
+    color: rgb(96, 165, 250) !important; /* blue-400 */
+    font-weight: 700 !important;
+  }
+}

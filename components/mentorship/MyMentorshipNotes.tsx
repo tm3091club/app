@@ -40,26 +40,25 @@ export default function MyMentorshipNotes({
 
   useEffect(() => {
     if (!currentUser?.uid) return;
-    
-    // Watch notifications for current user that are mentorship notes
+
+    // Watch notifications for current user; avoid composite index by filtering type client-side
     const notificationsRef = collection(db, 'users', currentUser.uid, 'notifications');
     const q = query(
       notificationsRef,
-      where('type', '==', NotificationType.MentorshipNote),
       orderBy('createdAt', 'asc')
     );
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const notifications: Notification[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // Show all notes in this specific mentor-mentee relationship
-        // Check if this note belongs to the conversation between these two people
-        const isPartOfThisConversation = 
-          data.metadata?.mentorId === mentorId && 
+        const isMentorshipNote = data.type === NotificationType.MentorshipNote;
+        // Show notes belonging to this mentor/mentee pairing
+        const isPartOfThisConversation =
+          data.metadata?.mentorId === mentorId &&
           data.metadata?.menteeId === menteeId;
-        
-        if (isPartOfThisConversation) {
+
+        if (isMentorshipNote && isPartOfThisConversation) {
           notifications.push({
             id: doc.id,
             userId: data.userId,
@@ -75,11 +74,13 @@ export default function MyMentorshipNotes({
           });
         }
       });
+      // Newest first
+      notifications.sort((a, b) => (b.createdAt?.getTime?.() || 0) - (a.createdAt?.getTime?.() || 0));
       setNotes(notifications);
     });
-    
+
     return () => unsubscribe();
-  }, [currentUser?.uid, recipientUid, mentorId, menteeId, isAdmin]);
+  }, [currentUser?.uid, mentorId, menteeId]);
 
   const addNote = async () => {
     if (!organization || !currentUser?.uid || !text.trim() || !subject.trim()) return;
@@ -88,13 +89,43 @@ export default function MyMentorshipNotes({
     try {
       const currentMember = organization.members.find(m => m.uid === currentUser.uid);
       const senderName = currentMember?.name || 'Unknown';
+      const now = new Date();
+      
+      // Optimistically add the note to the UI immediately
+      const optimisticNote: Notification = {
+        id: `temp-${Date.now()}`,
+        userId: currentUser.uid,
+        type: NotificationType.MentorshipNote,
+        title: `${subject} - Note to ${recipientName}`,
+        message: text.trim(),
+        createdAt: now,
+        isRead: true,
+        metadata: {
+          mentorId,
+          menteeId,
+          senderUid: currentUser.uid,
+          senderName,
+          recipientUid,
+          recipientName,
+          subject: subject.trim(),
+        }
+      };
+      
+  // Put newest at top optimistically
+  setNotes(prev => [optimisticNote, ...prev]);
+      
+      // Reset form immediately for better UX
+      const noteText = text.trim();
+      const noteSubject = subject.trim();
+      setText('');
+      setSubject('');
       
       // Create notification for recipient
       const recipientNotificationData = {
         userId: recipientUid,
         type: NotificationType.MentorshipNote,
-        title: `${subject} - Note from ${senderName}`,
-        message: text.trim(),
+        title: `${noteSubject} - Note from ${senderName}`,
+        message: noteText,
         createdAt: serverTimestamp(),
         isRead: false,
         metadata: {
@@ -104,22 +135,24 @@ export default function MyMentorshipNotes({
           senderName,
           recipientUid,
           recipientName,
-          subject: subject.trim(),
+          subject: noteSubject,
         }
       };
       
-      // Save notification to recipient's collection
-      await addDoc(
-        collection(db, 'users', recipientUid, 'notifications'),
-        recipientNotificationData
-      );
+      // Save notification to recipient's collection (only if mentor has a linked account)
+      if (recipientUid) {
+        await addDoc(
+          collection(db, 'users', recipientUid, 'notifications'),
+          recipientNotificationData
+        );
+      }
       
       // Also save a copy to sender's notifications for record keeping
       const senderNotificationData = {
         userId: currentUser.uid,
         type: NotificationType.MentorshipNote,
-        title: `${subject} - Note to ${recipientName}`,
-        message: text.trim(),
+        title: `${noteSubject} - Note to ${recipientName}`,
+        message: noteText,
         createdAt: serverTimestamp(),
         isRead: true, // Mark as read since sender created it
         metadata: {
@@ -129,7 +162,7 @@ export default function MyMentorshipNotes({
           senderName,
           recipientUid,
           recipientName,
-          subject: subject.trim(),
+          subject: noteSubject,
         }
       };
       
@@ -138,11 +171,9 @@ export default function MyMentorshipNotes({
         senderNotificationData
       );
       
-      // Reset form
-      setText('');
-      setSubject('');
     } catch (error) {
       console.error('Error adding note:', error);
+      // If there's an error, the real-time listener will sync the correct state
     } finally {
       setLoading(false);
     }

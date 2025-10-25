@@ -127,7 +127,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                         type="checkbox"
                         checked={!!meeting.isBlackout}
                         onChange={() => onToggleBlackout(index)}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:pointer-events-none"
+                        className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 disabled:pointer-events-none"
                         disabled={!canToggleBlackout(index)}
                       />
                       Blackout

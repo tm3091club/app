@@ -664,7 +664,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
       {/* Instructions Panel - Hide in print */}
       {isEditing && (
-        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg print:hidden">
+        <div className="mb-4 p-4 bg-blue-50 dark:!bg-transparent rounded-lg print:hidden border border-blue-200 dark:border-blue-800">
           <div className="flex items-start gap-2">
             <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-800 dark:text-blue-200">
@@ -806,15 +806,23 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                   let isVotingRow = false;
                   
                   if (item.rowColor === 'highlight') {
-                    rowColorClass = 'bg-blue-50 dark:bg-blue-900/20';
+                    rowColorClass = 'bg-blue-50';
                   } else if (item.rowColor === 'space') {
-                    rowColorClass = 'bg-red-50 dark:bg-red-900/20';
+                    rowColorClass = 'bg-red-50';
                     isVotingRow = true; // Keep the red styling
                   }
                   // Default: normal (no color) - rowColorClass stays empty
                   
                   return (
-                    <tr key={item.id} className={`border-b border-gray-200 dark:border-gray-700 ${rowColorClass}`}>
+                    <tr key={item.id}
+                      className={`border-b border-gray-200 dark:border-gray-700 ${
+                        item.rowColor === 'highlight' 
+                          ? 'bg-blue-50 dark:text-blue-400 dark:!bg-transparent' 
+                          : item.rowColor === 'space' 
+                            ? 'bg-red-50 dark:text-red-400 dark:!bg-transparent' 
+                            : ''
+                      }`}
+                    >
                       <td className="py-0.5 px-1 md:py-1 md:px-2 align-top text-center" style={{ verticalAlign: 'top' }}>
                       {isEditing ? (
                         <input
@@ -935,7 +943,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                         <select
                           value={item.rowColor || 'normal'}
                           onChange={(e) => handleItemChange(item.id, 'rowColor', e.target.value)}
-                          className="w-20 px-1 py-0.5 text-xs border rounded dark:bg-gray-700 dark:border-gray-600"
+                          className={`w-20 px-1 py-0.5 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 ${item.rowColor === 'highlight' ? 'dark:bg-transparent' : ''}`}
                         >
                           <option value="normal">Normal</option>
                           <option value="highlight">Highlight</option>

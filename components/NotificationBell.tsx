@@ -34,7 +34,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onNavigateToAvailab
     <div className="relative" ref={bellRef}>
       <button
         onClick={() => setIsPanelOpen(!isPanelOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-full"
+        className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-indigo-500 rounded-full transition-colors"
         aria-label="Notifications"
       >
         <Bell className="h-6 w-6" />

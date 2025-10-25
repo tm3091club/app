@@ -86,13 +86,13 @@ const LinkAccountModal: React.FC<{
                         </p>
                         
                         {success && (
-                            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                            <div className="mt-4 p-3 bg-green-50 dark:bg-transparent border border-green-200 dark:border-green-800 rounded-md">
                                 <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
                             </div>
                         )}
                         
                         {error && (
-                            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                            <div className="mt-4 p-3 bg-red-50 dark:bg-transparent border border-red-200 dark:border-red-800 rounded-md">
                                 <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
                             </div>
                         )}
@@ -198,7 +198,7 @@ const ConfirmationModal: React.FC<{
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md transform transition-all">
                 <div className="p-6">
                     <div className="flex items-start">
-                        <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                        <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-transparent sm:mx-0 sm:h-10 sm:w-10">
                             <svg className="h-6 w-6 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
@@ -259,13 +259,94 @@ const availabilityDisplayMap: Record<AvailabilityStatus, string> = {
 };
 
 const getStatusBadgeColor = (status: MemberStatus) => {
+    // Light mode: filled background + strong text
+    // Dark mode: text color only (transparent background)
     switch (status) {
-        case MemberStatus.Active: return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-        case MemberStatus.Possible: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-        case MemberStatus.Unavailable: return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-        case MemberStatus.Archived: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        case MemberStatus.Active: return 'bg-green-100 dark:!bg-transparent text-green-800 dark:text-green-300';
+        case MemberStatus.Possible: return 'bg-yellow-100 dark:!bg-transparent text-yellow-800 dark:text-yellow-300';
+        case MemberStatus.Unavailable: return 'bg-red-100 dark:!bg-transparent text-red-800 dark:text-red-300';
+        case MemberStatus.Archived: return 'bg-gray-100 dark:!bg-transparent text-gray-800 dark:text-gray-300';
         default: return 'bg-gray-100 text-gray-800';
     }
+};
+
+// Helpers to color <option> elements: light mode uses filled backgrounds; dark uses colored text only
+// Detect dark mode via either .dark class or prefers-color-scheme media query
+const useIsDarkTheme = () => {
+    const [isDark, setIsDark] = React.useState(false);
+
+    React.useEffect(() => {
+        const check = () => {
+            const hasDarkClass = !!document.querySelector('.dark');
+            const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            setIsDark(!!hasDarkClass || !!prefersDark);
+        };
+        check();
+
+        const observer = new MutationObserver(check);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true });
+
+        let mql: MediaQueryList | null = null;
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            mql = window.matchMedia('(prefers-color-scheme: dark)');
+            if (typeof mql.addEventListener === 'function') mql.addEventListener('change', check);
+            else if (typeof (mql as any).addListener === 'function') (mql as any).addListener(check);
+        }
+
+        return () => {
+            observer.disconnect();
+            if (mql) {
+                if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', check);
+                else if (typeof (mql as any).removeListener === 'function') (mql as any).removeListener(check);
+            }
+        };
+    }, []);
+
+    return isDark;
+};
+
+const getStatusTextHexDark = (status: MemberStatus): string => {
+    switch (status) {
+        case MemberStatus.Active: return '#86EFAC'; // green-300
+        case MemberStatus.Possible: return '#FCD34D'; // amber-300
+        case MemberStatus.Unavailable: return '#FCA5A5'; // red-300
+        case MemberStatus.Archived: return '#D1D5DB'; // gray-300
+        default: return '#E5E7EB'; // gray-200
+    }
+};
+
+const getStatusBgHexLight = (status: MemberStatus): string => {
+    switch (status) {
+        case MemberStatus.Active: return '#DCFCE7'; // green-100
+        case MemberStatus.Possible: return '#FEF3C7'; // amber-100
+        case MemberStatus.Unavailable: return '#FEE2E2'; // red-100
+        case MemberStatus.Archived: return '#F3F4F6'; // gray-100
+        default: return '#F3F4F6';
+    }
+};
+
+const getStatusTextHexLight = (status: MemberStatus): string => {
+    switch (status) {
+        case MemberStatus.Active: return '#065F46'; // green-800
+        case MemberStatus.Possible: return '#92400E'; // amber-800
+        case MemberStatus.Unavailable: return '#991B1B'; // red-800
+        case MemberStatus.Archived: return '#374151'; // gray-700
+        default: return '#374151';
+    }
+};
+
+const getOptionStyle = (status: MemberStatus, isDark: boolean): React.CSSProperties => {
+    if (isDark) {
+        return { 
+            backgroundColor: 'transparent',
+            color: getStatusTextHexDark(status) 
+        };
+    }
+    return {
+        backgroundColor: getStatusBgHexLight(status),
+        // Use regular dark text in light mode for readability
+        color: '#111827' // gray-900
+    };
 };
 
 const SortIcon: React.FC<{ direction: 'ascending' | 'descending' }> = ({ direction }) => (
@@ -299,6 +380,7 @@ const MemberRow: React.FC<{
     const isAdmin = adminStatus?.hasAdminRights || false;
     const canEditRow = isAdmin;
     const canEditAvailability = isAdmin || isSelf;
+    const isDark = useIsDarkTheme();
     
     const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         updateMemberStatus({ 
@@ -335,7 +417,7 @@ const MemberRow: React.FC<{
     const displayName = linkedUser ? linkedUser.name : member.name;
 
     return (
-        <tr className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+        <tr id={`member-${member.id}`} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50">
             <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                 {isEditing && canEditRow && !linkedUser ? (
                     <div className="flex flex-col">
@@ -431,21 +513,18 @@ const MemberRow: React.FC<{
                     onChange={handleStatusChange}
                     aria-label={`Status for ${displayName}`}
                     disabled={!canEditRow}
-                    className={`border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                    className={`status-select border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 disabled:opacity-50 bg-white dark:bg-gray-700 ${getStatusBadgeColor(member.status)}`}
                     style={{
-                        // Safari-specific fixes for text centering
                         WebkitAppearance: 'none',
                         MozAppearance: 'none',
                         appearance: 'none',
                         textAlign: 'center',
-                        // Force centering for Safari
                         textAlignLast: 'center',
-                        // Additional Safari-specific properties
                         WebkitTextAlign: 'center'
                     }}
                 >
                     {Object.values(MemberStatus).map(status => (
-                        <option key={status} value={status}>{status}</option>
+                        <option key={status} value={status} style={getOptionStyle(status, isDark)}>{status}</option>
                     ))}
                 </select>
             </td>
@@ -513,6 +592,7 @@ const MobileMemberCard: React.FC<{
     const isAdmin = adminStatus?.hasAdminRights || false;
     const canEditRow = isAdmin;
     const canEditAvailability = isAdmin || isSelf;
+    const isDark = useIsDarkTheme();
 
     const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         updateMemberStatus({ id: member.id, status: e.target.value as MemberStatus });
@@ -539,7 +619,7 @@ const MobileMemberCard: React.FC<{
     const displayName = linkedUser ? linkedUser.name : member.name;
 
     return (
-        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 space-y-4">
+        <div id={`member-${member.id}`} className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 {/* Column 1: Member Info */}
                 <div className="space-y-4">
@@ -593,10 +673,10 @@ const MobileMemberCard: React.FC<{
                             onChange={handleStatusChange}
                             aria-label={`Status for ${displayName}`}
                             disabled={!canEditRow}
-                            className={`w-auto border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center disabled:opacity-50 ${getStatusBadgeColor(member.status)}`}
+                            className={`w-auto border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center disabled:opacity-50 bg-white dark:bg-gray-700 ${getStatusBadgeColor(member.status)}`}
                         >
                             {Object.values(MemberStatus).map(status => (
-                                <option key={status} value={status}>{status}</option>
+                                <option key={status} value={status} style={getOptionStyle(status, isDark)}>{status}</option>
                             ))}
                         </select>
                     </div>
@@ -713,6 +793,7 @@ const MobileMemberCard: React.FC<{
 
 const ArchivedMemberRow: React.FC<{ member: Member; onDelete: (member: Member) => void; }> = ({ member, onDelete }) => {
     const { updateMemberStatus } = useToastmasters();
+    const isDark = useIsDarkTheme();
 
     const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         updateMemberStatus({
@@ -729,10 +810,10 @@ const ArchivedMemberRow: React.FC<{ member: Member; onDelete: (member: Member) =
                     value={member.status}
                     onChange={handleStatusChange}
                     aria-label={`Status for archived member ${member.name}`}
-                    className={`border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
+                    className={`border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center bg-white dark:bg-gray-700 ${getStatusBadgeColor(member.status)}`}
                 >
                     {Object.values(MemberStatus).map(status => (
-                        <option key={status} value={status}>{status}</option>
+                        <option key={status} value={status} style={getOptionStyle(status, isDark)}>{status}</option>
                     ))}
                 </select>
             </td>
@@ -753,6 +834,7 @@ const ArchivedMemberRow: React.FC<{ member: Member; onDelete: (member: Member) =
 
 const ArchivedMobileMemberCard: React.FC<{ member: Member; onDelete: (member: Member) => void; }> = ({ member, onDelete }) => {
     const { updateMemberStatus } = useToastmasters();
+    const isDark = useIsDarkTheme();
     const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         updateMemberStatus({ id: member.id, status: e.target.value as MemberStatus });
     };
@@ -765,10 +847,10 @@ const ArchivedMobileMemberCard: React.FC<{ member: Member; onDelete: (member: Me
                     value={member.status}
                     onChange={handleStatusChange}
                     aria-label={`Status for archived member ${member.name}`}
-                    className={`mt-2 w-full sm:w-auto border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center ${getStatusBadgeColor(member.status)}`}
+                    className={`mt-2 w-full sm:w-auto border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] py-1 px-2 text-center bg-white dark:bg-gray-700 ${getStatusBadgeColor(member.status)}`}
                 >
                     {Object.values(MemberStatus).map(status => (
-                        <option key={status} value={status}>{status}</option>
+                        <option key={status} value={status} style={getOptionStyle(status, isDark)}>{status}</option>
                     ))}
                 </select>
             </div>
@@ -923,6 +1005,8 @@ export const MemberManager: React.FC = () => {
         isPastPresident: false,
     });
     const [addMemberError, setAddMemberError] = useState<string | null>(null);
+    const [lastAddedMemberId, setLastAddedMemberId] = useState<string | null>(null);
+    const [showAddedBanner, setShowAddedBanner] = useState<boolean>(false);
     const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: 'name'; direction: 'ascending' | 'descending' }>({
         key: 'name',
@@ -1090,14 +1174,32 @@ export const MemberManager: React.FC = () => {
         const name = fullName.trim();
         if (name) {
             try {
-                await addMember({ name, status, ...qualifications });
+                const created = await addMember({ name, status, ...qualifications });
                 setFullName('');
                 setStatus(MemberStatus.Active);
                 setQualifications({ isToastmaster: false, isTableTopicsMaster: false, isGeneralEvaluator: false, isPastPresident: false });
+                setLastAddedMemberId(created.id);
+                setShowAddedBanner(true);
+                // Auto-hide after 5 seconds
+                window.setTimeout(() => setShowAddedBanner(false), 5000);
             } catch (error: any) {
                 setAddMemberError(error.message);
             }
         }
+    };
+
+    const handleScrollToLastAdded = () => {
+        if (!lastAddedMemberId) return;
+        const el = document.getElementById(`member-${lastAddedMemberId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Temporary highlight
+            el.classList.add('ring-2', 'ring-yellow-400', 'ring-offset-2');
+            window.setTimeout(() => {
+                el.classList.remove('ring-2', 'ring-yellow-400', 'ring-offset-2');
+            }, 2000);
+        }
+        setShowAddedBanner(false);
     };
     
     const handleOpenDeleteModal = (member: Member) => {
@@ -1315,6 +1417,24 @@ export const MemberManager: React.FC = () => {
                 memberId={memberToLink?.id || ''}
             />
             {linkError && <p className="text-red-500">{linkError}</p>}
+            {isAdmin && showAddedBanner && lastAddedMemberId && (
+                <div className="sticky top-2 z-40 mb-3">
+                    <button
+                        type="button"
+                        onClick={handleScrollToLastAdded}
+                        className="w-full flex items-center justify-between px-4 py-2 rounded-md bg-green-50 text-green-800 border border-green-200 shadow hover:bg-green-100 dark:bg-transparent dark:text-green-200 dark:border-green-800"
+                        title="Click to view the new member"
+                    >
+                        <span className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 18a6 6 0 100-12 6 6 0 000 12z" />
+                            </svg>
+                            New member added. Click to view.
+                        </span>
+                        <span className="text-sm text-green-700/70 dark:text-green-300/70">Dismisses in 5s</span>
+                    </button>
+                </div>
+            )}
             
 
 
@@ -1432,7 +1552,7 @@ export const MemberManager: React.FC = () => {
                 {/* Current Month Indicator and Meeting Day */}
                 <div className="flex flex-col gap-3 mt-3 sm:flex-row sm:items-center sm:justify-between">
                     {currentMonthHasRemainingMeetings && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md w-fit">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-transparent text-green-800 dark:text-green-200 rounded-md w-fit">
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>

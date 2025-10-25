@@ -1,6 +1,6 @@
 import { collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
-import { NotificationType, Member, AppUser } from '../types';
+import { NotificationType, Member } from '../types';
 
 class NotificationService {
   private notificationsCollection = collection(db, 'notifications');
@@ -182,6 +182,19 @@ class NotificationService {
       'Speaker Unassigned',
       `The ${speakerRole} you were assigned to evaluate on ${meetingDate} is now unassigned.`,
       { scheduleId, meetingDate, role: speakerRole }
+    );
+  }
+
+  // Notify officers when a new member is added
+  async notifyNewMemberAdded(officers: Member[], newMemberName: string, newMemberId: string) {
+    const officerUids = officers.filter(o => o.uid).map(o => o.uid!)
+    if (officerUids.length === 0) return;
+    await this.createNotificationsForUsers(
+      officerUids,
+      NotificationType.NewMemberAdded,
+      'New Member Added',
+      `${newMemberName} has been added to the club roster.`,
+      { memberId: newMemberId }
     );
   }
 }

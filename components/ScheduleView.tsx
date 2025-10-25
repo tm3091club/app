@@ -100,9 +100,14 @@ export const ScheduleView: React.FC = () => {
 
     const activeMembers = useMemo(() => 
         hydratedMembers.filter(m => {
-            // Filter out inactive members
-            if (m.status !== MemberStatus.Active) return false;
-            
+            // For admins (including VPE with admin rights), allow assigning to all non-archived members,
+            // regardless of their global status (Active/Possible/Unavailable). For non-admins, keep only Active.
+            if (isAdmin) {
+                if (m.status === MemberStatus.Archived) return false;
+            } else {
+                if (m.status !== MemberStatus.Active) return false;
+            }
+
             // Filter out club admin by UID
             if (m.uid === ownerId) return false;
             
@@ -110,7 +115,7 @@ export const ScheduleView: React.FC = () => {
             if (organization && m.name.includes(organization.name)) return false;
             
             return true;
-        }), [hydratedMembers, ownerId, organization]);
+        }), [hydratedMembers, ownerId, organization, isAdmin]);
     
     const previousSchedule = useMemo(() => {
         if (!activeSchedule || !Array.isArray(schedules)) return null;
@@ -859,9 +864,10 @@ export const ScheduleView: React.FC = () => {
     
         return (
             <div className="mt-4 space-y-3">
-                <AvailabilityList title="Available" members={memberLists.available.sort()} bgColor="rgba(16, 185, 129, 0.1)" textColor="text-green-800 dark:text-green-300" />
-                <AvailabilityList title="Possible" members={memberLists.possible.sort()} bgColor="rgba(245, 158, 11, 0.1)" textColor="text-yellow-800 dark:text-yellow-300" />
-                <AvailabilityList title="Unavailable" members={memberLists.unavailable.sort()} bgColor="rgba(239, 68, 68, 0.1)" textColor="text-red-800 dark:text-red-300" />
+                {/* Use soft light palette backgrounds like before (green-100, amber-100, red-100 equivalents) */}
+                <AvailabilityList title="Available" members={memberLists.available.sort()} bgColor="#DCFCE7" textColor="text-green-800 dark:text-green-300" />
+                <AvailabilityList title="Possible" members={memberLists.possible.sort()} bgColor="#FEF3C7" textColor="text-yellow-800 dark:text-yellow-300" />
+                <AvailabilityList title="Unavailable" members={memberLists.unavailable.sort()} bgColor="#FEE2E2" textColor="text-red-800 dark:text-red-300" />
             </div>
         );
     }, [hydratedMembers, availability]);
