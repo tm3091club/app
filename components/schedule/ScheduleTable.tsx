@@ -127,7 +127,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                         type="checkbox"
                         checked={!!meeting.isBlackout}
                         onChange={() => onToggleBlackout(index)}
-                        className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 disabled:pointer-events-none"
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:pointer-events-none"
                         disabled={!canToggleBlackout(index)}
                       />
                       Blackout
@@ -179,12 +179,15 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                       <ReadOnlyRoleCell name={getMemberName(meeting.assignments[role])} highlightColor={highlightColor} />
                   </td>
                 ))}
-                {activeSchedule.meetings.map((meeting, index) => {
-                    const membersAvailableForMeeting = activeMembers.filter(member => {
-                        const dateKey = meeting.date.split('T')[0];
-                        const memberAvailability = availability[member.id]?.[dateKey];
-                        return memberAvailability !== AvailabilityStatus.Unavailable && memberAvailability !== AvailabilityStatus.Possible;
-                    });
+        {activeSchedule.meetings.map((meeting, index) => {
+          // For admins (isEditable=true), include all active members regardless of availability.
+          // For non-admin/self-assign flows, restrict to Available only.
+          const membersAvailableForMeeting = activeMembers.filter(member => {
+            if (isEditable) return true;
+            const dateKey = meeting.date.split('T')[0];
+            const memberAvailability = availability[member.id]?.[dateKey];
+            return memberAvailability !== AvailabilityStatus.Unavailable && memberAvailability !== AvailabilityStatus.Possible;
+          });
                     return (
                       <td 
                         key={index} 

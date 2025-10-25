@@ -57,7 +57,7 @@ export const UnsubscribePage: React.FC = () => {
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Unsubscribe from Emails</h1>
             <p className="text-gray-600 mb-6">
@@ -91,7 +91,7 @@ export const UnsubscribePage: React.FC = () => {
   if (status === 'success') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
               <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,7 +123,7 @@ export const UnsubscribePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
             <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

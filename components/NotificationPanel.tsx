@@ -75,7 +75,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
   const readNotifications = notifications.filter(n => n.isRead);
 
   return (
-    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50 max-w-[calc(100vw-2rem)] mx-2 sm:mx-0">
+    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-w-[calc(100vw-2rem)] mx-2 sm:mx-0">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -221,8 +221,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 }) => {
   return (
     <div
-      className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer border-b border-gray-100 dark:border-gray-700 ${
-        !isRead && !isPreviousView ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+      className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${
+        !isRead && !isPreviousView ? 'bg-blue-50' : ''
       } ${isPreviousView ? 'opacity-75' : ''}`}
     >
       <div className="flex items-start">

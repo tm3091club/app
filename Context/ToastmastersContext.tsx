@@ -8,6 +8,7 @@ import { useAuth } from './AuthContext';
 import { db, FieldValue } from '../services/firebase';
 import firebase from 'firebase/compat/app';
 import { getUserAdminStatus, ToastmasterAdminStatus } from '../utils/adminTransitionUtils';
+import { notificationService } from '../services/notificationService';
 
 
 
@@ -25,7 +26,7 @@ interface ToastmastersState {
   error: string | null;
   needsEmailVerification: boolean;
   adminStatus: ToastmasterAdminStatus | null;
-  addMember: (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => Promise<void>;
+    addMember: (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => Promise<Member>;
   updateMemberName: (payload: { memberId: string; newName: string; }) => Promise<void>;
   updateMemberStatus: (payload: { id: string; status: MemberStatus; }) => Promise<void>;
   updateMemberQualifications: (payload: { id: string; qualifications: Partial<Pick<Member, 'isToastmaster' | 'isTableTopicsMaster' | 'isGeneralEvaluator' | 'isPastPresident'>>; }) => Promise<void>;
@@ -1538,9 +1539,9 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     };
 
 
-    const addMember = async (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => {
+    const addMember = async (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }): Promise<Member> => {
         const docRef = getDataDocRef();
-        if (!docRef || !organization) return;
+        if (!docRef || !organization) throw new Error('Unable to add member: missing organization or database reference.');
         
         if (organization.members.some(m => m.name.toLowerCase() === payload.name.trim().toLowerCase())) {
             throw new Error("A member with this name already exists.");
@@ -1564,6 +1565,19 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
             'organization': updatedOrganization,
             'members': updatedSchedulingMembers
         });
+
+        // Notify officers about the new member
+        try {
+            const officers = updatedMembers.filter(m => m.officerRole && m.uid);
+            if (officers.length > 0) {
+                await notificationService.notifyNewMemberAdded(officers, newMember.name, newMember.id);
+            }
+        } catch (e) {
+            // Non-fatal: log and continue
+            console.warn('Failed to send officer notifications for new member:', e);
+        }
+
+        return newMember;
     };
 
     const updateMemberName = async (payload: { memberId: string; newName: string; }) => {
@@ -1920,7 +1934,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                     logOut();
                                     setNeedsEmailVerification(false);
                                 }}
-                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 dark:hover:bg-gray-400 transition-colors"
+                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
                             >
                                 Sign Out
                             </button>
@@ -1963,7 +1977,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
                                    logOut();
                                    setError(null);
                                }}
-                               className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 dark:hover:bg-gray-400 transition-colors"
+                               className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
                            >
                                Sign Out
                            </button>
