@@ -10,7 +10,7 @@ import { db } from '../services/firebase';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../Context/AuthContext';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 // Refactored Components
 import { ShareModal } from './common/ShareModal';
@@ -573,7 +573,7 @@ export const ScheduleView: React.FC = () => {
             const weeklyColumnWidth = (availableWidth - roleColumnWidth) / numberOfWeeklyColumns;
 
             // --- Main Schedule Table ---
-            (doc as any).autoTable({
+            autoTable(doc, {
                 startY: 40,
                 head: head,
                 body: [themeRowData, ...roleRowsData],
@@ -627,7 +627,7 @@ export const ScheduleView: React.FC = () => {
             const allAvailabilityRows = [...availableRows, ...possibleRows, ...unavailableRows];
             
             if (allAvailabilityRows.length > 0) {
-                (doc as any).autoTable({
+                autoTable(doc, {
                     startY: lastTableY + 3,
                     body: allAvailabilityRows,
                     theme: 'grid',
