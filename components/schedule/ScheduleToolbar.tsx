@@ -103,7 +103,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               }
               // Don't call onSelectSchedule(null) unless user explicitly selects empty option
             }}
-            className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] sm:text-left sm:pl-3 sm:pr-10 appearance-none flex-1 sm:flex-initial sm:min-w-[200px]"
+            className="bg-gray-50 dark:bg-gray-700 !border-2 !border-gray-300 dark:!border-gray-600 rounded-md shadow-sm py-1 px-2 text-lg focus:outline-none focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] sm:text-left appearance-none sm:w-fit [&>option]:text-sm [&>option]:font-normal"
             style={{
               // Safari-specific fixes for text centering
               WebkitAppearance: 'none',
@@ -193,7 +193,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">View Options:</span>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400 w-fit">
                         <input
                             type="checkbox"
                             checked={showPrevious}
