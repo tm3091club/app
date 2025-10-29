@@ -13,7 +13,9 @@ export const exportWeeklyAgendaToPDF = (
   // Very compact header - pushed higher
   doc.setFontSize(12); // Larger header
   doc.setFont(undefined, 'bold');
-  const headerText = `${organization?.name || 'Toastmasters Club'} Meeting Agenda for ${format(meetingDate, 'MMMM d, yyyy')}`;
+  const clubName = organization?.name || 'Toastmasters Club';
+  const clubNumber = organization?.clubNumber ? ` ${organization.clubNumber}` : '';
+  const headerText = `${clubName}${clubNumber} Meeting Agenda for ${format(meetingDate, 'MMMM d, yyyy')}`;
   doc.text(headerText, 105, 8, { align: 'center' }); // Move header up
 
   // Add a larger space between title and theme
@@ -168,9 +170,8 @@ export const exportWeeklyAgendaToPDF = (
   
   // Save the PDF with proper naming: TM - Club Name - Theme - Month Day - Agenda
   const monthDay = format(meetingDate, 'MMMM d');
-  const clubName = organization?.name || 'Toastmasters Club';
   const theme = agenda.theme || 'No Theme';
-  const fileName = `TM - ${clubName} - ${theme} - ${monthDay} - Agenda.pdf`;
+  const fileName = `TM - ${clubName}${clubNumber} - ${theme} - ${monthDay} - Agenda.pdf`;
   doc.save(fileName);
 };
 
