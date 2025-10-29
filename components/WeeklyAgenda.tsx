@@ -433,17 +433,60 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       const year = meetingDate.getFullYear();
       const themeSlug = agenda.theme ? agenda.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
       
-      // Always create a new version when sharing to ensure updated content is reflected
+      // Helper function to compare only the meaningful agenda content
+      const getAgendaContentHash = (agenda: any) => {
+        // Only compare fields that represent actual agenda changes
+        const contentToCompare = {
+          id: agenda.id,
+          scheduleId: agenda.scheduleId,
+          week: agenda.week,
+          meetingDate: agenda.meetingDate,
+          theme: agenda.theme,
+          items: agenda.items, // This contains all agenda items
+        };
+        return JSON.stringify(contentToCompare);
+      };
+      
+      // Always check all existing versions for this agenda to find matching content
       const baseShareId = `${themeSlug}-${monthName}-${day}-${year}`;
       const docIdPrefix = `${clubNumber}_${baseShareId}-v`;
-      
-      // Check for existing versions of this specific agenda
       const querySnapshot = await db.collection('publicAgendas')
         .where(firebase.firestore.FieldPath.documentId(), '>=', docIdPrefix)
         .where(firebase.firestore.FieldPath.documentId(), '<', docIdPrefix + 'z')
         .get();
       
-      // Find the highest version number
+      const currentContentHash = getAgendaContentHash(agendaToShare);
+      
+      // Check if any existing version has the same content
+      for (const doc of querySnapshot.docs) {
+        const existingData = doc.data();
+        const existingContentHash = getAgendaContentHash(existingData);
+        
+        if (currentContentHash === existingContentHash) {
+          // Found matching content, reuse that share link
+          const shareId = existingData.shareId || doc.id.replace(`${clubNumber}_`, '');
+          
+          // Update local agenda if not already set
+          if (!agendaToShare.isShared || agendaToShare.shareId !== shareId) {
+            agendaToShare.shareId = shareId;
+            agendaToShare.isShared = true;
+            agendaToShare.ownerId = user.uid;
+            
+            if (saveWeeklyAgenda) {
+              await saveWeeklyAgenda(agendaToShare);
+            }
+          }
+          
+          const url = `${window.location.origin}/#/${clubNumber}/agenda/${shareId}`;
+          setShareUrl(url);
+          setIsShareModalOpen(true);
+          setIsSaving(false);
+          return;
+        }
+      }
+      
+      // Content has changed or no existing share, create new version
+      // Find the highest version number from the query we already did
       let maxVersion = 0;
       querySnapshot.forEach(doc => {
         const docId = doc.id;
@@ -456,7 +499,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
         }
       });
       
-      // Always increment version to ensure fresh content
+      // Increment version for new content
       const newVersion = maxVersion + 1;
       const humanReadableShareId = `${themeSlug}-${monthName}-${day}-${year}-v${newVersion}`;
       const firestoreDocId = `${clubNumber}_${humanReadableShareId}`;
@@ -468,7 +511,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       agendaToShare.isShared = true;
       agendaToShare.ownerId = user.uid;
       
-      // Create public agenda data
+      // Create public agenda data with share info
       const publicAgendaData = {
         ...agendaToShare,
         clubNumber: organization.clubNumber,

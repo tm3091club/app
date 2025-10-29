@@ -199,6 +199,9 @@ export const MentorshipPage: React.FC = () => {
     ? organization?.members.find(m => m.uid === currentUser.uid)
     : null;
 
+  // Check if current user is archived
+  const isArchivedMember = currentMember && (currentMember as any).status === 'Archived';
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* My Mentorship Section - Shows for logged-in users with member profiles */}
@@ -206,7 +209,7 @@ export const MentorshipPage: React.FC = () => {
         <MyMentorshipSection 
           currentUserId={currentUser.uid} 
           currentMemberId={currentMember.id} 
-          showButtons={true}
+          showButtons={!isArchivedMember} // Hide buttons for archived members
           onShowGuide={() => setShowGuide(true)}
           onShowVPECenter={() => setShowVPECenter(!showVPECenter)}
           showVPECenter={showVPECenter}
@@ -215,8 +218,11 @@ export const MentorshipPage: React.FC = () => {
         />
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* Only show Club Mentorship Relationships section for non-archived members */}
+      {!isArchivedMember && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -329,6 +335,8 @@ export const MentorshipPage: React.FC = () => {
           </table>
         </div>
       </div>
+        </>
+      )}
 
       <MentorGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
     </div>

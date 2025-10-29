@@ -75,17 +75,17 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
   const readNotifications = notifications.filter(n => n.isRead);
 
   return (
-    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-w-[calc(100vw-2rem)] mx-2 sm:mx-0">
-      <div className="p-4 border-b border-gray-200">
+    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-w-[calc(100vw-2rem)] mx-2 sm:mx-0">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {showingPrevious ? 'Previous Notifications' : 'Notifications'}
           </h3>
           <div className="flex items-center gap-2">
             {showingPrevious ? (
               <button
                 onClick={handleClosePrevious}
-                className="text-sm text-gray-600 hover:text-gray-800"
+                className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
               >
                 Back to current
               </button>
@@ -95,7 +95,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
                   <button
                     onClick={handleShowPrevious}
                     disabled={loadingPrevious}
-                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50"
                   >
                     <History className="h-4 w-4" />
                     {loadingPrevious ? 'Loading...' : 'Show Previous'}
@@ -104,7 +104,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
                 {unreadNotifications.length > 0 && (
                   <button
                     onClick={() => markAllAsRead()}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     Mark all as read
                   </button>
@@ -113,7 +113,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
             )}
             <button
               onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <X className="h-5 w-5" />
             </button>
@@ -126,12 +126,12 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
           // Previous notifications view
           <div>
             {previousNotifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 No previous notifications found
               </div>
             ) : (
               <div>
-                <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700">
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-sm font-medium text-gray-700 dark:text-gray-300">
                   Last 10 Notifications
                 </div>
                 {previousNotifications.map((notification) => (
@@ -152,14 +152,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
           // Current notifications view
           <>
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 No notifications yet
               </div>
             ) : (
               <>
                 {unreadNotifications.length > 0 && (
                   <div>
-                    <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700">
+                    <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-sm font-medium text-gray-700 dark:text-gray-300">
                       New
                     </div>
                     {unreadNotifications.map((notification) => (
@@ -177,7 +177,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, onNaviga
                 {readNotifications.length > 0 && (
                   <div>
                     {unreadNotifications.length > 0 && (
-                      <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700">
+                      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-sm font-medium text-gray-700 dark:text-gray-300">
                         Earlier
                       </div>
                     )}
@@ -221,18 +221,18 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 }) => {
   return (
     <div
-      className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${
-        !isRead && !isPreviousView ? 'bg-blue-50' : ''
+      className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 ${
+        !isRead && !isPreviousView ? 'bg-blue-50 dark:bg-blue-900/30' : ''
       } ${isPreviousView ? 'opacity-75' : ''}`}
     >
       <div className="flex items-start">
         <div className="flex-shrink-0 pt-0.5">{getIcon(notification.type)}</div>
         <div className="ml-3 flex-1" onClick={onClick}>
-          <p className={`text-sm ${!isRead && !isPreviousView ? 'font-semibold' : 'font-medium'} text-gray-900`}>
+          <p className={`text-sm ${!isRead && !isPreviousView ? 'font-semibold' : 'font-medium'} text-gray-900 dark:text-gray-100`}>
             {notification.title}
           </p>
-          <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{notification.message}</p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
             {isPreviousView && <span className="ml-1 text-gray-400">(Previous)</span>}
           </p>
@@ -243,7 +243,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               e.stopPropagation();
               onDelete();
             }}
-            className="ml-2 text-gray-400 hover:text-gray-600"
+            className="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
           >
             <X className="h-4 w-4" />
           </button>

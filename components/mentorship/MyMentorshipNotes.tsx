@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useToastmasters } from '../../Context/ToastmastersContext';
-import { Notification, NotificationType } from '../../types';
-import { db } from '../../services/firebase';
-import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp } from 'firebase/firestore';
+import { MentorshipNote } from '../../types';
+import { db, FieldValue } from '../../services/firebase';
 
 interface MyMentorshipNotesProps {
   mentorId: string;
@@ -29,159 +28,95 @@ export default function MyMentorshipNotes({
   isRecipientMentor,
   onClose 
 }: MyMentorshipNotesProps) {
-  const { organization, currentUser } = useToastmasters();
-  const [notes, setNotes] = useState<Notification[]>([]);
+  const { organization, currentUser, ownerId } = useToastmasters();
+  const [notes, setNotes] = useState<MentorshipNote[]>([]);
   const [text, setText] = useState('');
   const [subject, setSubject] = useState('');
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const isAdmin = currentUser?.role === 'Admin';
+  
+  // Create pairId using mentor and mentee IDs
+  const pairId = `${mentorId}_${menteeId}`;
 
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!ownerId || !pairId) return;
 
-    // Watch notifications for current user; avoid composite index by filtering type client-side
-    const notificationsRef = collection(db, 'users', currentUser.uid, 'notifications');
-    const q = query(
-      notificationsRef,
-      orderBy('createdAt', 'asc')
-    );
+    // Watch mentorship notes for this pairing in the club's mentorship collection
+    const notesRef = db.collection('users').doc(ownerId)
+      .collection('mentorship').doc('mentorshipPairs')
+      .collection('pairs').doc(pairId)
+      .collection('notes');
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifications: Notification[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const isMentorshipNote = data.type === NotificationType.MentorshipNote;
-        // Show notes belonging to this mentor/mentee pairing
-        const isPartOfThisConversation =
-          data.metadata?.mentorId === mentorId &&
-          data.metadata?.menteeId === menteeId;
-
-        if (isMentorshipNote && isPartOfThisConversation) {
-          notifications.push({
+    const unsubscribe = notesRef
+      .orderBy('createdAt', 'desc')
+      .onSnapshot((snapshot) => {
+        const mentorshipNotes: MentorshipNote[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          mentorshipNotes.push({
             id: doc.id,
-            userId: data.userId,
-            type: data.type,
-            title: data.title,
-            message: data.message,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            isRead: data.isRead || false,
-            readAt: data.readAt?.toDate(),
-            isDismissed: data.isDismissed,
-            dismissedAt: data.dismissedAt?.toDate(),
-            metadata: data.metadata,
+            createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
+            createdByUid: data.createdByUid,
+            visibility: data.visibility || 'both',
+            type: data.type || 'general',
+            text: data.text,
+            goals: data.goals,
+            status: data.status,
+            meetingDate: data.meetingDate,
+            linkedRole: data.linkedRole,
           });
-        }
+        });
+        setNotes(mentorshipNotes);
       });
-      // Newest first
-      notifications.sort((a, b) => (b.createdAt?.getTime?.() || 0) - (a.createdAt?.getTime?.() || 0));
-      setNotes(notifications);
-    });
 
     return () => unsubscribe();
-  }, [currentUser?.uid, mentorId, menteeId]);
+  }, [ownerId, pairId]);
 
   const addNote = async () => {
-    if (!organization || !currentUser?.uid || !text.trim() || !subject.trim()) return;
+    if (!ownerId || !currentUser?.uid || !text.trim() || !subject.trim()) return;
     
     setLoading(true);
     try {
-      const currentMember = organization.members.find(m => m.uid === currentUser.uid);
+      const currentMember = organization?.members.find(m => m.uid === currentUser.uid);
       const senderName = currentMember?.name || 'Unknown';
-      const now = new Date();
       
-      // Optimistically add the note to the UI immediately
-      const optimisticNote: Notification = {
-        id: `temp-${Date.now()}`,
-        userId: currentUser.uid,
-        type: NotificationType.MentorshipNote,
-        title: `${subject} - Note to ${recipientName}`,
-        message: text.trim(),
-        createdAt: now,
-        isRead: true,
-        metadata: {
-          mentorId,
-          menteeId,
-          senderUid: currentUser.uid,
-          senderName,
-          recipientUid,
-          recipientName,
-          subject: subject.trim(),
-        }
-      };
+      // Save note to the mentorship collection under the club
+      const notesRef = db.collection('users').doc(ownerId)
+        .collection('mentorship').doc('mentorshipPairs')
+        .collection('pairs').doc(pairId)
+        .collection('notes');
       
-  // Put newest at top optimistically
-  setNotes(prev => [optimisticNote, ...prev]);
+      const noteDoc = notesRef.doc();
       
-      // Reset form immediately for better UX
-      const noteText = text.trim();
-      const noteSubject = subject.trim();
+      await noteDoc.set({
+        id: noteDoc.id,
+        createdAt: FieldValue.serverTimestamp(),
+        createdByUid: currentUser.uid,
+        visibility: 'both',
+        type: subject.toLowerCase() === 'session' ? 'session' : 
+              subject.toLowerCase() === 'goal' ? 'goal' :
+              subject.toLowerCase() === 'feedback' ? 'feedback' :
+              subject.toLowerCase() === 'milestone' ? 'milestone' : 'general',
+        text: `**${subject}** - ${senderName}\n\n${text.trim()}`,
+      });
+      
+      // Reset form
       setText('');
       setSubject('');
       
-      // Create notification for recipient
-      const recipientNotificationData = {
-        userId: recipientUid,
-        type: NotificationType.MentorshipNote,
-        title: `${noteSubject} - Note from ${senderName}`,
-        message: noteText,
-        createdAt: serverTimestamp(),
-        isRead: false,
-        metadata: {
-          mentorId,
-          menteeId,
-          senderUid: currentUser.uid,
-          senderName,
-          recipientUid,
-          recipientName,
-          subject: noteSubject,
-        }
-      };
-      
-      // Save notification to recipient's collection (only if mentor has a linked account)
-      if (recipientUid) {
-        await addDoc(
-          collection(db, 'users', recipientUid, 'notifications'),
-          recipientNotificationData
-        );
-      }
-      
-      // Also save a copy to sender's notifications for record keeping
-      const senderNotificationData = {
-        userId: currentUser.uid,
-        type: NotificationType.MentorshipNote,
-        title: `${noteSubject} - Note to ${recipientName}`,
-        message: noteText,
-        createdAt: serverTimestamp(),
-        isRead: true, // Mark as read since sender created it
-        metadata: {
-          mentorId,
-          menteeId,
-          senderUid: currentUser.uid,
-          senderName,
-          recipientUid,
-          recipientName,
-          subject: noteSubject,
-        }
-      };
-      
-      await addDoc(
-        collection(db, 'users', currentUser.uid, 'notifications'),
-        senderNotificationData
-      );
-      
     } catch (error) {
       console.error('Error adding note:', error);
-      // If there's an error, the real-time listener will sync the correct state
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | any) => {
     if (!date) return '';
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const d = date instanceof Date ? date : date.toDate?.() || new Date(date);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -273,21 +208,22 @@ export default function MyMentorshipNotes({
             No notes yet. Add your first note above.
           </p>
         ) : (
-          notes.map((note, index) => {
-            // Extract subject from title (format: "Subject - Note from/to Name")
-            const subjectMatch = note.title.match(/^(.+?)\s*-\s*/);
-            const subject = subjectMatch ? subjectMatch[1] : note.title;
-            
-            // Extract sender name from metadata or title
-            const senderName = note.metadata?.senderName || 'Unknown';
+          notes.map((note) => {
+            // Extract subject and sender from the formatted text
+            const textLines = note.text.split('\n');
+            const firstLine = textLines[0] || '';
+            const subjectMatch = firstLine.match(/^\*\*(.+?)\*\*\s*-\s*(.+)$/);
+            const noteSubject = subjectMatch ? subjectMatch[1] : note.type;
+            const senderName = subjectMatch ? subjectMatch[2] : 'Unknown';
+            const noteContent = textLines.slice(2).join('\n'); // Skip first line and empty line
             
             // Check if this is the current user's note
-            const isCurrentUser = note.metadata?.senderUid === currentUser?.uid;
+            const isCurrentUserNote = note.createdByUid === currentUser?.uid;
             
             return (
-              <div key={note.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+              <div key={note.id} className={`flex ${isCurrentUserNote ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] p-4 rounded-lg ${
-                  isCurrentUser 
+                  isCurrentUserNote 
                     ? 'bg-blue-600 text-white ml-8' 
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white mr-8'
                 }`}>
@@ -295,23 +231,23 @@ export default function MyMentorshipNotes({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className={`font-semibold text-sm ${
-                        isCurrentUser ? 'text-blue-100' : 'text-gray-900 dark:text-white'
+                        isCurrentUserNote ? 'text-blue-100' : 'text-gray-900 dark:text-white'
                       }`}>
                         {senderName}
                       </span>
                       <span className={`text-xs ${
-                        isCurrentUser ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'
+                        isCurrentUserNote ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'
                       }`}>
                         •
                       </span>
                       <span className={`text-xs font-medium ${
-                        isCurrentUser ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'
+                        isCurrentUserNote ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'
                       }`}>
-                        {subject}
+                        {noteSubject}
                       </span>
                     </div>
                     <span className={`text-xs ${
-                      isCurrentUser ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'
+                      isCurrentUserNote ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'
                     } ml-3 flex-shrink-0`}>
                       {formatDate(note.createdAt)}
                     </span>
@@ -319,9 +255,9 @@ export default function MyMentorshipNotes({
                   
                   {/* Message content */}
                   <div className={`whitespace-pre-wrap text-sm leading-relaxed ${
-                    isCurrentUser ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                    isCurrentUserNote ? 'text-white' : 'text-gray-700 dark:text-gray-300'
                   }`}>
-                    {note.message}
+                    {noteContent}
                   </div>
                 </div>
               </div>

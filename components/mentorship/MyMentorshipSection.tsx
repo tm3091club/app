@@ -148,9 +148,9 @@ export const MyMentorshipSection: React.FC<MyMentorshipSectionProps> = ({
             </h3>
             {myMentors.length > 0 ? (
               <div className="space-y-2">
-                {myMentors.map((mentor, index) => (
+                {myMentors.map((mentor) => (
                   <div 
-                    key={index} 
+                    key={`mentor-${mentor.id}-${mentor.pairingMentorId || ''}_${mentor.pairingMenteeId || ''}`} 
                     className="p-3 bg-blue-50 dark:!bg-gray-700 rounded-lg"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -187,9 +187,9 @@ export const MyMentorshipSection: React.FC<MyMentorshipSectionProps> = ({
             </h3>
             {myMentees.length > 0 ? (
               <div className="space-y-2">
-                {myMentees.map((mentee, index) => (
+                {myMentees.map((mentee) => (
                   <div 
-                    key={index} 
+                    key={`mentee-${mentee.id}-${mentee.pairingMentorId || ''}_${mentee.pairingMenteeId || ''}`} 
                     className="p-3 bg-green-50 dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -233,8 +233,8 @@ export const MyMentorshipSection: React.FC<MyMentorshipSectionProps> = ({
         </div>
       </div>
 
-      {/* Notes Modal */}
-      {showNotes && notesRecipient && notesRecipient.uid && (
+      {/* Notes Modal: allow opening even if recipient has no uid yet (not linked account) */}
+      {showNotes && notesRecipient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">

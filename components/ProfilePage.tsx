@@ -15,26 +15,69 @@ const districts = [...Array(130).keys()].map(i => String(i + 1)).concat(['F', 'U
 const EditableUser: React.FC<{
     user: AppUser,
     isCurrentUser: boolean,
-    onSaveName: (payload: { uid: string, newName: string }) => Promise<any>
-}> = ({ user, isCurrentUser, onSaveName }) => {
+    onSaveName: (payload: { uid: string, newName: string }) => Promise<any>,
+    phone?: string,
+    onSavePhone?: (phone: string) => Promise<any>,
+    tmId?: string,
+    onSaveTmId?: (tmId: string) => Promise<any>
+}> = ({ user, isCurrentUser, onSaveName, phone = '', onSavePhone, tmId = '', onSaveTmId }) => {
     const [name, setName] = useState(user.name);
+    const [phoneValue, setPhoneValue] = useState(phone);
+    const [tmIdValue, setTmIdValue] = useState(tmId);
     const [isEditing, setIsEditing] = useState(false);
     const [feedback, setFeedback] = useState<{type: 'success' | 'error', message: string} | null>(null);
+
+    const formatPhoneDisplay = (val: string): string => {
+        const digits = val.replace(/\D/g, '');
+        if (!digits) return '';
+        const c = digits[0] === '1' ? digits[0] : '';
+        const rest = c ? digits.slice(1) : digits;
+        const a = rest.slice(0, 3);
+        const p = rest.slice(3, 6);
+        const l = rest.slice(6, 10);
+        let out = '';
+        if (c) out += `${c}+`;
+        if (a) out += `(${a}${a.length === 3 ? ')' : ''}`;
+        if (p) out += ` ${p}`;
+        if (l) out += `-${l}`;
+        return out.trim();
+    };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setFeedback(null);
         try {
-            await onSaveName({ uid: user.uid, newName: name });
-            setFeedback({type: 'success', message: 'Name updated!'});
+            const nameChanged = name.trim() !== user.name;
+            const phoneChanged = phoneValue !== phone;
+            const tmIdChanged = tmIdValue !== tmId;
+            
+            if (nameChanged) {
+                await onSaveName({ uid: user.uid, newName: name });
+            }
+            
+            if (phoneChanged && onSavePhone) {
+                const formatted = formatPhoneDisplay(phoneValue);
+                await onSavePhone(formatted);
+                setPhoneValue(formatted);
+            }
+            
+            if (tmIdChanged && onSaveTmId) {
+                await onSaveTmId(tmIdValue);
+            }
+            
+            if (nameChanged || phoneChanged || tmIdChanged) {
+                setFeedback({type: 'success', message: 'Profile updated!'});
+            }
             setIsEditing(false);
         } catch (error: any) {
-            setFeedback({type: 'error', message: error.message || 'Failed to update name.'});
+            setFeedback({type: 'error', message: error.message || 'Failed to update profile.'});
         }
     };
 
     const handleCancel = () => {
         setName(user.name);
+        setPhoneValue(phone);
+        setTmIdValue(tmId);
         setIsEditing(false);
         setFeedback(null);
     }
@@ -42,6 +85,16 @@ const EditableUser: React.FC<{
     useEffect(() => {
         setName(user.name);
     }, [user.name]);
+    
+    useEffect(() => {
+        setPhoneValue(phone);
+    }, [phone]);
+    
+    useEffect(() => {
+        setTmIdValue(tmId);
+    }, [tmId]);
+
+    const hasChanges = name.trim() !== user.name || phoneValue !== phone || tmIdValue !== tmId;
 
     return (
         <form onSubmit={handleSave} className="space-y-4">
@@ -63,17 +116,50 @@ const EditableUser: React.FC<{
                     />
                 </div>
             </div>
-             <div>
-                <label htmlFor={`email-${user.uid}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
-                <input type="email" id={`email-${user.uid}`} value={user.email || ''} disabled
-                    className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
-                />
+            {/* Email, Phone, and TM ID in one row on larger screens */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div>
+                    <label htmlFor={`email-${user.uid}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
+                    <input type="email" id={`email-${user.uid}`} value={user.email || ''} disabled
+                        className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm bg-gray-100 dark:bg-gray-700/50 sm:text-sm"
+                    />
+                </div>
+                {onSavePhone && (
+                    <div>
+                        <label htmlFor={`phone-${user.uid}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
+                        <input
+                            id={`phone-${user.uid}`}
+                            type="tel"
+                            value={phoneValue}
+                            onChange={(e) => setPhoneValue(e.target.value.replace(/[^\d+\-\s()]/g, ''))}
+                            onBlur={(e) => setPhoneValue(formatPhoneDisplay(e.target.value))}
+                            placeholder="1+(360) 566-1234"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
+                        />
+                    </div>
+                )}
+                {onSaveTmId && (
+                    <div>
+                        <label htmlFor={`tmId-${user.uid}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <span className="hidden sm:inline">Toastmaster ID #</span>
+                            <span className="sm:hidden">TM ID#</span>
+                        </label>
+                        <input
+                            id={`tmId-${user.uid}`}
+                            type="text"
+                            value={tmIdValue}
+                            onChange={(e) => setTmIdValue(e.target.value)}
+                            placeholder="Enter your TM ID"
+                            className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 sm:text-sm"
+                        />
+                    </div>
+                )}
             </div>
             <div className="flex justify-end">
                 <button
                     type="submit"
                     className="inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:opacity-50"
-                    disabled={name.trim() === user.name}
+                    disabled={!hasChanges}
                 >
                     Save My Profile
                 </button>
@@ -389,7 +475,7 @@ const TeamMemberListItem: React.FC<{
 
 
 export const ProfilePage = (): React.ReactElement | null => {
-    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, updateUserRole, removeUser, sendPasswordResetEmail, pendingInvites, inviteUser, revokeInvite, removeFromPendingLinking, adminStatus } = useToastmasters();
+    const { currentUser, organization, ownerId, updateClubProfile, updateUserName, updateUserRole, removeUser, sendPasswordResetEmail, pendingInvites, inviteUser, revokeInvite, removeFromPendingLinking, adminStatus, updateMemberPhone, updateMemberInfo } = useToastmasters();
     const { updatePassword, user, updateUserEmail } = useAuth();
     
     // State for club profile form
@@ -413,6 +499,9 @@ export const ProfilePage = (): React.ReactElement | null => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordFeedback, setPasswordFeedback] = useState<{type: 'success' | 'error', message: string} | null>(null);
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+    // Phone (My Profile)
+    const [myPhone, setMyPhone] = useState<string>('');
+    const [myTmId, setMyTmId] = useState<string>('');
 
     // State for team management
     const [teamFeedback, setTeamFeedback] = useState<{type: 'success' | 'error', message: string} | null>(null);
@@ -440,6 +529,16 @@ export const ProfilePage = (): React.ReactElement | null => {
             setTimezone(organization.timezone ?? 'America/New_York'); // Default to Eastern Time
         }
     }, [organization]);
+
+    // Prefill my phone and TM ID from my member record
+    useEffect(() => {
+        if (!organization || !currentUser?.uid) return;
+        const member = (organization.members || []).find((m: any) => m.uid === currentUser.uid);
+        if (member) {
+            setMyPhone((member as any).phone || '');
+            setMyTmId((member as any).tmId || '');
+        }
+    }, [organization, currentUser?.uid]);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.hash.split('?')[1]);
@@ -845,7 +944,24 @@ export const ProfilePage = (): React.ReactElement | null => {
                          />
                      )}
                  </div>
-                 <EditableUser user={currentUser} isCurrentUser={true} onSaveName={handleSaveUserName} />
+                 <EditableUser 
+                    user={currentUser} 
+                    isCurrentUser={true} 
+                    onSaveName={handleSaveUserName}
+                    phone={myPhone}
+                    onSavePhone={async (formatted: string) => {
+                        const member = (organization?.members || []).find((m: any) => m.uid === currentUser?.uid);
+                        if (!member) throw new Error('Member profile not found.');
+                        await updateMemberPhone({ memberId: (member as any).id, phone: formatted || undefined });
+                    }}
+                    tmId={myTmId}
+                    onSaveTmId={async (tmIdValue: string) => {
+                        const member = (organization?.members || []).find((m: any) => m.uid === currentUser?.uid);
+                        if (!member) throw new Error('Member profile not found.');
+                        await updateMemberInfo({ memberId: (member as any).id, phone: (member as any).phone, tmId: tmIdValue || null });
+                        setMyTmId(tmIdValue);
+                    }}
+                 />
             </div>
 
             <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 sm:p-6">
@@ -964,9 +1080,10 @@ export const ProfilePage = (): React.ReactElement | null => {
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                             <div className="flex-grow">
                                                 <h4 className="font-medium text-gray-900 dark:text-white">{memberName}</h4>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                                                    {invite.email}
-                                                </p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">{invite.email}</p>
+                                                {member && (member as any).phone && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{(member as any).phone}</p>
+                                                )}
                                                 <p className="text-xs text-gray-500 dark:text-gray-500">
                                                     Sent: {formatDate(invite.createdAt)}
                                                 </p>
@@ -1018,6 +1135,39 @@ export const ProfilePage = (): React.ReactElement | null => {
                                                 >
                                                     Change Email
                                                 </button>
+                                                {isAdmin && member && (
+                                                    <button 
+                                                        type="button"
+                                                        onClick={async () => {
+                                                            const currentPhone = (member as any).phone || '';
+                                                            const input = prompt(`Enter phone for ${memberName}`, currentPhone);
+                                                            if (input !== null) {
+                                                                const digits = (input || '').replace(/\D/g, '');
+                                                                let d = digits;
+                                                                if (d.length === 10) d = '1' + d;
+                                                                const c = d[0] || '';
+                                                                const a = d.slice(1, 4);
+                                                                const p = d.slice(4, 7);
+                                                                const l = d.slice(7, 11);
+                                                                let out = '';
+                                                                if (c) out += `${c}+`;
+                                                                if (a) out += `(${a}${a.length === 3 ? ')' : ''}`;
+                                                                if (p) out += ` ${p}`;
+                                                                if (l) out += `-${l}`;
+                                                                const formatted = out.trim();
+                                                                try {
+                                                                    await updateMemberPhone({ memberId: (member as any).id, phone: formatted || undefined });
+                                                                } catch (e) {
+                                                                    console.error('Failed to update phone', e);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="flex-1 sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-2 sm:px-3 py-2 bg-white dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] dark:focus:ring-offset-gray-800 sm:text-sm whitespace-nowrap"
+                                                        title="Edit phone"
+                                                    >
+                                                        {(member as any).phone ? 'Edit Phone' : 'Add Phone'}
+                                                    </button>
+                                                )}
                                                 <button 
                                                     type="button"
                                                     onClick={() => {
@@ -1051,11 +1201,11 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </div>
                     )}
                     
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Club Members ({organization.members?.filter(m => m.uid).length || 0})</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Active Club Members ({organization.members?.filter(m => m.uid && (m as any).status !== 'Archived').length || 0})</h3>
                     <div className="flow-root">
                         <ul role="list" className="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
                             {[...(organization.members || [])]
-                                .filter(member => member.uid) // Only show members with Firebase Auth accounts
+                                .filter(member => member.uid && (member as any).status !== 'Archived') // Only show active members with Firebase Auth accounts
                                 .sort((a, b) => {
                                     // Club Admin first
                                     if (a.uid === ownerId) return -1;
@@ -1092,6 +1242,40 @@ export const ProfilePage = (): React.ReactElement | null => {
                         </ul>
                     </div>
 
+                    {/* Archived Members Section */}
+                    {organization.members?.filter(m => m.uid && (m as any).status === 'Archived').length > 0 && (
+                        <>
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 mt-8">Archived Members ({organization.members?.filter(m => m.uid && (m as any).status === 'Archived').length || 0})</h3>
+                            <div className="flow-root">
+                                <ul role="list" className="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {[...(organization.members || [])]
+                                        .filter(member => member.uid && (member as any).status === 'Archived') // Only show archived members with Firebase Auth accounts
+                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                        .map((member) => {
+                                            const hasUserAccount = !!member.uid;
+                                            
+                                            return (
+                                                <TeamMemberListItem
+                                                    key={member.uid || member.id || `member-${member.name}`}
+                                                    member={member}
+                                                    isClubAdmin={member.uid === ownerId}
+                                                    isLastAdmin={isLastAdmin}
+                                                    isAdminView={isAdmin}
+                                                    isSelf={currentUser?.uid === member.uid}
+                                                    onRoleChange={handleRoleChange}
+                                                    onOfficerRoleChange={handleOfficerRoleChange}
+                                                    onRemove={openDeleteModal}
+                                                    onSaveName={handleSaveUserName}
+                                                    onSendPasswordReset={hasUserAccount ? handleSendPasswordReset : () => {}}
+                                                    isSendingPasswordReset={hasUserAccount && isSendingPasswordReset === member.uid}
+                                                    availableOfficerRoles={availableOfficerRoles}
+                                                />
+                                            );
+                                        })}
+                                </ul>
+                            </div>
+                        </>
+                    )}
 
                 </div>
             )}

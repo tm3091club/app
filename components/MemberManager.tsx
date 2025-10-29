@@ -236,6 +236,143 @@ const ConfirmationModal: React.FC<{
     );
 };
 
+const AddInfoModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (phone: string, tmId: string) => Promise<void>;
+    memberName: string;
+    initialPhone?: string;
+    initialTmId?: string;
+}> = ({ isOpen, onClose, onSave, memberName, initialPhone = '', initialTmId = '' }) => {
+    const [phone, setPhone] = useState(initialPhone);
+    const [tmId, setTmId] = useState(initialTmId);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setPhone(initialPhone);
+            setTmId(initialTmId);
+            setError(null);
+            setIsSaving(false);
+        }
+    }, [isOpen, initialPhone, initialTmId]);
+
+    const formatPhone = (raw: string): string => {
+        const digits = (raw || '').replace(/\D/g, '');
+        if (!digits) return '';
+        let d = digits;
+        if (d.length === 10) d = '1' + d;
+        const c = d[0] || '';
+        const a = d.slice(1, 4);
+        const p = d.slice(4, 7);
+        const l = d.slice(7, 11);
+        let out = '';
+        if (c) out += `${c}+`;
+        if (a) out += `(${a}${a.length === 3 ? ')' : ''}`;
+        if (p) out += ` ${p}`;
+        if (l) out += `-${l}`;
+        return out.trim();
+    };
+
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setPhone(e.target.value);
+    };
+
+    const handlePhoneBlur = () => {
+        setPhone(formatPhone(phone));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        setError(null);
+        
+        try {
+            await onSave(formatPhone(phone).trim(), tmId.trim());
+            onClose();
+        } catch (error: any) {
+            setError(error.message || 'Failed to save information. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md transform transition-all">
+                <form onSubmit={handleSubmit}>
+                    <div className="p-6">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                            Add Info for "{memberName}"
+                        </h3>
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Update phone number and Toastmaster ID for this member.
+                        </p>
+                        
+                        {error && (
+                            <div className="mt-4 p-3 bg-red-50 dark:bg-transparent border border-red-200 dark:border-red-800 rounded-md">
+                                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+                            </div>
+                        )}
+                        
+                        <div className="mt-4 space-y-4">
+                            <div>
+                                <label htmlFor="modal-phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Phone Number
+                                </label>
+                                <input
+                                    type="tel"
+                                    id="modal-phone"
+                                    value={phone}
+                                    onChange={handlePhoneChange}
+                                    onBlur={handlePhoneBlur}
+                                    placeholder="1+(360) 566-1234"
+                                    className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 dark:text-white sm:text-sm"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label htmlFor="modal-tmId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <span className="hidden sm:inline">Toastmaster ID #</span>
+                                    <span className="sm:hidden">TM ID#</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="modal-tmId"
+                                    value={tmId}
+                                    onChange={(e) => setTmId(e.target.value)}
+                                    placeholder="1234567"
+                                    className="mt-1 block w-full px-3 py-2 border !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] bg-white dark:bg-gray-700 dark:text-white sm:text-sm"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg">
+                        <button
+                            type="submit"
+                            disabled={isSaving}
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            {isSaving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={isSaving}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 const InlineCheckbox: React.FC<{ id: string; name: string; label: string; checked: boolean; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; disabled?: boolean; }> = ({ id, name, label, checked, onChange, disabled = false }) => (
     <div className="flex items-center">
@@ -373,9 +510,11 @@ const MemberRow: React.FC<{
     editError: string | null;
     isSelf?: boolean;
     linkedUser?: AppUser | null;
+    pendingInvite?: PendingInvite | null;
     onLink: () => void;
     onUnlink: () => void;
-}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
+    onOpenAddInfo: () => void;
+}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, pendingInvite, onLink, onUnlink, onOpenAddInfo }) => {
     const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser, adminStatus } = useToastmasters();
     const isAdmin = adminStatus?.hasAdminRights || false;
     const canEditRow = isAdmin;
@@ -470,12 +609,46 @@ const MemberRow: React.FC<{
                                 )}
                             </div>
                             {linkedUser ? (
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{linkedUser.email}</p>
-                            ) : isAdmin ? (
-                                <button type="button" onClick={onLink} className="mt-1 text-xs text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
-                                    Link Account...
-                                </button>
-                            ) : null}
+                                <>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{linkedUser.email}</p>
+                                    {member.phone && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{member.phone}</p>
+                                    )}
+                                    {member.tmId && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">TM ID#: {member.tmId}</p>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    {member.email && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{member.email}</p>
+                                    )}
+                                    {member.phone && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{member.phone}</p>
+                                    )}
+                                    {member.tmId && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">TM ID#: {member.tmId}</p>
+                                    )}
+                                    {isAdmin && (
+                                        pendingInvite ? (
+                                            <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                                                ⏳ Invitation Pending
+                                            </p>
+                                        ) : (
+                                            <button type="button" onClick={onLink} className="mt-1 text-xs text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
+                                                Link Account...
+                                            </button>
+                                        )
+                                    )}
+                                </>
+                            )}
+                            {isAdmin && (
+                                <div className="mt-1">
+                                    <button type="button" onClick={onOpenAddInfo} className="text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">
+                                        {member.phone || member.tmId ? 'Edit info' : 'Add info'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -585,9 +758,11 @@ const MobileMemberCard: React.FC<{
     editError: string | null;
     isSelf?: boolean;
     linkedUser?: AppUser | null;
+    pendingInvite?: PendingInvite | null;
     onLink: () => void;
     onUnlink: () => void;
-}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, onLink, onUnlink }) => {
+    onOpenAddInfo: () => void;
+}> = ({ member, meetingDates, monthName, isEditing, editedName, onNameChange, onStartEdit, onCancelEdit, onSaveEdit, editError, isSelf = false, linkedUser, pendingInvite, onLink, onUnlink, onOpenAddInfo }) => {
     const { availability, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability, currentUser, adminStatus } = useToastmasters();
     const isAdmin = adminStatus?.hasAdminRights || false;
     const canEditRow = isAdmin;
@@ -721,6 +896,12 @@ const MobileMemberCard: React.FC<{
                                 <div className="flex-grow">
                                     <p className="font-medium text-gray-800 dark:text-gray-200">{linkedUser.name}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">{linkedUser.email}</p>
+                                    {member.phone && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{member.phone}</p>
+                                    )}
+                                    {member.tmId && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">TM ID#: {member.tmId}</p>
+                                    )}
                                     <div className="mt-1">
                                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Joined Date</label>
                                         {canEditRow ? (
@@ -779,10 +960,23 @@ const MobileMemberCard: React.FC<{
                                 )}
                             </div>
                             {isAdmin ? (
-                                <button type="button" onClick={onLink} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
-                                    Link Account...
-                                </button>
+                                pendingInvite ? (
+                                    <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                                        ⏳ Invitation Pending
+                                    </p>
+                                ) : (
+                                    <button type="button" onClick={onLink} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
+                                        Link Account...
+                                    </button>
+                                )
                             ) : null}
+                            {isAdmin && (
+                                <div className="mt-2">
+                                    <button type="button" onClick={onOpenAddInfo} className="text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">
+                                        {member.phone || member.tmId ? 'Edit info' : 'Add info'}
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -898,18 +1092,20 @@ const MembersTable: React.FC<{
     editedName: string;
     editError: string | null;
     organization: Organization | null;
+    pendingInvites: PendingInvite[];
     onNameChange: (value: string) => void;
     onStartEdit: (member: Member) => void;
     onCancelEdit: () => void;
     onSaveEdit: () => Promise<void>;
     onLink: (member: Member) => void;
     onUnlink: (memberId: string) => void;
+    onOpenAddInfo: (member: Member) => void;
     handleSortRequest?: () => void;
     sortConfig?: { direction: 'ascending' | 'descending' };
 }> = ({ 
     memberList, isMyProfileSection = false, isAdmin, meetingDates, monthName,
-    editingMemberId, editedName, editError, organization, onNameChange, onStartEdit, onCancelEdit, onSaveEdit,
-    onLink, onUnlink, handleSortRequest, sortConfig
+    editingMemberId, editedName, editError, organization, pendingInvites, onNameChange, onStartEdit, onCancelEdit, onSaveEdit,
+    onLink, onUnlink, onOpenAddInfo, handleSortRequest, sortConfig
 }) => {
     return (
         <>
@@ -952,6 +1148,8 @@ const MembersTable: React.FC<{
                                 linkedUser={member?.uid ? { uid: member.uid, email: member.email || '', name: member.name, role: UserRole.Member } : null}
                                 onLink={() => onLink(member)}
                                 onUnlink={() => onUnlink(member.id)}
+                                pendingInvite={pendingInvites.find(invite => invite.memberId === member.id) || null}
+                                onOpenAddInfo={() => onOpenAddInfo(member)}
                             />
                         )) : (
                             <tr>
@@ -982,6 +1180,8 @@ const MembersTable: React.FC<{
                         linkedUser={member?.uid ? { uid: member.uid, email: member.email || '', name: member.name, role: UserRole.Member } : null}
                         onLink={() => onLink(member)}
                         onUnlink={() => onUnlink(member.id)}
+                        pendingInvite={pendingInvites.find(invite => invite.memberId === member.id) || null}
+                        onOpenAddInfo={() => onOpenAddInfo(member)}
                     />
                  )) : (
                     <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -995,9 +1195,12 @@ const MembersTable: React.FC<{
 
 
 export const MemberManager: React.FC = () => {
-    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, linkCurrentUserToMember, inviteUser, pendingInvites, revokeInvite, removeFromPendingLinking, findAndLinkExistingUser, adminStatus } = useToastmasters();
+    const { schedules, addMember, deleteMember, updateMemberName, currentUser, organization, ownerId, linkMemberToAccount, linkCurrentUserToMember, inviteUser, pendingInvites, revokeInvite, removeFromPendingLinking, findAndLinkExistingUser, updateMemberInfo, adminStatus } = useToastmasters();
     const [fullName, setFullName] = useState('');
     const [status, setStatus] = useState<MemberStatus>(MemberStatus.Active);
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [tmId, setTmId] = useState('');
     const [qualifications, setQualifications] = useState({
         isToastmaster: false,
         isTableTopicsMaster: false,
@@ -1021,6 +1224,10 @@ export const MemberManager: React.FC = () => {
     const [memberToLink, setMemberToLink] = useState<Member | null>(null);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [linkError, setLinkError] = useState<string | null>(null);
+    
+    // State for Add Info modal
+    const [memberToEdit, setMemberToEdit] = useState<Member | null>(null);
+    const [isAddInfoModalOpen, setIsAddInfoModalOpen] = useState(false);
     
     // NEW: State for availability month selection
     const [availabilityMonth, setAvailabilityMonth] = useState<{ year: number; month: number } | null>(null);
@@ -1168,20 +1375,75 @@ export const MemberManager: React.FC = () => {
         setQualifications(prev => ({ ...prev, [name]: checked }));
     };
 
+    // Format phone into 1+(XXX) XXX-XXXX; keep permissive for partial input
+    const formatPhoneDisplay = (raw: string): string => {
+        const digits = raw.replace(/\D/g, '');
+        if (!digits) return '';
+        let d = digits;
+        // Ensure leading country code 1
+        if (d.length === 11 && d.startsWith('1')) {
+            d = d;
+        } else if (d.length === 10) {
+            d = '1' + d;
+        }
+        // Now we expect at least country(1) + area(3) + prefix(3) + line(4)
+        const c = d[0] || '';
+        const a = d.slice(1, 4);
+        const p = d.slice(4, 7);
+        const l = d.slice(7, 11);
+        let out = '';
+        if (c) out += `${c}+`;
+        if (a) out += `(${a}` + (a.length === 3 ? ')' : '');
+        if (p) out += ` ${p}`;
+        if (l) out += `-${l}`;
+        return out.trim();
+    };
+
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        // Allow normal typing/deletion; sanitize invalid characters only
+        const sanitized = val.replace(/[^\d+\-\s()]/g, '');
+        setPhone(sanitized);
+    };
+
+    const handlePhoneBlur = () => {
+        // Apply formatting only when leaving the field
+        setPhone(formatPhoneDisplay(phone));
+    };
+
     const handleAddMember = async (e: React.FormEvent) => {
         e.preventDefault();
         setAddMemberError(null);
         const name = fullName.trim();
         if (name) {
             try {
-                const created = await addMember({ name, status, ...qualifications });
+                const created = await addMember({ 
+                    name, 
+                    status, 
+                    email: email.trim() || undefined, 
+                    phone: formatPhoneDisplay(phone).trim() || undefined, 
+                    tmId: tmId.trim() || undefined,
+                    ...qualifications 
+                });
                 setFullName('');
                 setStatus(MemberStatus.Active);
                 setQualifications({ isToastmaster: false, isTableTopicsMaster: false, isGeneralEvaluator: false, isPastPresident: false });
+                setEmail('');
+                setPhone('');
+                setTmId('');
                 setLastAddedMemberId(created.id);
                 setShowAddedBanner(true);
                 // Auto-hide after 5 seconds
                 window.setTimeout(() => setShowAddedBanner(false), 5000);
+
+                // If email provided, send invite to link account
+                if (created && (created.email || email.trim())) {
+                    try {
+                        await inviteUser({ email: (created.email || email.trim())!, name: created.name, memberId: created.id });
+                    } catch (invErr) {
+                        console.warn('Invite failed for new member:', invErr);
+                    }
+                }
             } catch (error: any) {
                 setAddMemberError(error.message);
             }
@@ -1346,6 +1608,30 @@ export const MemberManager: React.FC = () => {
         return pendingInvites.find(invite => invite.memberId === memberId) || null;
     };
 
+    // Handle opening the Add Info modal
+    const handleOpenAddInfo = (member: Member) => {
+        setMemberToEdit(member);
+        setIsAddInfoModalOpen(true);
+    };
+
+    // Handle saving info from Add Info modal
+    const handleSaveAddInfo = async (phone: string, tmId: string) => {
+        if (!memberToEdit) return;
+        
+        try {
+            await updateMemberInfo({ 
+                memberId: memberToEdit.id, 
+                phone: phone || null, 
+                tmId: tmId || null 
+            });
+            setIsAddInfoModalOpen(false);
+            setMemberToEdit(null);
+        } catch (error: any) {
+            console.error("Failed to update member info", error);
+            throw error; // Let the modal handle the error display
+        }
+    };
+
 
 
 
@@ -1361,8 +1647,9 @@ export const MemberManager: React.FC = () => {
     const commonTableProps = {
         meetingDates: availabilityMeetingDates, // Use availability meeting dates instead
         monthName: availabilityMonthName, // Use availability month name
-        editingMemberId, editedName, editError, organization, onNameChange: setEditedName, onStartEdit: handleStartEdit,
+        editingMemberId, editedName, editError, organization, pendingInvites, onNameChange: setEditedName, onStartEdit: handleStartEdit,
         onCancelEdit: handleCancelEdit, onSaveEdit: handleSaveEdit, onLink: handleOpenLinkModal, onUnlink: handleUnlinkAccount,
+        onOpenAddInfo: handleOpenAddInfo,
     };
 
     // NEW: Check if current month has remaining meetings
@@ -1416,6 +1703,17 @@ export const MemberManager: React.FC = () => {
                 memberName={memberToLink?.name || ''}
                 memberId={memberToLink?.id || ''}
             />
+            <AddInfoModal
+                isOpen={isAddInfoModalOpen}
+                onClose={() => {
+                    setIsAddInfoModalOpen(false);
+                    setMemberToEdit(null);
+                }}
+                onSave={handleSaveAddInfo}
+                memberName={memberToEdit?.name || ''}
+                initialPhone={memberToEdit?.phone || ''}
+                initialTmId={memberToEdit?.tmId || ''}
+            />
             {linkError && <p className="text-red-500">{linkError}</p>}
             {isAdmin && showAddedBanner && lastAddedMemberId && (
                 <div className="sticky top-2 z-40 mb-3">
@@ -1443,6 +1741,7 @@ export const MemberManager: React.FC = () => {
                  <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-8">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Add New Member</h2>
                     <form onSubmit={handleAddMember} className="space-y-6">
+                        {/* Row 1: Name + Status */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
@@ -1466,6 +1765,46 @@ export const MemberManager: React.FC = () => {
                                 >
                                     {Object.values(MemberStatus).filter(s => s !== MemberStatus.Archived).map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
+                            </div>
+                        </div>
+                        {/* Row 2: Email + Phone + TM ID */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="user@example.com"
+                                    className="mt-1 flex-grow w-full px-4 py-2 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    value={phone}
+                                    onChange={handlePhoneChange}
+                                    onBlur={handlePhoneBlur}
+                                    placeholder="1+(360) 566-1234"
+                                    className="mt-1 flex-grow w-full px-4 py-2 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="tmId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <span className="hidden sm:inline">Toastmaster ID #</span>
+                                    <span className="sm:hidden">TM ID#</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="tmId"
+                                    value={tmId}
+                                    onChange={(e) => setTmId(e.target.value)}
+                                    placeholder="1234567"
+                                    className="mt-1 flex-grow w-full px-4 py-2 border-2 !border-2 !border-gray-300 dark:!border-gray-600 appearance-none rounded-md shadow-sm focus:ring-2 focus:ring-[#004165] dark:focus:ring-[#60a5fa] focus:border-[#004165] dark:focus:border-[#60a5fa] dark:bg-gray-700 dark:text-white"
+                                />
                             </div>
                         </div>
                         <div>

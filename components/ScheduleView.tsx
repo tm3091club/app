@@ -46,6 +46,13 @@ export const ScheduleView: React.FC = () => {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
+    const [isUnassignConfirmOpen, setIsUnassignConfirmOpen] = useState(false);
+    const [pendingUnassignment, setPendingUnassignment] = useState<{
+        meetingIndex: number;
+        role: string;
+        memberId: string;
+        memberName: string;
+    } | null>(null);
     
     // Data State
     const [shareUrl, setShareUrl] = useState('');
@@ -53,20 +60,54 @@ export const ScheduleView: React.FC = () => {
 
     const isAdmin = adminStatus?.hasAdminRights || false;
 
+    // --- Check if current user is archived ---
+    const currentMemberProfile = useMemo(() => {
+        if (!currentUser?.uid || !organization?.members) return null;
+        return organization.members.find(m => m.uid === currentUser.uid);
+    }, [currentUser, organization?.members]);
+
+    const isArchivedMember = useMemo(() => {
+        return currentMemberProfile && (currentMemberProfile as any).status === 'Archived';
+    }, [currentMemberProfile]);
+
+    // Filter schedules for archived members - only show past and current month schedules
+    const visibleSchedules = useMemo(() => {
+        if (!Array.isArray(schedules)) return [];
+        if (!isArchivedMember) return schedules; // Non-archived members see all schedules
+        
+        // For archived members, show schedules up to and including the current month
+        // This allows them to see the current month's schedule even if some meetings haven't occurred yet
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth(); // 0-indexed
+        
+        return schedules.filter(schedule => {
+            // Compare schedule year and month with current date
+            // Show schedules that are in past months or the current month
+            if (schedule.year < currentYear) return true; // Past years
+            if (schedule.year === currentYear && schedule.month <= currentMonth) return true; // Current or past months in current year
+            return false; // Future months
+        });
+    }, [schedules, isArchivedMember]);
+
     // --- Data Hydration ---
     const hydratedMembers = useMemo(() => {
         return organization?.members || [];
     }, [organization?.members]);
 
     // The active schedule is now directly derived from the context's state.
-    // No local copy is made, ensuring the view is always in sync with the database.
+    // For archived members, we use visibleSchedules; for others, use all schedules
     const activeSchedule = useMemo(() => {
-        if (!Array.isArray(schedules)) return null;
-        return schedules.find(s => s.id === selectedScheduleId) || null;
-    }, [schedules, selectedScheduleId]);
+        const schedulesToUse = isArchivedMember ? visibleSchedules : schedules;
+        if (!Array.isArray(schedulesToUse)) return null;
+        return schedulesToUse.find(s => s.id === selectedScheduleId) || null;
+    }, [schedules, visibleSchedules, selectedScheduleId, isArchivedMember]);
 
     // --- Granular Permission Logic for Members ---
     const canEditRoleAssignment = useCallback((meetingIndex: number, role: string) => {
+        // Archived members cannot edit anything
+        if (isArchivedMember) return false;
+        
         if (isAdmin) return true; // Admins can edit everything
         
         if (!activeSchedule || !currentUser?.uid) return false;
@@ -86,22 +127,34 @@ export const ScheduleView: React.FC = () => {
         
         // Members can only edit if they're assigned to this role or if the role is unassigned
         return isAssignedToThisRole || isRoleUnassigned;
-    }, [isAdmin, activeSchedule, currentUser, hydratedMembers]);
+    }, [isAdmin, activeSchedule, currentUser, hydratedMembers, isArchivedMember]);
 
     const canEditTheme = useCallback((meetingIndex: number) => {
+        // Archived members cannot edit anything
+        if (isArchivedMember) return false;
         // Only admins can edit themes
         return isAdmin;
-    }, [isAdmin]);
+    }, [isAdmin, isArchivedMember]);
 
     const canToggleBlackout = useCallback((meetingIndex: number) => {
+        // Archived members cannot edit anything
+        if (isArchivedMember) return false;
         // Only admins can toggle blackout
         return isAdmin;
-    }, [isAdmin]);
+    }, [isAdmin, isArchivedMember]);
 
     const activeMembers = useMemo(() => 
         hydratedMembers.filter(m => {
+            // For archived members viewing schedules, show ALL members (for read-only display)
             // For admins (including VPE with admin rights), allow assigning to all non-archived members,
             // regardless of their global status (Active/Possible/Unavailable). For non-admins, keep only Active.
+            if (isArchivedMember) {
+                // Archived members see everyone except the club admin (for display purposes)
+                if (m.uid === ownerId) return false;
+                if (organization && m.name.includes(organization.name)) return false;
+                return true;
+            }
+            
             if (isAdmin) {
                 if (m.status === MemberStatus.Archived) return false;
             } else {
@@ -115,15 +168,17 @@ export const ScheduleView: React.FC = () => {
             if (organization && m.name.includes(organization.name)) return false;
             
             return true;
-        }), [hydratedMembers, ownerId, organization, isAdmin]);
+        }), [hydratedMembers, ownerId, organization, isAdmin, isArchivedMember]);
     
     const previousSchedule = useMemo(() => {
-        if (!activeSchedule || !Array.isArray(schedules)) return null;
+        if (!activeSchedule) return null;
+        const schedulesToUse = isArchivedMember ? visibleSchedules : schedules;
+        if (!Array.isArray(schedulesToUse)) return null;
         const current = new Date(activeSchedule.year, activeSchedule.month);
         current.setMonth(current.getMonth() - 1);
         const prevId = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-        return schedules.find(s => s.id === prevId) || null;
-    }, [activeSchedule, schedules]);
+        return schedulesToUse.find(s => s.id === prevId) || null;
+    }, [activeSchedule, schedules, visibleSchedules, isArchivedMember]);
 
     const previousScheduleToShow = useMemo(() => {
         if (!showPreviousMonth || !previousSchedule || previousSchedule.meetings.length === 0) return null;
@@ -134,6 +189,17 @@ export const ScheduleView: React.FC = () => {
     useEffect(() => {
         setShowPreviousMonth(false);
     }, [selectedScheduleId]);
+
+    // Auto-select most recent schedule for archived members
+    useEffect(() => {
+        if (isArchivedMember && visibleSchedules.length > 0 && !selectedScheduleId) {
+            // Select the most recent visible schedule (last one in the array)
+            const mostRecentSchedule = visibleSchedules[visibleSchedules.length - 1];
+            if (mostRecentSchedule) {
+                setSelectedScheduleId(mostRecentSchedule.id);
+            }
+        }
+    }, [isArchivedMember, visibleSchedules, selectedScheduleId, setSelectedScheduleId]);
 
     // Computed properties for UI logic
     const hasUnassignedRoles = useMemo(() => {
@@ -407,13 +473,56 @@ export const ScheduleView: React.FC = () => {
                 .toLowerCase();
             const year = scheduleToShare.year;
             
-            const docIdPrefix = `${clubNumber}_${monthName}-${year}-v`;
+            const publicMembers = hydratedMembers.filter(m => m.status !== MemberStatus.Archived).map(m => ({ id: m.id, name: m.name }));
             
+            // Helper function to compare only the meaningful schedule content
+            const getScheduleContentHash = (schedule: any) => {
+                // Only compare fields that represent actual schedule changes
+                const contentToCompare = {
+                    id: schedule.id,
+                    year: schedule.year,
+                    month: schedule.month,
+                    meetings: schedule.meetings, // This contains all role assignments
+                };
+                return JSON.stringify(contentToCompare);
+            };
+            
+            // Always check all existing versions for this month/year to find matching content
+            const docIdPrefix = `${clubNumber}_${monthName}-${year}-v`;
             const querySnapshot = await db.collection('publicSchedules')
                 .where(firebase.firestore.FieldPath.documentId(), '>=', docIdPrefix)
                 .where(firebase.firestore.FieldPath.documentId(), '<', docIdPrefix + 'z')
                 .get();
-
+            
+            const currentContentHash = getScheduleContentHash(scheduleToShare);
+            
+            // Check if any existing version has the same content
+            for (const doc of querySnapshot.docs) {
+                const existingData = doc.data();
+                const existingContentHash = getScheduleContentHash(existingData);
+                
+                if (currentContentHash === existingContentHash) {
+                    // Found matching content, reuse that share link
+                    const shareId = existingData.shareId || doc.id.replace(`${clubNumber}_`, '');
+                    
+                    // Update local schedule if not already set
+                    if (!scheduleToShare.isShared || scheduleToShare.shareId !== shareId) {
+                        scheduleToShare.shareId = shareId;
+                        scheduleToShare.isShared = true;
+                        scheduleToShare.ownerId = user.uid;
+                        await updateSchedule({ schedule: scheduleToShare });
+                    }
+                    
+                    const url = new URL(`#/${clubNumber}/share/${shareId}`, window.location.origin).toString();
+                    setShareUrl(url);
+                    setIsShareModalOpen(true);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+            
+            // Content has changed or no existing share, create new version
+            // Find the highest version number from the query we already did
             let maxVersion = 0;
             querySnapshot.forEach(doc => {
                 const docId = doc.id;
@@ -434,7 +543,6 @@ export const ScheduleView: React.FC = () => {
             scheduleToShare.isShared = true;
             scheduleToShare.ownerId = user.uid;
             
-            const publicMembers = hydratedMembers.filter(m => m.status !== MemberStatus.Archived).map(m => ({ id: m.id, name: m.name }));
             const publicScheduleData = { ...scheduleToShare, publicMembers, clubNumber: organization.clubNumber, clubName: organization.name };
             
             await db.collection('publicSchedules').doc(firestoreDocId).set(publicScheduleData);
@@ -456,7 +564,7 @@ export const ScheduleView: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [activeSchedule, hydratedMembers, organization, updateSchedule, user]);
+    }, [activeSchedule, hydratedMembers, organization, updateSchedule, user, members]);
     
     const handleCopyToClipboard = useCallback(() => {
         if (!activeSchedule) return;
@@ -695,32 +803,41 @@ export const ScheduleView: React.FC = () => {
         const previousMemberId = assignments[role];
         const meeting = updatedSchedule.meetings[meetingIndex];
 
-        // Check if user is unassigning themselves from a speaker role
-        if (previousMemberId && !newMemberId && !isAdmin) {
-            const currentMember = members.find(m => m.id === previousMemberId);
-            if (currentMember?.uid === user?.uid && role.includes('Speaker')) {
-                // Show confirmation to find replacement
-                const shouldContinue = window.confirm(
-                    'You are unassigning yourself from a speaker role. Please make sure to find a replacement. ' +
-                    'Would you like to continue?'
-                );
-                if (!shouldContinue) return;
-
-                // Notify evaluator if one is assigned
-                const evaluatorRole = role.replace('Speaker', 'Evaluator');
-                const evaluatorId = assignments[evaluatorRole];
-                if (evaluatorId) {
-                    const evaluator = members.find(m => m.id === evaluatorId);
-                    if (evaluator?.uid) {
-                        await notificationService.notifySpeakerUnassigned(
-                            evaluator.uid,
-                            role,
-                            new Date(meeting.date).toLocaleDateString(),
-                            activeSchedule.id
-                        );
-                    }
-                }
+        // Check if someone is being unassigned (both members and admins see the confirmation)
+        if (previousMemberId && !newMemberId) {
+            const unassignedMember = members.find(m => m.id === previousMemberId);
+            if (unassignedMember) {
+                // Show confirmation modal for all users unassigning someone
+                setPendingUnassignment({
+                    meetingIndex,
+                    role,
+                    memberId: previousMemberId,
+                    memberName: unassignedMember.name
+                });
+                setIsUnassignConfirmOpen(true);
+                return; // Wait for confirmation
             }
+        }
+
+        // Continue with the rest of the assignment logic
+        await processAssignmentChange(meetingIndex, role, newMemberId, previousMemberId);
+    }, [activeSchedule, members]);
+
+    // Process the actual assignment change (called after confirmation or for assignments)
+    const processAssignmentChange = useCallback(async (
+        meetingIndex: number, 
+        role: string, 
+        newMemberId: string | null,
+        previousMemberId?: string | null
+    ) => {
+        if (!activeSchedule) return;
+
+        const updatedSchedule = deepClone(activeSchedule);
+        const assignments = updatedSchedule.meetings[meetingIndex].assignments;
+        const meeting = updatedSchedule.meetings[meetingIndex];
+        
+        if (previousMemberId === undefined) {
+            previousMemberId = assignments[role];
         }
 
         if (newMemberId && MAJOR_ROLES.includes(role)) {
@@ -753,8 +870,8 @@ export const ScheduleView: React.FC = () => {
         
         assignments[role] = newMemberId;
 
-        // Send notifications for role changes
-        if (previousMemberId !== newMemberId && isAdmin) {
+        // Send notifications for role changes (when admin assigns someone)
+        if (previousMemberId !== newMemberId && isAdmin && newMemberId) {
             const previousMember = previousMemberId ? organization?.members.find(m => m.id === previousMemberId) : null;
             const newMember = newMemberId ? organization?.members.find(m => m.id === newMemberId) : null;
 
@@ -765,9 +882,55 @@ export const ScheduleView: React.FC = () => {
                 new Date(meeting.date).toLocaleDateString(),
                 activeSchedule.id
             );
+        }
 
-            // If role becomes unassigned, notify qualified available/possible members
-            if (!newMemberId && previousMemberId) {
+        // Handle notifications when someone is unassigned (both admins and members)
+        if (previousMemberId && !newMemberId) {
+            // Notify the Toastmaster for this meeting
+            const toastmasterId = assignments['Toastmaster'];
+            if (toastmasterId) {
+                const toastmaster = members.find(m => m.id === toastmasterId);
+                const unassignedMember = members.find(m => m.id === previousMemberId);
+                
+                if (toastmaster?.uid && unassignedMember) {
+                    // Get email from organization.members (AppUser list) which has authenticated user emails
+                    const toastmasterAppUser = organization?.members.find(m => m.uid === toastmaster.uid);
+                    const toastmasterEmail = toastmasterAppUser?.email || toastmaster.email;
+                    
+                    if (toastmasterEmail) {
+                        await notificationService.notifyToastmasterOfSelfUnassignment(
+                            toastmaster.uid,
+                            toastmasterEmail,
+                            toastmaster.name,
+                            organization?.name || 'Your Toastmasters Club',
+                            unassignedMember.name,
+                            role,
+                            new Date(meeting.date).toLocaleDateString(),
+                            activeSchedule.id
+                        );
+                    }
+                }
+            }
+
+            // If unassigning from a speaker role, notify the evaluator
+            if (role.includes('Speaker')) {
+                const evaluatorRole = role.replace('Speaker', 'Evaluator');
+                const evaluatorId = assignments[evaluatorRole];
+                if (evaluatorId) {
+                    const evaluator = members.find(m => m.id === evaluatorId);
+                    if (evaluator?.uid) {
+                        await notificationService.notifySpeakerUnassigned(
+                            evaluator.uid,
+                            role,
+                            new Date(meeting.date).toLocaleDateString(),
+                            activeSchedule.id
+                        );
+                    }
+                }
+            }
+
+            // Notify qualified available/possible members when role becomes unassigned
+            if (isAdmin) {
                 const dateKey = meeting.date.split('T')[0];
                 const qualifiedMembers = (organization?.members || []).filter(member => {
                     // Check availability
@@ -800,7 +963,27 @@ export const ScheduleView: React.FC = () => {
         }
 
         await updateSchedule({ schedule: updatedSchedule });
-    }, [activeSchedule, updateSchedule, members, availability, currentUser, user]);
+    }, [activeSchedule, updateSchedule, members, availability, organization, isAdmin]);
+
+    // Handle confirmation of member self-unassignment
+    const handleConfirmUnassignment = useCallback(async () => {
+        if (!pendingUnassignment) return;
+
+        const { meetingIndex, role, memberId } = pendingUnassignment;
+        
+        // Close modal and clear pending state
+        setIsUnassignConfirmOpen(false);
+        setPendingUnassignment(null);
+
+        // Process the unassignment
+        await processAssignmentChange(meetingIndex, role, null, memberId);
+    }, [pendingUnassignment, processAssignmentChange]);
+
+    // Handle cancellation of unassignment
+    const handleCancelUnassignment = useCallback(() => {
+        setIsUnassignConfirmOpen(false);
+        setPendingUnassignment(null);
+    }, []);
     
     const handleThemeChange = useCallback(async (meetingIndex: number, theme: string) => {
         if (!activeSchedule) return;
@@ -881,6 +1064,30 @@ export const ScheduleView: React.FC = () => {
             <ConfirmationModal isOpen={isGenerateConfirmOpen} onClose={() => setIsGenerateConfirmOpen(false)} onConfirm={handleConfirmGenerateSchedule} title="Regenerate Schedule?">
                 <p>This will overwrite manual assignments. This action cannot be undone.</p>
             </ConfirmationModal>
+            <ConfirmationModal 
+                isOpen={isUnassignConfirmOpen} 
+                onClose={handleCancelUnassignment} 
+                onConfirm={handleConfirmUnassignment} 
+                title="Please Find a Replacement"
+                hideIcon={true}
+            >
+                <div className="space-y-4">
+                    <p className="text-gray-700 dark:text-gray-300">
+                        You are about to unassign yourself from <strong>{pendingUnassignment?.role}</strong>.
+                    </p>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <p className="text-sm text-blue-800 dark:text-blue-300 font-semibold mb-2">
+                            Important Reminder:
+                        </p>
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                            Please ask another member to step in and fill this role. If needed, contact that week's Toastmaster to help find a replacement.
+                        </p>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                        The Toastmaster has been notified via email.
+                    </p>
+                </div>
+            </ConfirmationModal>
 
             {isLoading && (
                 <div className="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center">
@@ -906,7 +1113,7 @@ export const ScheduleView: React.FC = () => {
             )}
 
             <ScheduleToolbar
-                schedules={schedules}
+                schedules={visibleSchedules}
                 selectedScheduleId={selectedScheduleId}
                 onSelectSchedule={setSelectedScheduleId}
                 onDeleteSchedule={() => setIsDeleteModalOpen(true)}
@@ -947,36 +1154,38 @@ export const ScheduleView: React.FC = () => {
                     />
                 </div>
             ) : (
-                <div className="mt-6 text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Create a New Schedule</h3>
-                    {organization?.meetingDay !== undefined ? (
-                         <div className="mt-6 flex flex-col justify-center items-center gap-4 px-4">
-                            {(() => {
-                                const nextMonthInfo = getNextScheduleMonth(schedules, organization.meetingDay);
-                                const nextMonthExists = Array.isArray(schedules) && schedules.some(s => s.id === `${nextMonthInfo.year}-${String(nextMonthInfo.month + 1).padStart(2, '0')}`);
-                                
-                                return (
-                                    <>
-                                        <p className="text-md text-gray-600 dark:text-gray-400">
-                                            Ready to generate the schedule for <strong className="text-gray-900 dark:text-white">{nextMonthInfo.displayName}</strong> with AI-powered themes and role assignments.
-                                        </p>
-                                        <button 
-                                            onClick={() => {
-                                                handleNewSchedule();
-                                            }}
-                                            disabled={nextMonthExists || !isAdmin} 
-                                            className="w-full sm:w-auto inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:bg-indigo-400 dark:disabled:bg-indigo-800 disabled:cursor-not-allowed"
-                                        >
-                                            {nextMonthExists ? 'Schedule Already Exists' : `Generate ${nextMonthInfo.displayName} Schedule`}
-                                        </button>
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Please set a meeting day in your Club Profile and add members in "Manage Members" before creating schedules.</p>
-                    )}
-                </div>
+                !isArchivedMember && (
+                    <div className="mt-6 text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Create a New Schedule</h3>
+                        {organization?.meetingDay !== undefined ? (
+                             <div className="mt-6 flex flex-col justify-center items-center gap-4 px-4">
+                                {(() => {
+                                    const nextMonthInfo = getNextScheduleMonth(schedules, organization.meetingDay);
+                                    const nextMonthExists = Array.isArray(schedules) && schedules.some(s => s.id === `${nextMonthInfo.year}-${String(nextMonthInfo.month + 1).padStart(2, '0')}`);
+                                    
+                                    return (
+                                        <>
+                                            <p className="text-md text-gray-600 dark:text-gray-400">
+                                                Ready to generate the schedule for <strong className="text-gray-900 dark:text-white">{nextMonthInfo.displayName}</strong> with AI-powered themes and role assignments.
+                                            </p>
+                                            <button 
+                                                onClick={() => {
+                                                    handleNewSchedule();
+                                                }}
+                                                disabled={nextMonthExists || !isAdmin} 
+                                                className="w-full sm:w-auto inline-flex items-center justify-center bg-[#004165] hover:bg-[#003554] text-white font-bold py-2 px-4 rounded-md transition duration-150 disabled:bg-indigo-400 dark:disabled:bg-indigo-800 disabled:cursor-not-allowed"
+                                            >
+                                                {nextMonthExists ? 'Schedule Already Exists' : `Generate ${nextMonthInfo.displayName} Schedule`}
+                                            </button>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Please set a meeting day in your Club Profile and add members in "Manage Members" before creating schedules.</p>
+                        )}
+                    </div>
+                )
             )}
         </>
     );

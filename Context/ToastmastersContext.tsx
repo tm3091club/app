@@ -26,10 +26,12 @@ interface ToastmastersState {
   error: string | null;
   needsEmailVerification: boolean;
   adminStatus: ToastmasterAdminStatus | null;
-    addMember: (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => Promise<Member>;
+    addMember: (payload: { name: string; status: MemberStatus; email?: string; phone?: string; tmId?: string; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }) => Promise<Member>;
   updateMemberName: (payload: { memberId: string; newName: string; }) => Promise<void>;
   updateMemberStatus: (payload: { id: string; status: MemberStatus; }) => Promise<void>;
   updateMemberQualifications: (payload: { id: string; qualifications: Partial<Pick<Member, 'isToastmaster' | 'isTableTopicsMaster' | 'isGeneralEvaluator' | 'isPastPresident'>>; }) => Promise<void>;
+    updateMemberPhone: (payload: { memberId: string; phone?: string | null; }) => Promise<void>;
+    updateMemberInfo: (payload: { memberId: string; phone?: string | null; tmId?: string | null; }) => Promise<void>;
   setMemberAvailability: (payload: { memberId: string; date: string; status: AvailabilityStatus; }) => Promise<void>;
   addSchedule: (payload: { schedule: MonthlySchedule; }) => Promise<void>;
   updateSchedule: (payload: { schedule: MonthlySchedule; }) => Promise<void>;
@@ -856,8 +858,14 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         if (!dataOwnerId || !currentUser || !organization) {
           throw new Error("Cannot send invite: missing user or organization data.");
         }
-        if (currentUser.uid !== dataOwnerId) {
-            throw new Error("Only the Club Admin can send invitations.");
+        
+        // Allow club admin, officers, and admin role to send invites
+        const isClubAdmin = currentUser.uid === dataOwnerId;
+        const isOfficer = currentUser.officerRole !== undefined;
+        const isAdmin = currentUser.role === UserRole.Admin;
+        
+        if (!isClubAdmin && !isOfficer && !isAdmin) {
+            throw new Error("Only officers and admins can send invitations.");
         }
       
         const emailLower = email.trim().toLowerCase();
@@ -1539,7 +1547,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
     };
 
 
-    const addMember = async (payload: { name: string; status: MemberStatus; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }): Promise<Member> => {
+    const addMember = async (payload: { name: string; status: MemberStatus; email?: string; phone?: string; tmId?: string; isToastmaster?: boolean; isTableTopicsMaster?: boolean; isGeneralEvaluator?: boolean; isPastPresident?: boolean; }): Promise<Member> => {
         const docRef = getDataDocRef();
         if (!docRef || !organization) throw new Error('Unable to add member: missing organization or database reference.');
         
@@ -1648,6 +1656,62 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
         const updatedSchedulingMembers = members.map(m => m.id === payload.id ? { ...m, ...payload.qualifications } : m);
         setMembers(updatedSchedulingMembers);
         
+        await docRef.update({ 
+            'organization': updatedOrganization,
+            'members': updatedSchedulingMembers
+        });
+    };
+
+    const updateMemberPhone = async (payload: { memberId: string; phone?: string | null; }) => {
+        const docRef = getDataDocRef();
+        if (!docRef || !organization) return;
+        const { memberId, phone } = payload;
+
+        // Update in organization.members
+        const updatedMembers = organization.members.map(m => 
+            m.id === memberId ? { ...m, phone: phone || undefined } : m
+        );
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+
+        // Also mirror into the separate scheduling members array if present
+        const updatedSchedulingMembers = members.map(m => 
+            m.id === memberId ? { ...m, phone: phone || undefined } : m
+        );
+        setMembers(updatedSchedulingMembers);
+
+        await docRef.update({ 
+            'organization': updatedOrganization,
+            'members': updatedSchedulingMembers
+        });
+    };
+
+    const updateMemberInfo = async (payload: { memberId: string; phone?: string | null; tmId?: string | null; }) => {
+        const docRef = getDataDocRef();
+        if (!docRef || !organization) return;
+        const { memberId, phone, tmId } = payload;
+
+        // Update in organization.members
+        const updatedMembers = organization.members.map(m => 
+            m.id === memberId ? { 
+                ...m, 
+                ...(phone !== undefined && { phone: phone || undefined }),
+                ...(tmId !== undefined && { tmId: tmId || undefined })
+            } : m
+        );
+        const updatedOrganization = { ...organization, members: updatedMembers };
+        setOrganization(updatedOrganization);
+
+        // Also mirror into the separate scheduling members array if present
+        const updatedSchedulingMembers = members.map(m => 
+            m.id === memberId ? { 
+                ...m, 
+                ...(phone !== undefined && { phone: phone || undefined }),
+                ...(tmId !== undefined && { tmId: tmId || undefined })
+            } : m
+        );
+        setMembers(updatedSchedulingMembers);
+
         await docRef.update({ 
             'organization': updatedOrganization,
             'members': updatedSchedulingMembers
@@ -1793,7 +1857,7 @@ export const ToastmastersProvider = ({ children }: { children: ReactNode }) => {
 
     const value = {
         schedules, availability, selectedScheduleId, organization, members, currentUser, ownerId: dataOwnerId, loading, error, needsEmailVerification, pendingInvites, weeklyAgendas, adminStatus,
-        addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, setMemberAvailability,
+        addMember, updateMemberName, updateMemberStatus, updateMemberJoinDate, updateMemberQualifications, updateMemberPhone, updateMemberInfo, setMemberAvailability,
         addSchedule, updateSchedule, deleteSchedule, setSelectedScheduleId, deleteMember,
         updateUserName, updateClubProfile, updateUserRole, removeUser, inviteUser, revokeInvite,
         sendPasswordResetEmail, removeFromPendingLinking, linkMemberToAccount, linkCurrentUserToMember, linkMemberByEmail, findAndLinkExistingUser, checkMemberLinkingStatus, getAllUnlinkedUsers, linkMemberToUid, linkMemberToFirebaseAuthUser, saveWeeklyAgenda, deleteWeeklyAgenda

@@ -55,6 +55,9 @@ export interface Member {
   isGeneralEvaluator?: boolean;
   isPastPresident?: boolean;
   uid?: string; // Link to the user account
+  email?: string; // Optional email for invitations/linking
+  phone?: string; // Optional phone number (formatted)
+  tmId?: string; // Optional Toastmasters ID number
   joinedDate?: string; // ISO date string when member joined
   ownerId?: string; // Links member to the club owner who manages them
 }
@@ -102,6 +105,7 @@ export enum NotificationType {
   MeetingBlackout = 'MeetingBlackout',
   SpeakerUnassigned = 'SpeakerUnassigned',
   NewMemberAdded = 'NewMemberAdded',
+  MemberSelfUnassigned = 'MemberSelfUnassigned',
 }
 
 export interface Notification {
