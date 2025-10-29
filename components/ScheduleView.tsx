@@ -545,16 +545,30 @@ export const ScheduleView: React.FC = () => {
             
             const publicScheduleData = { ...scheduleToShare, publicMembers, clubNumber: organization.clubNumber, clubName: organization.name };
             
+            // Write public doc
             await db.collection('publicSchedules').doc(firestoreDocId).set(publicScheduleData);
+
+            // Deduplicate "Schedule Published" notifications: only notify on first publish
+            // for this exact content hash (or if we have never notified before).
+            const previouslyPublishedHash = (activeSchedule as any)?.lastPublishedHash as string | undefined;
+            const contentHashForThisPublish = currentContentHash; // computed above for scheduleToShare
+            const shouldNotifyMembers = previouslyPublishedHash !== contentHashForThisPublish;
+
+            // Stamp the schedule with publish metadata (optional fields; schema-safe)
+            (scheduleToShare as any).lastPublishedHash = contentHashForThisPublish;
+            (scheduleToShare as any).lastPublishedAt = new Date().toISOString();
+
             await updateSchedule({ schedule: scheduleToShare });
-            
-            // Notify all active members about the new schedule
-            const monthYear = `${new Date(scheduleToShare.year, scheduleToShare.month).toLocaleString('default', {month: 'long'})} ${scheduleToShare.year}`;
-            await notificationService.notifySchedulePublished(
-                members.filter(m => m.status === MemberStatus.Active),
-                scheduleToShare.id,
-                monthYear
-            );
+
+            if (shouldNotifyMembers) {
+                // Notify all active members about the new schedule
+                const monthYear = `${new Date(scheduleToShare.year, scheduleToShare.month).toLocaleString('default', {month: 'long'})} ${scheduleToShare.year}`;
+                await notificationService.notifySchedulePublished(
+                    members.filter(m => m.status === MemberStatus.Active),
+                    scheduleToShare.id,
+                    monthYear
+                );
+            }
             
             const url = new URL(`#/${clubNumber}/share/${humanReadableShareId}`, window.location.origin).toString();
             setShareUrl(url);
