@@ -4,6 +4,94 @@ import { useToastmasters } from '../../Context/ToastmastersContext';
 import { knowledgeService, KnowledgeSection } from '../../services/knowledgeService';
 import { KnowledgeEditorModal } from './KnowledgeEditorModal';
 import { KnowledgeSectionEditor } from './KnowledgeSectionEditor';
+import '../../styles/KnowledgeContent.css';
+
+const CALL_OUT_BACKGROUND_REGEX = /background-color:\s*(rgb\(239,\s*246,\s*255\)|rgb\(240,\s*244,\s*255\)|#eff6ff|#f0f4ff)/i;
+const CALL_OUT_BORDER_REGEX = /(border-left:\s*4px\s*solid\s*(rgb\(59,\s*130,\s*246\)|#3b82f6)|border-left-color:\s*(rgb\(59,\s*130,\s*246\)|#3b82f6))/i;
+const CALL_OUT_TEXT_COLOR_REGEX = /color:\s*(rgb\(55,\s*65,\s*81\)|#374151)/i;
+
+const removeStyleProperties = (style: string, properties: string[]): string => {
+  if (!style) return style;
+  const declarations = style
+    .split(';')
+    .map(part => part.trim())
+    .filter(Boolean);
+
+  const filtered = declarations.filter(declaration => {
+    const [property] = declaration.split(':');
+    if (!property) return false;
+    return !properties.includes(property.trim().toLowerCase());
+  });
+
+  return filtered.join('; ');
+};
+
+const sanitizeKnowledgeContent = (html: string): string => {
+  if (!html) return html;
+
+  if (typeof window === 'undefined') {
+    return html;
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const elements = Array.from(doc.body.querySelectorAll<HTMLElement>('[style]'));
+
+    elements.forEach(element => {
+      const styleAttr = element.getAttribute('style');
+      if (!styleAttr) return;
+
+      const isCalloutContainer = CALL_OUT_BACKGROUND_REGEX.test(styleAttr) || CALL_OUT_BORDER_REGEX.test(styleAttr);
+      const isCalloutText = CALL_OUT_TEXT_COLOR_REGEX.test(styleAttr);
+
+      let updatedStyle = styleAttr;
+
+      if (isCalloutContainer) {
+        updatedStyle = removeStyleProperties(updatedStyle, [
+          'background-color',
+          'background',
+          'border-left',
+          'border-left-color',
+          'padding',
+          'margin',
+        ]);
+      }
+
+      if (isCalloutText) {
+        updatedStyle = removeStyleProperties(updatedStyle, ['color']);
+      }
+
+      if (isCalloutContainer || isCalloutText) {
+        const cleanedStyle = updatedStyle
+          .split(';')
+          .map(part => part.trim())
+          .filter(Boolean)
+          .join('; ');
+
+        if (cleanedStyle) {
+          element.setAttribute('style', cleanedStyle);
+        } else {
+          element.removeAttribute('style');
+        }
+      }
+
+      if (isCalloutContainer) {
+        element.classList.add('tm-knowledge-callout');
+      }
+
+      if (isCalloutText) {
+        element.classList.add('tm-knowledge-callout-text');
+      }
+    });
+
+    return doc.body.innerHTML;
+  } catch (error) {
+    console.warn('[Knowledge] Failed to sanitize content for rendering', error);
+    return html;
+  }
+};
 
 interface EditableKnowledgePageProps {
   pageId: string;
@@ -27,6 +115,7 @@ export const EditableKnowledgePage: React.FC<EditableKnowledgePageProps> = ({
 
   // Check if user can edit (admin or officer)
   const canEdit = adminStatus?.hasAdminRights || currentUser?.officerRole;
+  const renderedContent = React.useMemo(() => sanitizeKnowledgeContent(content), [content]);
 
   useEffect(() => {
     if (!ownerId) return;
@@ -175,8 +264,8 @@ export const EditableKnowledgePage: React.FC<EditableKnowledgePageProps> = ({
 
           {/* Render content as HTML */}
           <div
-            className="prose prose-lg dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: content }}
+            className="prose prose-lg dark:prose-invert max-w-none knowledge-content"
+            dangerouslySetInnerHTML={{ __html: renderedContent }}
           />
 
           {children}

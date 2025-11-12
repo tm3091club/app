@@ -152,23 +152,37 @@ This project uses an automated versioning system:
 - **Manual**: Run `npm run version:update` to update version manually
 - **Format**: `M.DD.YY-X` (Month.Day.Year-PushCount)
 
-## 🎯 Data Model Overview
+## ✨ Key Features
 
-### Firestore Collections (at a glance)
-- `users` – club admins & members
-- `members` – per-club members and qualifications
-- `schedules` – monthly schedules with meetings & assignments
-- `weeklyAgendas` – weekly meeting agendas
-- `invitations` – pending invites
-- `notifications` – user notifications
-- `publicAgendas` / `publicSchedules` – read-only shared links
+- **Dynamic Schedule Management**: Create and manage monthly meeting schedules with real-time updates.
+- **Intelligent Role Assignment**: Assign members to roles, with automatic qualification checks and officer-specific logic (e.g., President/VPE fallback).
+- **Member & Availability Tracking**: Manage member profiles, qualifications (Toastmaster, GE, etc.), and per-meeting availability.
+- **Automated Notifications**: Keep members informed with automatic email reminders for upcoming roles and availability requests.
+- **Public Sharing**: Generate shareable, read-only links for monthly schedules and weekly agendas.
+- **Export Options**: Export schedules to PDF or copy as TSV for Google Sheets.
+- **PWA Support**: Installable as a Progressive Web App (PWA) on both mobile and desktop for a native-like experience.
 
-➡️ For full details on schema, logic, and roadmap, see [TOASTMASTERS_APP_SPEC.md](./TOASTMASTERS_APP_SPEC.md)
+### 🧠 Member Resource Hub (Knowledge Section)
 
-### Permissions Model
-- **Admins**: Full control (assign roles, manage members, schedules)
-- **Members**: Can update their availability, self-assign to unassigned roles (if qualified)
-- **Club Officers**: Specific logic (e.g., President always appears on schedule, fallback to VP Education if unavailable)
+A fully dynamic, CMS-like section where club officers can create, edit, and organize resources for members.
+
+- **Officer-Controlled**: Only users with an "Officer" role can create, edit, or delete sections and content.
+- **Dynamic Sections**: Officers can add new resource sections, customize their title, description, and icon.
+- **Featured Content**: Sections can be marked as "Featured" to appear prominently at the top of the hub, perfect for onboarding new members (e.g., "New Member Journey").
+- **Rich Text Editing**: Content for each page is managed via a rich text editor, allowing for formatted text and links.
+- **Secure & Scoped**: All content is stored securely in Firestore and scoped to the specific club.
+
+## 🎯 Data Model & Permissions
+
+The application uses a comprehensive Firestore data model to manage all aspects of a Toastmasters club's operations.
+
+- **Collections**: `users`, `members`, `schedules`, `weeklyAgendas`, `knowledgeSections`, `knowledgeContent`, `invitations`, `notifications`, and more.
+- **Permissions**:
+  - **Admins**: Full control over schedules, members, and club settings.
+  - **Officers**: Can manage the Member Resource Hub content.
+  - **Members**: Can manage their own availability and self-assign to qualified, open roles.
+
+➡️ For the complete specification, app logic, database schema, and feature roadmap, see the [**Project Specification & Golden Rules**](./.github/copilot-instructions.md).
 
 ## 🤝 Contributing
 

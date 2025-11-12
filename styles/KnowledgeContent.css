@@ -1,0 +1,197 @@
+/* Knowledge Content Styles - Ensures proper text visibility in light and dark modes */
+
+/* Force text color for all elements within knowledge content */
+.knowledge-content,
+.knowledge-content *,
+.knowledge-content div,
+.knowledge-content span,
+.knowledge-content p,
+.knowledge-content h1,
+.knowledge-content h2,
+.knowledge-content h3,
+.knowledge-content h4,
+.knowledge-content h5,
+.knowledge-content h6,
+.knowledge-content li,
+.knowledge-content td,
+.knowledge-content th {
+  color: inherit !important;
+}
+
+/* Light mode - black text */
+.knowledge-content {
+  color: #111827; /* gray-900 */
+}
+
+/* Dark mode - white text */
+.dark .knowledge-content {
+  color: #f9fafb !important; /* gray-50 */
+}
+
+/* Knowledge content callouts */
+.knowledge-content .tm-knowledge-callout {
+  background-color: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+}
+
+.dark .knowledge-content .tm-knowledge-callout {
+  /* Force removal of light background in dark mode */
+  background-color: transparent !important;
+  background: none !important;
+  border-left-color: rgba(96, 165, 250, 0.6) !important;
+  /* Ensure text remains readable inside the callout */
+  color: #f8fafc !important;
+}
+
+/* Fallback: force-callout inline backgrounds transparent in dark mode */
+.dark .knowledge-content [style*="239, 246, 255"],
+.dark .knowledge-content [style*="#eff6ff"],
+.dark .knowledge-content [style*="#EFF6FF"],
+.dark .knowledge-content [style*="240, 244, 255"],
+.dark .knowledge-content [style*="#f0f4ff"],
+.dark .knowledge-content [style*="#F0F4FF"] {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+.dark .knowledge-content [style*="border-left: 4px"],
+.dark .knowledge-content [style*="border-left-color"] {
+  border-left-color: rgba(96, 165, 250, 0.6) !important;
+}
+
+.dark .knowledge-content [style*="background-color"] {
+  background-color: transparent !important;
+  background: transparent !important;
+  color: #f8fafc !important;
+}
+
+.knowledge-content .tm-knowledge-callout-text {
+  color: #1f2937;
+}
+
+.dark .knowledge-content .tm-knowledge-callout-text {
+  color: #f8fafc;
+}
+
+/* Ensure links are visible and styled properly */
+.knowledge-content a {
+  color: #2563eb !important; /* blue-600 in light mode */
+  text-decoration: underline;
+}
+
+.dark .knowledge-content a {
+  color: #60a5fa !important; /* blue-400 in dark mode */
+}
+
+/* Ensure headings maintain proper hierarchy while respecting dark mode */
+.knowledge-content h1,
+.knowledge-content h2,
+.knowledge-content h3,
+.knowledge-content h4,
+.knowledge-content h5,
+.knowledge-content h6 {
+  font-weight: bold;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.25;
+}
+
+.knowledge-content h1 { font-size: 2em; }
+.knowledge-content h2 { font-size: 1.5em; }
+.knowledge-content h3 { font-size: 1.25em; }
+
+/* Ensure lists are properly styled */
+.knowledge-content ul,
+.knowledge-content ol {
+  margin-left: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.knowledge-content li {
+  margin-bottom: 0.25em;
+}
+
+/* Ensure paragraphs have proper spacing */
+.knowledge-content p {
+  margin-bottom: 1em;
+  line-height: 1.6;
+}
+
+/* Code blocks */
+.knowledge-content code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.dark .knowledge-content code {
+  background-color: #374151;
+}
+
+/* Blockquotes */
+.knowledge-content blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin-left: 0;
+  font-style: italic;
+  color: #6b7280;
+}
+
+.dark .knowledge-content blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+
+/* Tables */
+.knowledge-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.knowledge-content th,
+.knowledge-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.dark .knowledge-content th,
+.dark .knowledge-content td {
+  border-color: #4b5563;
+}
+
+.knowledge-content th {
+  background-color: #f9fafb;
+  font-weight: bold;
+}
+
+.dark .knowledge-content th {
+  background-color: #1f2937;
+}
+
+/* Strong and emphasis */
+.knowledge-content strong {
+  font-weight: bold;
+}
+
+.knowledge-content em {
+  font-style: italic;
+}
+
+/* Horizontal rules */
+.knowledge-content hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 2em 0;
+}
+
+.dark .knowledge-content hr {
+  border-top-color: #4b5563;
+}
