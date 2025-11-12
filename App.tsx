@@ -16,6 +16,13 @@ import { UnsubscribePage } from './components/UnsubscribePage';
 import { MentorshipPage } from './components/MentorshipPage';
 import { TermsOfServicePage } from './components/TermsOfServicePage';
 import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
+import KnowledgePage from './components/KnowledgePage';
+import { NewMemberJourneyPage } from './components/NewMemberJourneyPage';
+import { ClubOverviewPage } from './components/ClubOverviewPage';
+import { CurrentMembersPage } from './components/CurrentMembersPage';
+import { OfficersHubPage } from './components/OfficersHubPage';
+import { RolesLibraryPage } from './components/RolesLibraryPage';
+import { MiscPage } from './components/MiscPage';
 import { APP_VERSION } from './utils/version';
 import { db } from './services/firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -131,6 +138,9 @@ function App() {
   const termsMatch = hash.match(/^\/terms-of-service/);
   // Matches /privacy-policy
   const privacyMatch = hash.match(/^\/privacy-policy/);
+  // Matches /knowledge routes
+  const knowledgeMatch = hash.match(/^\/knowledge(\/.*)?$/);
+  const knowledgeSubPath = knowledgeMatch ? (knowledgeMatch[1] || '') : null;
   const urlParams = new URLSearchParams(hash.split('?')[1] || '');
   const inviteToken = urlParams.get('token');
   
@@ -268,6 +278,44 @@ function App() {
   // Handle Privacy Policy route (no authentication required)
   if (privacyMatch) {
     return <PrivacyPolicyPage />;
+  }
+
+  // Handle Knowledge routes (authentication required for editing)
+  if (knowledgeMatch) {
+    if (!user) {
+      // If not logged in, redirect to auth
+      return <AuthPage />;
+    }
+    
+    // Wrap Knowledge pages in providers for edit functionality
+    const KnowledgeWrapper = () => {
+      switch (knowledgeSubPath) {
+        case '':
+          return <KnowledgePage />;
+        case '/new-member-journey':
+          return <NewMemberJourneyPage />;
+        case '/club-overview':
+          return <ClubOverviewPage />;
+        case '/current-members':
+          return <CurrentMembersPage />;
+        case '/officers-hub':
+          return <OfficersHubPage />;
+        case '/roles-library':
+          return <RolesLibraryPage />;
+        case '/misc':
+          return <MiscPage />;
+        default:
+          return <KnowledgePage />;
+      }
+    };
+    
+    return (
+      <ToastmastersProvider>
+        <NotificationProvider>
+          <KnowledgeWrapper />
+        </NotificationProvider>
+      </ToastmastersProvider>
+    );
   }
 
   // Agenda Share Route - Show shared agenda

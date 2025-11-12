@@ -74,6 +74,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                                     {adminStatus?.hasAdminRights ? 'Manage Members' : 'My Availability'}
                                 </NavLink>
                                 <NavLink isActive={currentView === 'mentorship'} onClick={() => handleNavClick('mentorship')}>Mentorship</NavLink>
+                                <button
+                                    onClick={() => window.location.hash = '/knowledge'}
+                                    className="text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white block w-full text-left md:w-auto md:text-center px-4 py-2 md:py-3 rounded-md text-base md:text-sm font-semibold md:font-medium transition-colors duration-150"
+                                >
+                                    Knowledge
+                                </button>
                             </nav>
                              <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-4"></div>
                              <div className="flex items-center space-x-3">
@@ -154,6 +160,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setCurrentView, log
                         </div>
                         
                         <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                        
+                        {/* Knowledge Link */}
+                        <div className="px-2 py-1">
+                            <button
+                                onClick={() => { window.location.hash = '/knowledge'; setIsMobileMenuOpen(false); }}
+                                className="w-full text-left block px-4 py-2 rounded-md text-base font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                                Knowledge
+                            </button>
+                        </div>
                         
                         {/* Log Out */}
                         <div className="px-2 py-1">

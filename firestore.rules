@@ -127,6 +127,24 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // --- Knowledge Content Subcollection under Users ---
+    match /users/{userId}/knowledgeContent/{pageId} {
+      // Allow all authenticated users to read knowledge content
+      allow read: if isAuthenticated();
+      
+      // Allow authenticated users to write (app will handle officer/admin checks)
+      allow write: if isAuthenticated();
+    }
+
+    // --- Knowledge Sections Subcollection under Users ---
+    match /users/{userId}/knowledgeSections/{sectionId} {
+      // Allow all authenticated users to read knowledge sections
+      allow read: if isAuthenticated();
+      
+      // Allow authenticated users to write (app will handle officer/admin checks)
+      allow write: if isAuthenticated();
+    }
+
     // --- Mentorship Subcollection under Users ---
     match /users/{userId}/mentorship/{category} {
       // Allow authenticated users to read/write mentorship data

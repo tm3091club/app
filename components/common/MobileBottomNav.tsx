@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, FileText, User, Users, Settings } from 'lucide-react';
+import { Calendar, FileText, User, Users, Settings, BookOpen } from 'lucide-react';
 
 type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda' | 'mentorship';
 
@@ -34,33 +34,39 @@ const NavButton: React.FC<NavButtonProps> = ({ icon, label, isActive, onClick })
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, setCurrentView }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 md:hidden">
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center justify-around h-16 px-1">
         <NavButton
-          icon={<Calendar size={24} />}
+          icon={<Calendar size={20} />}
           label="Scheduler"
           isActive={currentView === 'schedule'}
           onClick={() => setCurrentView('schedule')}
         />
         <NavButton
-          icon={<FileText size={24} />}
+          icon={<FileText size={20} />}
           label="Agenda"
           isActive={currentView === 'weekly-agenda'}
           onClick={() => setCurrentView('weekly-agenda')}
         />
         <NavButton
-          icon={<User size={24} />}
+          icon={<User size={20} />}
           label="Availability"
           isActive={currentView === 'members'}
           onClick={() => setCurrentView('members')}
         />
         <NavButton
-          icon={<Users size={24} />}
+          icon={<Users size={20} />}
           label="Mentorship"
           isActive={currentView === 'mentorship'}
           onClick={() => setCurrentView('mentorship')}
         />
         <NavButton
-          icon={<Settings size={24} />}
+          icon={<BookOpen size={20} />}
+          label="Knowledge"
+          isActive={false}
+          onClick={() => window.location.hash = '/knowledge'}
+        />
+        <NavButton
+          icon={<Settings size={20} />}
           label="Profile"
           isActive={currentView === 'profile'}
           onClick={() => setCurrentView('profile')}
