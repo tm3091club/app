@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, FileText, User, Users, Settings, BookOpen } from 'lucide-react';
+import { Calendar, FileText, User, Users, Settings } from 'lucide-react';
 
 type View = 'schedule' | 'members' | 'profile' | 'weekly-agenda' | 'mentorship';
 
@@ -59,12 +59,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, s
           isActive={currentView === 'mentorship'}
           onClick={() => setCurrentView('mentorship')}
         />
-        <NavButton
-          icon={<BookOpen size={20} />}
-          label="Knowledge"
-          isActive={false}
-          onClick={() => window.location.hash = '/knowledge'}
-        />
+        {/* Knowledge button is available via the hamburger menu; omit on mobile bottom nav to avoid crowding */}
         <NavButton
           icon={<Settings size={20} />}
           label="Profile"
