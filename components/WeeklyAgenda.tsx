@@ -42,6 +42,8 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   const [isShareRolesMenuOpen, setIsShareRolesMenuOpen] = useState(false);
   const [shareRolesUrl, setShareRolesUrl] = useState('');
   const shareRolesMenuRef = useRef<HTMLDivElement>(null);
+  const [isShareAgendaMenuOpen, setIsShareAgendaMenuOpen] = useState(false);
+  const shareAgendaMenuRef = useRef<HTMLDivElement>(null);
   const justSavedRef = useRef(false);
 
   const schedule = monthlySchedules.find(s => s.id === scheduleId);
@@ -200,6 +202,9 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
       }
       if (shareRolesMenuRef.current && !shareRolesMenuRef.current.contains(event.target as Node)) {
         setIsShareRolesMenuOpen(false);
+      }
+      if (shareAgendaMenuRef.current && !shareAgendaMenuRef.current.contains(event.target as Node)) {
+        setIsShareAgendaMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -944,13 +949,43 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
               </>
             )}
-            {/* Share button */}
-            <button
-              onClick={handleShare}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1.5 px-3 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition whitespace-nowrap"
-            >
-              Share
-            </button>
+            {/* Share Agenda dropdown */}
+            <div className="relative" ref={shareAgendaMenuRef}>
+              <button
+                onClick={() => setIsShareAgendaMenuOpen(prev => !prev)}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1.5 px-3 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition whitespace-nowrap"
+              >
+                Share Agenda
+              </button>
+              {isShareAgendaMenuOpen && (
+                <div className="origin-top-right absolute right-0 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-20 top-full mt-2">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        handleShare();
+                        setIsShareAgendaMenuOpen(false);
+                      }}
+                      disabled={isSaving}
+                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
+                    >
+                      {isSaving ? 'Sharing...' : 'Web Link'}
+                    </button>
+                    <button
+                      onClick={handleExportPDFFromMenu}
+                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
+                      Export PDF
+                    </button>
+                    <button
+                      onClick={handleCopyToClipboard}
+                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
+                      {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Share Roles dropdown */}
             <div className="relative" ref={shareRolesMenuRef}>
@@ -968,7 +1003,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
                       disabled={isSaving}
                       className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
                     >
-                      {isSaving ? 'Sharing...' : 'Share'}
+                      {isSaving ? 'Sharing...' : 'Web Link'}
                     </button>
                     <button
                       onClick={handleExportRolesPDF}
@@ -981,33 +1016,7 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
               )}
             </div>
             
-            {/* Export dropdown */}
-            <div className="relative" ref={exportMenuRef}>
-              <button
-                onClick={() => setIsExportMenuOpen(prev => !prev)}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-3 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition whitespace-nowrap"
-              >
-                Export
-              </button>
-              {isExportMenuOpen && (
-                <div className="origin-top-right absolute right-0 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-20 top-full mt-2">
-                  <div className="py-1">
-                    <button
-                      onClick={handleExportPDFFromMenu}
-                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
-                    >
-                      Export PDF
-                    </button>
-                    <button
-                      onClick={handleCopyToClipboard}
-                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
-                    >
-                      {copySuccess ? 'Copied!' : 'Copy for Sheets (TSV)'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Export dropdown - REMOVED, consolidated into Share Agenda */}
           </>
         ) : (
           <>

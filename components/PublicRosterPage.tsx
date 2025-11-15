@@ -109,6 +109,11 @@ export const PublicRosterPage: React.FC<{ clubNumber: string; shareId: string }>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 print:bg-white print:min-h-0">
             <style>{`
                 @media print {
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
                     body {
                         margin: 0 !important;
                         padding: 0 !important;
@@ -117,7 +122,43 @@ export const PublicRosterPage: React.FC<{ clubNumber: string; shareId: string }>
                         display: none !important;
                     }
                     @page {
-                        margin: 0.75in;
+                        margin: 0.5in;
+                        size: letter portrait;
+                    }
+                    .roster-container {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        page-break-before: avoid !important;
+                        page-break-after: avoid !important;
+                    }
+                    .roster-header {
+                        page-break-inside: avoid !important;
+                        page-break-after: avoid !important;
+                    }
+                    table {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        page-break-before: avoid !important;
+                        table-layout: fixed !important;
+                        width: 100% !important;
+                    }
+                    tr {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+                    thead {
+                        display: table-header-group !important;
+                    }
+                    tbody {
+                        page-break-inside: avoid !important;
+                    }
+                    .role-column {
+                        width: 40% !important;
+                        min-width: 40% !important;
+                    }
+                    .member-column {
+                        width: 60% !important;
+                        min-width: 60% !important;
                     }
                 }
             `}</style>
@@ -140,33 +181,31 @@ export const PublicRosterPage: React.FC<{ clubNumber: string; shareId: string }>
                 </div>
 
                 {/* Roster Content */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg print:shadow-none print:rounded-none">
-                    {/* Header */}
-                    <div className="p-6 print:p-8 text-center border-b dark:border-gray-700 print:border-b-2 print:border-gray-300">
-                        <h1 className="text-2xl font-bold mb-2 print:text-3xl">
-                            {rosterData.clubName}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg print:shadow-none print:rounded-none roster-container">
+                    {/* Header - Compact for print */}
+                    <div className="p-6 print:p-2 text-center border-b dark:border-gray-700 print:border-0 roster-header">
+                        <h1 className="text-2xl font-bold mb-1 print:text-lg print:mb-1 print:leading-tight">
+                            {rosterData.clubName} {rosterData.clubNumber} - Meeting Roles
                         </h1>
-                        <p className="text-lg mb-2">Club #{rosterData.clubNumber}</p>
-                        <h2 className="text-xl font-semibold mb-2 print:text-2xl">Meeting Roles</h2>
-                        <p className="text-lg print:text-xl">
+                        <p className="text-lg print:text-base print:mb-1">
                             {format(meetingDate, 'MMMM d, yyyy')}
                         </p>
                         {rosterData.theme && (
-                            <p className="text-lg mt-2 font-medium text-red-600 dark:text-red-400 print:text-xl print:text-red-600">
+                            <p className="text-lg mt-2 font-medium text-red-600 dark:text-red-400 print:text-base print:text-red-600 print:mt-1 print:mb-2">
                                 Theme: "{rosterData.theme}"
                             </p>
                         )}
                     </div>
 
-                    {/* Roster Table */}
-                    <div className="p-6 print:p-8">
-                        <table className="w-full border-collapse">
+                    {/* Roster Table - Compact */}
+                    <div className="p-6 print:p-3">
+                        <table className="w-full border-collapse border border-gray-400 print:border-gray-400">
                             <thead>
-                                <tr className="border-b-2 border-gray-300 dark:border-gray-600 print:border-gray-400">
-                                    <th className="text-left py-3 px-4 font-bold text-lg print:text-xl print:bg-blue-100">
+                                <tr className="bg-blue-500 text-white print:bg-blue-500 print:text-white">
+                                    <th className="role-column text-left py-3 px-4 font-bold text-base border border-gray-400 print:text-base print:py-2 print:px-3 print:border-gray-400">
                                         Role
                                     </th>
-                                    <th className="text-left py-3 px-4 font-bold text-lg print:text-xl print:bg-blue-100">
+                                    <th className="member-column text-left py-3 px-4 font-bold text-base border border-gray-400 print:text-base print:py-2 print:px-3 print:border-gray-400">
                                         Member
                                     </th>
                                 </tr>
@@ -179,15 +218,15 @@ export const PublicRosterPage: React.FC<{ clubNumber: string; shareId: string }>
                                     return (
                                         <tr 
                                             key={role} 
-                                            className="border-b border-gray-200 dark:border-gray-700 print:border-gray-300"
+                                            className="border border-gray-400 print:border-gray-400"
                                         >
-                                            <td className="py-3 px-4 font-semibold text-gray-900 dark:text-gray-100 print:text-black print:text-base">
+                                            <td className="role-column py-2 px-4 font-normal text-gray-900 dark:text-gray-100 border border-gray-400 print:text-gray-700 print:text-sm print:py-1.5 print:px-3 print:border-gray-400">
                                                 {role}
                                             </td>
-                                            <td className={`py-3 px-4 print:text-base ${
+                                            <td className={`member-column py-2 px-4 border border-gray-400 print:text-sm print:py-1.5 print:px-3 print:border-gray-400 ${
                                                 isUnassigned 
                                                     ? 'text-red-600 dark:text-red-400 font-bold print:text-red-600 print:font-bold' 
-                                                    : 'text-gray-800 dark:text-gray-200 print:text-black'
+                                                    : 'text-gray-800 dark:text-gray-200 print:text-gray-600'
                                             }`}>
                                                 {member || 'UNASSIGNED'}
                                             </td>
@@ -198,10 +237,10 @@ export const PublicRosterPage: React.FC<{ clubNumber: string; shareId: string }>
                         </table>
                     </div>
 
-                    {/* Footer */}
-                    <div className="p-4 print:p-6 border-t dark:border-gray-700 text-center text-sm text-gray-500 dark:text-gray-400 print:border-t print:border-gray-300 print:text-gray-600">
+                    {/* Footer - Hidden in print */}
+                    <div className="p-4 print:hidden border-t dark:border-gray-700 text-center text-sm text-gray-500 dark:text-gray-400">
                         <p>Generated by Toastmasters Monthly Scheduler v{APP_VERSION}</p>
-                        <p className="mt-1">Visit <a href={window.location.origin} className="text-blue-600 dark:text-blue-400 hover:underline print:text-blue-600">tmapp.club</a> to create your own schedule</p>
+                        <p className="mt-1">Visit <a href={window.location.origin} className="text-blue-600 dark:text-blue-400 hover:underline">tmapp.club</a> to create your own schedule</p>
                     </div>
                 </div>
             </div>
