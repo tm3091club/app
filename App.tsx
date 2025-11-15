@@ -12,6 +12,7 @@ import { ToastmastersProvider, useToastmasters } from './Context/ToastmastersCon
 import { NotificationProvider } from './Context/NotificationContext';
 import { PublicSchedulePage } from './components/PublicSchedulePage';
 import { PublicAgendaPage } from './components/PublicAgendaPage';
+import { PublicRosterPage } from './components/PublicRosterPage';
 import { UnsubscribePage } from './components/UnsubscribePage';
 import { MentorshipPage } from './components/MentorshipPage';
 import { TermsOfServicePage } from './components/TermsOfServicePage';
@@ -130,6 +131,7 @@ function App() {
   const hash = currentHash.substring(1); // Remove the leading '#'
   const publicShareMatch = hash.match(/^\/(\d+)\/share\/([a-zA-Z0-9-]+)/);
   const agendaShareMatch = hash.match(/^\/(\d+)\/agenda\/([a-zA-Z0-9-]+)/);
+  const rosterShareMatch = hash.match(/^\/(\d+)\/roster\/([a-zA-Z0-9-]+)/);
   // Matches /<club-number>/join or just /join
   const joinMatch = hash.match(/^\/(?:[^/]+\/)?join/);
   // Matches /unsubscribe
@@ -323,6 +325,13 @@ function App() {
     const clubNumber = agendaShareMatch[1];
     const shareId = agendaShareMatch[2];
     return <PublicAgendaPage clubNumber={clubNumber} shareId={shareId} />;
+  }
+
+  // Roster Share Route - Show shared roster
+  if (rosterShareMatch) {
+    const clubNumber = rosterShareMatch[1];
+    const shareId = rosterShareMatch[2];
+    return <PublicRosterPage clubNumber={clubNumber} shareId={shareId} />;
   }
 
   if (publicShareMatch) {

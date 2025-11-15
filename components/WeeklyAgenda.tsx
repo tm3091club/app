@@ -11,6 +11,8 @@ import { exportWeeklyAgendaToPDF, exportWeeklyAgendaToTSV } from '../services/we
 import { ShareModal } from './common/ShareModal';
 import { db } from '../services/firebase';
 import firebase from 'firebase/compat/app';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface WeeklyAgendaProps {
   scheduleId: string;
@@ -37,6 +39,9 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const [isShareRolesMenuOpen, setIsShareRolesMenuOpen] = useState(false);
+  const [shareRolesUrl, setShareRolesUrl] = useState('');
+  const shareRolesMenuRef = useRef<HTMLDivElement>(null);
   const justSavedRef = useRef(false);
 
   const schedule = monthlySchedules.find(s => s.id === scheduleId);
@@ -192,6 +197,9 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     const handleClickOutside = (event: MouseEvent) => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
         setIsExportMenuOpen(false);
+      }
+      if (shareRolesMenuRef.current && !shareRolesMenuRef.current.contains(event.target as Node)) {
+        setIsShareRolesMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -619,6 +627,194 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
     setIsExportMenuOpen(false);
   };
 
+  const handleShareRoles = async () => {
+    if (!schedule || !user || !organization?.clubNumber || selectedWeek >= schedule.meetings.length) {
+      alert("Cannot share roles. Please check the schedule is loaded properly.");
+      return;
+    }
+
+    setIsSaving(true);
+    
+    try {
+      const meeting = schedule.meetings[selectedWeek];
+      const meetingDate = meeting.date ? new Date(meeting.date + 'T00:00:00') : new Date();
+      const monthName = meetingDate.toLocaleDateString('en-US', { month: 'long' }).toLowerCase();
+      const day = meetingDate.getDate();
+      const year = meetingDate.getFullYear();
+      const themeSlug = meeting.theme ? meeting.theme.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : 'no-theme';
+      
+      // Create a roster object with all role assignments
+      const roster: { [role: string]: string | null } = {};
+      const TOASTMASTERS_ROLES = [
+        'President', 'Pledge', 'Thought of the Day', 'Toastmaster', 'Grammarian',
+        'Timekeeper', 'Ballot Counter', 'Ah-Counter', 'Table Topics Master',
+        'Speaker 1', 'Speaker 2', 'Speaker 3', 'General Evaluator',
+        'Evaluator 1', 'Evaluator 2', 'Evaluator 3', 'Inspiration Award'
+      ];
+      
+      TOASTMASTERS_ROLES.forEach(role => {
+        const memberId = meeting.assignments[role];
+        roster[role] = memberId ? getMemberName(memberId) : null;
+      });
+      
+      const rosterData = {
+        clubName: organization.name,
+        clubNumber: organization.clubNumber,
+        meetingDate: meeting.date,
+        theme: meeting.theme || '',
+        roster,
+        ownerId: user.uid,
+        scheduleId,
+        weekIndex: selectedWeek,
+      };
+      
+      // Check for existing roster with same content
+      const baseShareId = `roster-${themeSlug}-${monthName}-${day}-${year}`;
+      const docIdPrefix = `${organization.clubNumber}_${baseShareId}-v`;
+      const querySnapshot = await db.collection('publicRosters')
+        .where(firebase.firestore.FieldPath.documentId(), '>=', docIdPrefix)
+        .where(firebase.firestore.FieldPath.documentId(), '<', docIdPrefix + 'z')
+        .get();
+      
+      const currentContentHash = JSON.stringify(rosterData.roster);
+      
+      // Check if any existing version has the same content
+      for (const doc of querySnapshot.docs) {
+        const existingData = doc.data();
+        const existingContentHash = JSON.stringify(existingData.roster);
+        
+        if (currentContentHash === existingContentHash) {
+          const shareId = existingData.shareId || doc.id.replace(`${organization.clubNumber}_`, '');
+          const url = `${window.location.origin}/#/${organization.clubNumber}/roster/${shareId}`;
+          setShareRolesUrl(url);
+          setIsShareModalOpen(true);
+          setIsSaving(false);
+          return;
+        }
+      }
+      
+      // Create new version
+      let maxVersion = 0;
+      querySnapshot.forEach(doc => {
+        const docId = doc.id;
+        const versionMatch = docId.match(/-v(\d+)$/);
+        if (versionMatch) {
+          const version = parseInt(versionMatch[1], 10);
+          if (version > maxVersion) {
+            maxVersion = version;
+          }
+        }
+      });
+      
+      const newVersion = maxVersion + 1;
+      const humanReadableShareId = `${baseShareId}-v${newVersion}`;
+      const firestoreDocId = `${organization.clubNumber}_${humanReadableShareId}`;
+      
+      const publicRosterData = {
+        ...rosterData,
+        shareId: humanReadableShareId,
+      };
+      
+      await db.collection('publicRosters').doc(firestoreDocId).set(publicRosterData);
+      
+      const url = `${window.location.origin}/#/${organization.clubNumber}/roster/${humanReadableShareId}`;
+      setShareRolesUrl(url);
+      setIsShareModalOpen(true);
+      
+    } catch (error) {
+      console.error('Error sharing roles:', error);
+      alert(`Failed to create shareable link: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+      setIsShareRolesMenuOpen(false);
+    }
+  };
+
+  const handleExportRolesPDF = () => {
+    if (!schedule || selectedWeek >= schedule.meetings.length || !organization) return;
+    
+    const meeting = schedule.meetings[selectedWeek];
+    const meetingDate = meeting.date ? new Date(meeting.date + 'T00:00:00') : new Date();
+    
+    // Create roster object
+    const roster: { [role: string]: string | null } = {};
+    const TOASTMASTERS_ROLES = [
+      'President', 'Pledge', 'Thought of the Day', 'Toastmaster', 'Grammarian',
+      'Timekeeper', 'Ballot Counter', 'Ah-Counter', 'Table Topics Master',
+      'Speaker 1', 'Speaker 2', 'Speaker 3', 'General Evaluator',
+      'Evaluator 1', 'Evaluator 2', 'Evaluator 3', 'Inspiration Award'
+    ];
+    
+    TOASTMASTERS_ROLES.forEach(role => {
+      const memberId = meeting.assignments[role];
+      roster[role] = memberId ? getMemberName(memberId) : null;
+    });
+    
+    // Generate PDF
+    const doc = new jsPDF();
+    
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    const clubName = organization?.name || 'Toastmasters Club';
+    const clubNumber = organization?.clubNumber ? ` ${organization.clubNumber}` : '';
+    const headerText = `${clubName}${clubNumber} - Meeting Roles`;
+    doc.text(headerText, 105, 15, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.text(format(meetingDate, 'MMMM d, yyyy'), 105, 22, { align: 'center' });
+    
+    if (meeting.theme) {
+      doc.setFontSize(11);
+      doc.setTextColor(185, 28, 28);
+      doc.text(`Theme: "${meeting.theme}"`, 105, 29, { align: 'center' });
+      doc.setTextColor(0, 0, 0);
+    }
+    
+    // Create table data
+    const tableData = TOASTMASTERS_ROLES.map(role => {
+      const member = roster[role] || 'UNASSIGNED';
+      return [role, member];
+    });
+    
+    const tableStartY = meeting.theme ? 35 : 28;
+    
+    (autoTable as any)(doc, {
+      head: [['Role', 'Member']],
+      body: tableData,
+      startY: tableStartY,
+      styles: {
+        fontSize: 11,
+        cellPadding: 3,
+        lineColor: [128, 128, 128],
+        lineWidth: 0.5,
+      },
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 12,
+        halign: 'center',
+      },
+      columnStyles: {
+        0: { cellWidth: 80, halign: 'left', fontStyle: 'bold' },
+        1: { cellWidth: 100, halign: 'left' },
+      },
+      didParseCell: (data) => {
+        // Highlight unassigned roles in red and bold
+        if (data.section === 'body' && data.column.index === 1) {
+          if (data.cell.text[0] === 'UNASSIGNED') {
+            data.cell.styles.textColor = [220, 38, 38]; // Red
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      },
+    });
+    
+    const dateStr = format(meetingDate, 'yyyy-MM-dd');
+    doc.save(`${clubName}-Roles-${dateStr}.pdf`);
+    setIsShareRolesMenuOpen(false);
+  };
+
   // Check if schedule exists and has meetings
   if (!schedule || schedule.meetings.length === 0) {
     return (
@@ -679,7 +875,14 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
 
   return (
     <>
-      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} shareUrl={shareUrl} />
+      <ShareModal 
+        isOpen={isShareModalOpen} 
+        onClose={() => {
+          setIsShareModalOpen(false);
+          setShareRolesUrl(''); // Clear roster URL when closing
+        }} 
+        shareUrl={shareRolesUrl || shareUrl} 
+      />
       <div className="max-w-7xl mx-auto p-4 print:p-0">
       {/* Week Selector - Hide in print */}
       <div className="mb-6 print:hidden">
@@ -748,6 +951,35 @@ const WeeklyAgendaComponent: React.FC<WeeklyAgendaProps> = ({ scheduleId }) => {
             >
               Share
             </button>
+            
+            {/* Share Roles dropdown */}
+            <div className="relative" ref={shareRolesMenuRef}>
+              <button
+                onClick={() => setIsShareRolesMenuOpen(prev => !prev)}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1.5 px-3 md:py-2 md:px-4 text-xs md:text-sm rounded-md transition whitespace-nowrap"
+              >
+                Share Roles
+              </button>
+              {isShareRolesMenuOpen && (
+                <div className="origin-top-right absolute right-0 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-20 top-full mt-2">
+                  <div className="py-1">
+                    <button
+                      onClick={handleShareRoles}
+                      disabled={isSaving}
+                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
+                    >
+                      {isSaving ? 'Sharing...' : 'Share'}
+                    </button>
+                    <button
+                      onClick={handleExportRolesPDF}
+                      className="w-full text-left text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
+                      Export PDF
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Export dropdown */}
             <div className="relative" ref={exportMenuRef}>
